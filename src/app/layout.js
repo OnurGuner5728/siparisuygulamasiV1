@@ -2,6 +2,7 @@
 
 import './globals.css';
 import { AuthProvider } from '../contexts/AuthContext';
+import { CartProvider } from '../contexts/CartContext';
 import HeaderWrapper from '../components/HeaderWrapper';
 import Footer from '../components/Footer';
 
@@ -14,9 +15,11 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <AuthProvider>
-          <HeaderWrapper />
-        {children}
-          <Footer />
+          <CartProvider>
+            <HeaderWrapper />
+            {children}
+            <Footer />
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

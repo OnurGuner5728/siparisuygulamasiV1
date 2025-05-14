@@ -85,13 +85,34 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Yetki kontrolü
+  const hasPermission = (requiredRole) => {
+    if (!user) return false;
+    
+    // Admin her sayfaya erişebilir
+    if (user.role === 'admin') return true;
+    
+    // Mağaza rolü kontrolü
+    if (requiredRole === 'store' && user.role === 'store') return true;
+    
+    // Kullanıcı rolü kontrolü
+    if (requiredRole === 'user' && (user.role === 'user' || user.role === 'admin' || user.role === 'store')) return true;
+    
+    // Özel modül kontrolü (örneğin, yemek, market, vb.)
+    if (user.modulePermissions && user.modulePermissions[requiredRole]) return true;
+    
+    return false;
+  };
+
   // Context değeri
   const value = {
     user,
     login,
     register,
     logout,
-    loading
+    loading,
+    isAuthenticated: !!user,
+    hasPermission
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

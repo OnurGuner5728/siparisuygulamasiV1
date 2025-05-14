@@ -3,286 +3,235 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { mockRestaurants } from '@/app/data/mockdatas';
+import { useCart } from '@/contexts/CartContext';
 
-export default function RestaurantDetailPage() {
-  const params = useParams();
-  const restaurantId = params?.id ? parseInt(params.id) : null;
+export default function RestaurantDetail() {
+  const { id } = useParams();
+  const { addToCart, removeFromCart, cartItems } = useCart();
   
-  // Dummy veri - Gerçek uygulamada API'den gelecek
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Tümü');
   const [cart, setCart] = useState([]);
-
-  // Sahte veritabanından restoran bilgilerini al
+  
   useEffect(() => {
-    // Gerçek uygulamada bir API isteği yapılacak
+    // Mock API çağrısı - gerçek bir API'den veri çekersiniz
+    setLoading(true);
+    
+    // ID'ye göre restoran verilerini al
+    const restaurantData = mockRestaurants.find(r => r.id === parseInt(id));
+    
     setTimeout(() => {
-      const foundRestaurant = mockRestaurants.find(r => r.id === restaurantId);
-      if (foundRestaurant) {
-        setRestaurant(foundRestaurant);
-        if (foundRestaurant.categories && foundRestaurant.categories.length > 0) {
-          setSelectedCategory(foundRestaurant.categories[0]);
-        }
+      setRestaurant(restaurantData);
+      if (restaurantData?.categories?.length > 0) {
+        setActiveCategory('Tümü');
       }
       setLoading(false);
-    }, 500);
-  }, [restaurantId]);
+    }, 1000);
+  }, [id]);
 
-  // Sepete ürün ekle
-  const addToCart = (item) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
+  useEffect(() => {
+    // CartContext'ten bu restorana ait ürünleri filtrele
+    const restaurantItems = cartItems.filter(item => 
+      item.storeName === restaurant?.name
+    );
+    setCart(restaurantItems);
+  }, [cartItems, restaurant]);
+
+  const handleAddToCart = (item) => {
+    addToCart({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: 1,
+      storeName: restaurant.name,
+      image: item.image || 'https://placehold.co/100'
+    });
+  };
+
+  const handleRemoveFromCart = (itemId) => {
+    removeFromCart(itemId);
+  };
+
+  const getFilteredItems = () => {
+    if (!restaurant || !restaurant.menu) return [];
     
-    if (existingItem) {
-      // Ürün zaten sepette, miktarı artır
-      setCart(cart.map(cartItem => 
-        cartItem.id === item.id 
-          ? { ...cartItem, quantity: cartItem.quantity + 1 } 
-          : cartItem
-      ));
+    if (activeCategory === 'Tümü') {
+      return restaurant.menu;
     } else {
-      // Yeni ürün, sepete ekle
-      setCart([...cart, { ...item, quantity: 1 }]);
+      return restaurant.menu.filter(item => item.category === activeCategory);
     }
   };
 
-  // Sepetten ürün çıkar
-  const removeFromCart = (itemId) => {
-    const existingItem = cart.find(cartItem => cartItem.id === itemId);
-    
-    if (existingItem.quantity === 1) {
-      // Sepetteki son ürün, tamamen kaldır
-      setCart(cart.filter(cartItem => cartItem.id !== itemId));
-    } else {
-      // Miktarı azalt
-      setCart(cart.map(cartItem => 
-        cartItem.id === itemId 
-          ? { ...cartItem, quantity: cartItem.quantity - 1 } 
-          : cartItem
-      ));
-    }
-  };
-
-  // Sepet toplamını hesapla
   const calculateTotal = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  // Filtrelenmiş menü öğeleri
-  const filteredMenuItems = restaurant?.menu.filter(item => 
-    selectedCategory === 'Tümü' || item.category === selectedCategory
-  );
-
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-16 flex justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Restoran bilgileri yükleniyor...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (!restaurant) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center py-10">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Restoran Bulunamadı</h2>
-          <p className="text-gray-600 mb-8">Üzgünüz, aradığınız restoran bulunamadı.</p>
-          <Link href="/yemek" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
-            Tüm Restoranlar
-          </Link>
-        </div>
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">Restaurant Bulunamadı</h1>
+        <p className="text-gray-600 mb-8">Aradığınız restoran bulunamadı veya kaldırılmış olabilir.</p>
+        <Link href="/yemek" className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+          Tüm Restoranlara Dön
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Geri dönüş linki */}
-      <div className="mb-6">
-        <Link href="/yemek" className="text-blue-600 hover:text-blue-800 flex items-center">
-          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Tüm Restoranlar
-        </Link>
-      </div>
+      {/* Geri Dönüş Bağlantısı */}
+      <Link 
+        href="/yemek" 
+        className="inline-flex items-center text-blue-600 hover:underline mb-6"
+      >
+        <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Tüm Restoranlar
+      </Link>
       
-      {/* Restoran bilgisi başlık kısmı */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-        <div className="h-64 bg-gray-200 relative">
-          <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-bold ${restaurant.isOpen ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            {restaurant.isOpen ? 'Açık' : 'Kapalı'}
+      {/* Restoran Bilgileri */}
+      <div className="bg-gray-100 rounded-lg overflow-hidden mb-8">
+        <div className="relative h-60 bg-gray-300">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-gray-500">Restoran resmi yüklenememiyor</span>
           </div>
-          <div className="h-full w-full flex items-center justify-center">
-            <span className="text-gray-400">Restoran resmi yüklenemiyor</span>
+          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black to-transparent h-1/2"></div>
+          <div className="absolute bottom-4 left-4 text-white">
+            <span className={`px-2 py-1 text-xs rounded-full ${restaurant.isOpen ? 'bg-green-500' : 'bg-red-500'}`}>
+              {restaurant.isOpen ? 'Açık' : 'Kapalı'}
+            </span>
           </div>
         </div>
         
         <div className="p-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+          <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold">{restaurant.name}</h1>
-              <div className="flex items-center text-sm text-gray-600 mt-1">
-                <span className="mr-2">{restaurant.cuisine}</span>
-                <span className="mr-2">⭐ {restaurant.rating}</span>
-                <span>{restaurant.deliveryTime} teslimat</span>
+              <h1 className="text-3xl font-bold text-gray-800">{restaurant.name}</h1>
+              <div className="flex items-center mt-2">
+                <span className="text-yellow-500 flex items-center mr-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  {restaurant.rating}
+                </span>
+                <span className="text-gray-600 mr-2">•</span>
+                <span className="text-gray-600">{restaurant.cuisine}</span>
+                <span className="text-gray-600 mx-2">•</span>
+                <span className="text-gray-600">{restaurant.deliveryTime}</span>
               </div>
               <p className="text-gray-600 mt-2">{restaurant.address}</p>
+              {restaurant.description && (
+                <p className="text-gray-700 mt-4">{restaurant.description}</p>
+              )}
             </div>
-            
-            <div className="mt-4 md:mt-0">
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                <p className="text-sm font-medium">Minimum Sipariş Tutarı</p>
-                <p className="text-xl font-bold text-blue-700">{restaurant.minOrder} TL</p>
-              </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <p className="font-semibold text-gray-700">Minimum Sipariş Tutarı</p>
+              <p className="text-xl font-bold text-blue-600">{restaurant.minOrder} TL</p>
             </div>
           </div>
-          
-          <p className="mt-4 text-gray-700 border-t pt-4">{restaurant.description}</p>
         </div>
       </div>
       
-      {/* Ana içerik bölümü: Menü ve Sepet */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Menü */}
         <div className="w-full lg:w-2/3">
-          <h2 className="text-2xl font-bold mb-4">Menü</h2>
-          
-          {/* Kategori Filtreleri */}
-          <div className="flex flex-wrap mb-6 gap-2">
+          {/* Kategori Seçimi */}
+          <div className="border-b overflow-x-auto whitespace-nowrap mb-6 pb-2">
             <button 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                selectedCategory === 'Tümü' 
+              onClick={() => setActiveCategory('Tümü')} 
+              className={`px-4 py-2 mr-2 rounded-full ${
+                activeCategory === 'Tümü' 
                   ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
-              onClick={() => setSelectedCategory('Tümü')}
             >
               Tümü
             </button>
             
-            {restaurant.categories.map((category, index) => (
+            {restaurant.categories && restaurant.categories.map((category, index) => (
               <button 
                 key={index}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  selectedCategory === category 
+                onClick={() => setActiveCategory(category)} 
+                className={`px-4 py-2 mr-2 rounded-full ${
+                  activeCategory === category 
                     ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
-                onClick={() => setSelectedCategory(category)}
               >
                 {category}
               </button>
             ))}
           </div>
           
-          {/* Menü Öğeleri */}
-          <div className="space-y-4">
-            {filteredMenuItems.map(item => (
-              <div key={item.id} className="bg-white rounded-lg shadow-sm p-4 flex">
-                <div className="flex-1">
-                  <h3 className="font-bold">{item.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-                  <p className="font-bold text-blue-700">{item.price.toFixed(2)} TL</p>
+          {/* Ürünler */}
+          <div className="space-y-6">
+            {getFilteredItems().map((item) => (
+              <div key={item.id} className="bg-white rounded-lg shadow-md p-4 flex justify-between">
+                <div className="flex-grow">
+                  <h3 className="text-lg font-semibold">{item.name}</h3>
+                  {item.description && (
+                    <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                  )}
+                  <p className="text-blue-600 font-medium mt-2">{item.price.toFixed(2)} TL</p>
                 </div>
-                <div className="ml-4 flex items-center">
-                  <button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                    onClick={() => addToCart(item)}
-                  >
-                    + Ekle
-                  </button>
+                
+                <div className="flex items-center ml-4">
+                  {/* Ürün resmi */}
+                  <div className="w-20 h-20 bg-gray-200 rounded-md mr-4 overflow-hidden">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-xs text-gray-500">Görsel yok</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Sepete ekle butonu */}
+                  {cart.find(cartItem => cartItem.id === item.id) ? (
+                    <div className="flex items-center">
+                      <button 
+                        onClick={() => handleRemoveFromCart(item.id)}
+                        className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="mx-2 font-medium">
+                        {cart.find(cartItem => cartItem.id === item.id).quantity}
+                      </span>
+                      <button 
+                        onClick={() => handleAddToCart(item)}
+                        className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => handleAddToCart(item)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700"
+                    >
+                      + Ekle
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-        
-        {/* Sepet */}
-        <div className="w-full lg:w-1/3">
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-            <h2 className="text-2xl font-bold mb-4">Sepetim</h2>
-            
-            {cart.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <p className="text-gray-500">Sepetiniz boş</p>
-                <p className="text-sm text-gray-400 mt-1">Menüden ürün ekleyebilirsiniz</p>
-              </div>
-            ) : (
-              <>
-                <div className="divide-y mb-4">
-                  {cart.map(item => (
-                    <div key={item.id} className="py-3 flex justify-between items-center">
-                      <div>
-                        <div className="flex items-center">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">{item.quantity}x</span>
-                        </div>
-                        <p className="text-sm text-gray-600">{(item.price * item.quantity).toFixed(2)} TL</p>
-                      </div>
-                      <div className="flex items-center">
-                        <button 
-                          className="text-red-500 hover:text-red-700 p-1"
-                          onClick={() => removeFromCart(item.id)}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        <button 
-                          className="text-blue-500 hover:text-blue-700 p-1"
-                          onClick={() => addToCart(item)}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="border-t pt-4">
-                  <div className="flex justify-between mb-2">
-                    <span>Ara Toplam:</span>
-                    <span>{calculateTotal().toFixed(2)} TL</span>
-                  </div>
-                  <div className="flex justify-between mb-2 text-sm text-gray-600">
-                    <span>Teslimat Ücreti:</span>
-                    <span>15.00 TL</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg mt-4">
-                    <span>Toplam:</span>
-                    <span>{(calculateTotal() + 15).toFixed(2)} TL</span>
-                  </div>
-                  
-                  <button 
-                    className={`w-full mt-4 py-3 rounded-md text-white font-medium transition-colors ${
-                      calculateTotal() >= restaurant.minOrder 
-                        ? 'bg-blue-600 hover:bg-blue-700' 
-                        : 'bg-gray-400 cursor-not-allowed'
-                    }`}
-                    disabled={calculateTotal() < restaurant.minOrder}
-                  >
-                    {calculateTotal() >= restaurant.minOrder 
-                      ? 'Siparişi Tamamla' 
-                      : `Min. ${restaurant.minOrder} TL sipariş vermelisiniz`}
-                  </button>
-                  
-                  {calculateTotal() < restaurant.minOrder && (
-                    <p className="text-sm text-red-500 mt-2 text-center">
-                      Minimum sipariş tutarına {(restaurant.minOrder - calculateTotal()).toFixed(2)} TL kaldı
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>

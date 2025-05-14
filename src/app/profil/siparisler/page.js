@@ -24,11 +24,11 @@ function OrdersContent() {
     setTimeout(() => {
       // Örnek sipariş verileri
       const mockOrders = [
-        { 
-          id: 10001, 
+        {
+          id: 10001,
           date: '2023-05-10', 
           store: { id: 1, name: 'Kebapçı Ahmet', type: 'Yemek' }, 
-          total: 185.50, 
+          total: 185.50,
           status: 'Teslim Edildi',
           items: [
             { id: 1, name: 'Adana Kebap', quantity: 2, price: 70 },
@@ -41,11 +41,11 @@ function OrdersContent() {
           },
           paymentMethod: 'Kapıda Nakit'
         },
-        { 
-          id: 10002, 
+        {
+          id: 10002,
           date: '2023-05-15', 
           store: { id: 2, name: 'Süpermarket A', type: 'Market' }, 
-          total: 342.75, 
+          total: 342.75,
           status: 'Teslim Edildi',
           items: [
             { id: 1, name: 'Süt (1L)', quantity: 3, price: 30 },
@@ -60,11 +60,11 @@ function OrdersContent() {
           },
           paymentMethod: 'Kapıda Kart'
         },
-        { 
-          id: 10003, 
+        {
+          id: 10003,
           date: '2023-05-22', 
           store: { id: 3, name: 'Hayat Su Bayisi', type: 'Su' }, 
-          total: 80.00, 
+          total: 80.00,
           status: 'Hazırlanıyor',
           items: [
             { id: 1, name: 'Damacana Su (19L)', quantity: 2, price: 40 }
@@ -75,8 +75,8 @@ function OrdersContent() {
           },
           paymentMethod: 'Kapıda Nakit'
         },
-        { 
-          id: 10004, 
+        {
+          id: 10004,
           date: '2023-05-23', 
           store: { id: 1, name: 'Kebapçı Ahmet', type: 'Yemek' }, 
           total: 220.00, 
@@ -111,7 +111,7 @@ function OrdersContent() {
           return order.status === 'İptal Edildi';
         }
         return true;
-      });
+  });
 
   // Tarih formatlama fonksiyonu
   const formatDate = (dateString) => {
