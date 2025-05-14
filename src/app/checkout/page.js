@@ -213,7 +213,7 @@ function CheckoutContent() {
           </p>
           
           <p className="text-gray-500 mb-8">
-            Siparişinizin durumunu "Siparişlerim" sayfasından takip edebilirsiniz.
+            Siparişinizin durumunu &quot;Siparişlerim&quot; sayfasından takip edebilirsiniz.
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-4">
