@@ -55,14 +55,14 @@ export default function Login() {
     setErrors({});
     
     try {
-      const result = login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password);
       
       if (result.success) {
         // Başarılı giriş
         router.push('/');
       } else {
         // Başarısız giriş
-        setErrors({ form: result.error || 'Giriş yapılırken bir hata oluştu' });
+        setErrors({ form: result.message || 'Giriş yapılırken bir hata oluştu' });
       }
     } catch (error) {
       setErrors({ form: 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.' });
