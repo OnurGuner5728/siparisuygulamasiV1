@@ -1,64 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
-
-// Mock kullanıcı verileri
-const MOCK_USERS = [
-  {
-    id: 1,
-    name: 'Ahmet Yılmaz',
-    email: 'ahmet@example.com',
-    password: '123456',
-    role: 'user',
-    addresses: [
-      { 
-        id: 1, 
-        title: 'Ev', 
-        fullName: 'Ahmet Yılmaz',
-        phone: '0555 111 2233',
-        city: 'İstanbul',
-        district: 'Kadıköy',
-        neighborhood: 'Göztepe',
-        fullAddress: 'Örnek Sokak No:1 D:5',
-        isDefault: true 
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Admin Kullanıcı',
-    email: 'admin@example.com',
-    password: '123456',
-    role: 'admin'
-  },
-  {
-    id: 3,
-    name: 'Kebapçı Ahmet',
-    email: 'kebapci@example.com',
-    password: '123456',
-    role: 'store',
-    storeInfo: {
-      id: 1,
-      category: 'Yemek',
-      description: 'En lezzetli kebaplar',
-      rating: 4.7,
-      approved: true
-    }
-  },
-  {
-    id: 4,
-    name: 'Yeni Mağaza',
-    email: 'store@example.com',
-    password: '123456',
-    role: 'store',
-    storeInfo: {
-      id: 4,
-      category: 'Market',
-      description: 'Yeni açılan market',
-      rating: 0,
-      approved: false
-    }
-  }
-];
+import { mockUsers } from '@/app/data/mockdatas';
 
 // Auth Context oluşturma
 const AuthContext = createContext(null);
@@ -80,18 +22,13 @@ export function AuthProvider({ children }) {
   // Kullanıcı girişi işlemi
   const login = async (email, password) => {
     try {
-      // API isteği simüle ediliyor
-      // Gerçek uygulamada fetch veya axios ile API'ye istek atılacak
-      const mockUsers = [
-        { id: 1, name: 'Ahmet Yılmaz', email: 'admin@test.com', password: '123456', role: 'admin' },
-        { id: 2, name: 'Mehmet Demir', email: 'user@test.com', password: '123456', role: 'user' },
-        { id: 3, name: 'Ayşe Şahin', email: 'store@test.com', password: '123456', role: 'store' },
-      ];
+      // mockdatas.js'den alınan kullanıcı verileri ile giriş kontrolü
+      const userFound = mockUsers.find(u => u.email === email);
       
-      // Kullanıcı kontrol
-      const userFound = mockUsers.find(u => u.email === email && u.password === password);
-      
-      if (userFound) {
+      // Basit bir şifre kontrolü (gerçek uygulamada şifreler hash'lenecektir)
+      // Gerçek projelerde bu şekilde plain text şifre kontrolü yapmayın
+      // Burada sadece mock veri olduğu için bu şekilde yapıyoruz
+      if (userFound && password === '123456') { // Tüm kullanıcılar için ortak şifre kullanıyoruz
         // Kullanıcı bilgilerini güvenlik için şifresiz saklıyoruz
         const { password, ...userWithoutPassword } = userFound;
         localStorage.setItem('user', JSON.stringify(userWithoutPassword));
@@ -109,12 +46,25 @@ export function AuthProvider({ children }) {
   // Kullanıcı kaydı işlemi
   const register = async (userData) => {
     try {
-      // API isteği simüle ediliyor
-      // Gerçek uygulamada fetch veya axios ile API'ye istek atılacak
+      // E-posta kontrolü (benzersiz olmalı)
+      const existingUser = mockUsers.find(u => u.email === userData.email);
+      if (existingUser) {
+        return { success: false, message: 'Bu e-posta adresi zaten kullanımda' };
+      }
+      
+      // Gerçek uygulamada bir API isteği yapılır
+      // Burada mockUsers'a ekleme yapmıyoruz çünkü bunu gerçek bir API'ye gönderecek şekilde düşünüyoruz
       const newUser = {
-        id: Date.now(), // Rastgele ID
+        id: mockUsers.length + 1, // Rastgele ID
         ...userData,
-        role: 'user' // Varsayılan olarak kullanıcı rolü
+        role: 'user', // Varsayılan olarak kullanıcı rolü
+        status: 'active',
+        registrationDate: new Date().toISOString().split('T')[0],
+        lastLogin: new Date().toISOString(),
+        ordersCount: 0,
+        activeOrder: 0,
+        totalSpent: 0,
+        addresses: []
       };
       
       // Şifre gizleme
