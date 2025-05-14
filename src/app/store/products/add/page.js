@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../../../../src/contexts/AuthContext';
-import StoreGuard from '../../../../../../src/components/StoreGuard';
+import { useAuth } from '@/contexts/AuthContext';
+import StoreGuard from '@/components/StoreGuard';
 
 export default function AddProduct() {
   return (

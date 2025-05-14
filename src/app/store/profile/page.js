@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../../../src/contexts/AuthContext';
-import StoreGuard from '../../../../../src/components/StoreGuard';
+import { useAuth } from '@/contexts/AuthContext';
+import StoreGuard from '@/components/StoreGuard';
 
 export default function StoreProfile() {
   return (
@@ -527,7 +527,7 @@ function StoreProfileContent() {
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Çalışma saatlerini "HH:MM - HH:MM" formatında girin. Kapalı günler için "Kapalı" yazabilirsiniz.
+                  Çalışma saatlerini &ldquo;HH:MM - HH:MM&rdquo; formatında girin. Kapalı günler için &ldquo;Kapalı&rdquo; yazabilirsiniz.
                 </p>
               </div>
             )}

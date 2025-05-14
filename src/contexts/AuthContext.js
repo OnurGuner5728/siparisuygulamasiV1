@@ -61,144 +61,97 @@ const MOCK_USERS = [
 ];
 
 // Auth Context oluşturma
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 // Auth Provider bileşeni
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // Sayfa yüklendiğinde localStorage'dan kullanıcı bilgisini kontrol etme
   useEffect(() => {
+    // Sayfa yüklendiğinde localStorage'dan kullanıcı bilgisini al
     const storedUser = localStorage.getItem('user');
-    
     if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Stored user parsing error:', error);
-        localStorage.removeItem('user');
-      }
+      setUser(JSON.parse(storedUser));
     }
-    
     setLoading(false);
   }, []);
 
-  // Giriş yapma fonksiyonu
-  const login = (email, password) => {
-    const foundUser = MOCK_USERS.find(
-      (u) => u.email === email && u.password === password
-    );
-    
-    if (foundUser) {
-      // Şifreyi client tarafına göndermeyelim
-      const { password, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      setIsAuthenticated(true);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-
-      // Yönlendirme için localStorage'dan redirect path'i kontrol et
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        localStorage.removeItem('redirectAfterLogin');
-        // Burada yönlendirme yapılabilir ama biz sadece return değeri döndüreceğiz
+  // Kullanıcı girişi işlemi
+  const login = async (email, password) => {
+    try {
+      // API isteği simüle ediliyor
+      // Gerçek uygulamada fetch veya axios ile API'ye istek atılacak
+      const mockUsers = [
+        { id: 1, name: 'Ahmet Yılmaz', email: 'admin@test.com', password: '123456', role: 'admin' },
+        { id: 2, name: 'Mehmet Demir', email: 'user@test.com', password: '123456', role: 'user' },
+        { id: 3, name: 'Ayşe Şahin', email: 'store@test.com', password: '123456', role: 'store' },
+      ];
+      
+      // Kullanıcı kontrol
+      const userFound = mockUsers.find(u => u.email === email && u.password === password);
+      
+      if (userFound) {
+        // Kullanıcı bilgilerini güvenlik için şifresiz saklıyoruz
+        const { password, ...userWithoutPassword } = userFound;
+        localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+        setUser(userWithoutPassword);
+        return { success: true, message: 'Giriş başarılı' };
+      } else {
+        return { success: false, message: 'Hatalı e-posta veya şifre' };
       }
-
-      return { success: true };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, message: 'Bir hata oluştu. Lütfen tekrar deneyin.' };
     }
-    
-    return { 
-      success: false, 
-      error: 'E-posta veya şifre hatalı'
-    };
   };
 
-  // Çıkış yapma fonksiyonu
+  // Kullanıcı kaydı işlemi
+  const register = async (userData) => {
+    try {
+      // API isteği simüle ediliyor
+      // Gerçek uygulamada fetch veya axios ile API'ye istek atılacak
+      const newUser = {
+        id: Date.now(), // Rastgele ID
+        ...userData,
+        role: 'user' // Varsayılan olarak kullanıcı rolü
+      };
+      
+      // Şifre gizleme
+      const { password, ...userWithoutPassword } = newUser;
+      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+      setUser(userWithoutPassword);
+      
+      return { success: true, message: 'Kayıt başarılı' };
+    } catch (error) {
+      console.error('Register error:', error);
+      return { success: false, message: 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.' };
+    }
+  };
+
+  // Çıkış işlemi
   const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
     localStorage.removeItem('user');
+    setUser(null);
   };
 
-  // Kayıt olma fonksiyonu
-  const register = (name, email, password, role = 'user') => {
-    // E-posta kontrolü
-    if (MOCK_USERS.some((u) => u.email === email)) {
-      return { 
-        success: false, 
-        error: 'Bu e-posta adresi zaten kullanılıyor' 
-      };
-    }
-    
-    // Yeni kullanıcı oluşturma
-    const newUser = {
-      id: MOCK_USERS.length + 1,
-      name,
-      email,
-      role,
-      addresses: []
-    };
-    
-    // Store rolü için ek bilgiler
-    if (role === 'store') {
-      newUser.storeInfo = {
-        id: Date.now(), // Benzersiz ID
-        category: '',
-        description: '',
-        rating: 0,
-        approved: false // Yeni mağazalar varsayılan olarak onaylanmamış durumda
-      };
-    }
-
-    // Gerçek bir backend'de bu noktada veritabanına kayıt yapılır
-    // Mock sistemde sadece memory'de tutulan diziye ekliyoruz
-    MOCK_USERS.push({...newUser, password});
-
-    // Kullanıcı şifresini client tarafında saklamak güvenli değil
-    const { password: _, ...userWithoutPassword } = newUser;
-    setUser(userWithoutPassword);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-    
-    return { success: true };
-  };
-
-  // Yetki kontrolü
-  const hasPermission = (requiredRole) => {
-    if (!user) return false;
-    
-    // any_auth değeri sadece giriş yapılmış olmasını kontrol eder
-    if (requiredRole === 'any_auth') return true;
-    
-    // Admin tüm sayfalara erişebilir
-    if (user.role === 'admin') return true;
-    
-    // Kullanıcının rolü istenen rolle aynı mı?
-    return user.role === requiredRole;
-  };
-
-  // Context value
+  // Context değeri
   const value = {
     user,
-    isAuthenticated,
-    loading,
     login,
-    logout,
     register,
-    hasPermission
+    logout,
+    loading
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Hook oluşturma
+// Context kullanımı için hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth hook must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }; 

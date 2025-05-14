@@ -317,91 +317,122 @@ export const mockOrders = [
   }
 ];
 
-// Mağaza paneli için sipariş verileri (farklı format)
+// Mağaza siparişleri verileri - Store Orders
 export const storeOrdersData = [
   {
-    id: 1001,
+    id: 1,
     customer: {
-      id: 5,
       name: 'Ahmet Yılmaz',
       phone: '0555 111 2233',
-      address: 'Kadıköy, İstanbul',
-      fullAddress: 'Göztepe Mah. Örnek Sokak No:1 D:5 Kadıköy/İstanbul'
+      address: 'Kadıköy, İstanbul'
     },
+    date: '2023-05-25T10:30:00',
     items: [
-      { id: 1, name: 'Adana Kebap', price: 120, quantity: 1, total: 120 },
-      { id: 2, name: 'Ayran', price: 15, quantity: 1, total: 15 }
+      {
+        id: 1,
+        name: 'Adana Kebap',
+        price: 120.00,
+        quantity: 1,
+        total: 120.00
+      },
+      {
+        id: 2,
+        name: 'Ayran',
+        price: 15.00,
+        quantity: 1,
+        total: 15.00
+      }
     ],
-    status: 'preparing', // preparing, onway, delivered, cancelled
-    statusHistory: [
-      { status: 'preparing', date: '2023-05-20T10:30:00', note: 'Sipariş alındı' }
-    ],
-    total: 150.75,
     subtotal: 135.00,
-    discount: 0,
-    deliveryFee: 15.75,
-    date: '2023-05-20T10:30:00',
-    paymentMethod: 'card',
-    notes: 'Acılı olsun',
-    deliveryTime: '30-40 dk',
-    estimatedDelivery: '2023-05-20T11:10:00'
-  },
-  {
-    id: 1002,
-    customer: {
-      id: 8,
-      name: 'Mehmet Kaya',
-      phone: '0533 222 5566',
-      address: 'Beşiktaş, İstanbul',
-      fullAddress: 'Levent Mah. Yeni Cad. No:12 D:8 Beşiktaş/İstanbul'
-    },
-    items: [
-      { id: 5, name: 'Dana Kıyma', price: 180, quantity: 1, total: 180 },
-      { id: 8, name: 'Ekmek', price: 7.50, quantity: 2, total: 15 },
-      { id: 9, name: 'Yumurta (10\'lu)', price: 25.50, quantity: 1, total: 25.50 }
-    ],
-    status: 'onway',
-    statusHistory: [
-      { status: 'preparing', date: '2023-05-21T14:45:00', note: 'Sipariş alındı' },
-      { status: 'onway', date: '2023-05-21T15:05:00', note: 'Kurye yola çıktı' }
-    ],
-    total: 235.50,
-    subtotal: 220.50,
-    discount: 0,
     deliveryFee: 15.00,
-    date: '2023-05-21T14:45:00',
-    paymentMethod: 'cash',
-    notes: 'Taze olsun',
-    deliveryTime: '20-30 dk',
-    estimatedDelivery: '2023-05-21T15:15:00'
+    total: 150.00,
+    status: 'delivered',
+    paymentMethod: 'online',
+    paymentStatus: 'paid',
+    notes: 'Acılı olsun lütfen',
+    statusHistory: [
+      { status: 'preparing', date: '2023-05-25T10:35:00', note: 'Sipariş hazırlanıyor' },
+      { status: 'onway', date: '2023-05-25T10:50:00', note: 'Kurye yola çıktı' },
+      { status: 'delivered', date: '2023-05-25T11:10:00', note: 'Sipariş teslim edildi' }
+    ]
   },
   {
-    id: 1003,
+    id: 2,
     customer: {
-      id: 6,
-      name: 'Zeynep Demir',
-      phone: '0544 333 7788',
-      address: 'Ataşehir, İstanbul',
-      fullAddress: 'Atatürk Mah. Çamlık Sok. No:5 D:3 Ataşehir/İstanbul'
+      name: 'Mehmet Demir',
+      phone: '0533 222 4455',
+      address: 'Beşiktaş, İstanbul'
     },
+    date: '2023-05-25T12:15:00',
     items: [
-      { id: 7, name: '19L Su', price: 40, quantity: 1, total: 40 }
+      {
+        id: 1,
+        name: 'Urfa Kebap',
+        price: 110.00,
+        quantity: 2,
+        total: 220.00
+      },
+      {
+        id: 3,
+        name: 'Baklava',
+        price: 45.00,
+        quantity: 1,
+        total: 45.00
+      }
     ],
-    status: 'delivered',
+    subtotal: 265.00,
+    deliveryFee: 15.00,
+    total: 280.00,
+    status: 'onway',
+    paymentMethod: 'cash',
+    paymentStatus: 'pending',
+    notes: '',
     statusHistory: [
-      { status: 'preparing', date: '2023-05-19T09:15:00', note: 'Sipariş alındı' },
-      { status: 'onway', date: '2023-05-19T09:30:00', note: 'Kurye yola çıktı' },
-      { status: 'delivered', date: '2023-05-19T10:00:00', note: 'Sipariş teslim edildi' }
+      { status: 'preparing', date: '2023-05-25T12:20:00', note: 'Sipariş hazırlanıyor' },
+      { status: 'onway', date: '2023-05-25T12:40:00', note: 'Kurye yola çıktı' }
+    ]
+  },
+  {
+    id: 3,
+    customer: {
+      name: 'Ayşe Şahin',
+      phone: '0544 333 6677',
+      address: 'Ümraniye, İstanbul'
+    },
+    date: '2023-05-25T15:45:00',
+    items: [
+      {
+        id: 4,
+        name: 'Tavuk Şiş',
+        price: 90.00,
+        quantity: 1,
+        total: 90.00
+      },
+      {
+        id: 5,
+        name: 'Salata',
+        price: 30.00,
+        quantity: 1,
+        total: 30.00
+      },
+      {
+        id: 2,
+        name: 'Ayran',
+        price: 15.00,
+        quantity: 2,
+        total: 30.00
+      }
     ],
-    total: 30.00,
-    subtotal: 40.00,
-    discount: 20.00,
-    deliveryFee: 10.00,
-    date: '2023-05-19T09:15:00',
-    paymentMethod: 'card',
-    notes: 'Kapıya bırakın',
-    deliveryTime: '30-45 dk',
-    estimatedDelivery: '2023-05-19T10:00:00'
+    subtotal: 150.00,
+    deliveryFee: 15.00,
+    total: 165.00,
+    status: 'preparing',
+    paymentMethod: 'online',
+    paymentStatus: 'paid',
+    notes: 'Tavuğu iyi pişmiş olsun',
+    statusHistory: [
+      { status: 'preparing', date: '2023-05-25T15:50:00', note: 'Sipariş hazırlanıyor' }
+    ]
   }
 ];
 
