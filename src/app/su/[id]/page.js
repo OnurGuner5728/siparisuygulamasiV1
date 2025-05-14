@@ -2,76 +2,85 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { mockWaterVendors } from '@/app/data/mockdatas';
+import { mockWaterVendors, mockProducts } from '@/app/data/mockdatas';
+import { useCart } from '@/contexts/CartContext';
 
 export default function WaterVendorDetailPage() {
   const params = useParams();
   const vendorId = params?.id ? parseInt(params.id) : null;
+  const { addToCart, removeFromCart, cartItems } = useCart();
   
   // Dummy veri - Gerçek uygulamada API'den gelecek
   const [vendor, setVendor] = useState(null);
+  const [vendorProducts, setVendorProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [cart, setCart] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('Tümü');
+  const [localCart, setLocalCart] = useState([]);
 
   // Sahte veritabanından satıcı bilgilerini al
   useEffect(() => {
     // Gerçek uygulamada bir API isteği yapılacak
     setTimeout(() => {
-      const foundVendor = mockWaterVendors.find(v => v.id === vendorId);
-      if (foundVendor) {
-        setVendor(foundVendor);
-        if (foundVendor.categories && foundVendor.categories.length > 0) {
-          setSelectedCategory(foundVendor.categories[0]);
+      if (vendorId) {
+        const foundVendor = mockWaterVendors.find(v => v.id === vendorId);
+        
+        if (foundVendor) {
+          setVendor(foundVendor);
+          
+          // Su satıcısı için ürünleri filtrele
+          const vendorRelatedProducts = mockProducts.filter(p => 
+            p.mainCategory === 'Su'
+          );
+          
+          // Ürünlerin kategorilerini al
+          const categories = [...new Set(vendorRelatedProducts.map(p => p.category))];
+          
+          // Satıcı nesnesini kategori bilgisi ile güncelle
+          setVendor({
+            ...foundVendor,
+            categories: categories,
+            products: vendorRelatedProducts
+          });
+          
+          setVendorProducts(vendorRelatedProducts);
+          
+          // İlk kategoriyi seç
+          setSelectedCategory('Tümü');
         }
       }
       setLoading(false);
     }, 500);
   }, [vendorId]);
 
-  // Sepete ürün ekle
-  const addToCart = (item) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    
-    if (existingItem) {
-      // Ürün zaten sepette, miktarı artır
-      setCart(cart.map(cartItem => 
-        cartItem.id === item.id 
-          ? { ...cartItem, quantity: cartItem.quantity + 1 } 
-          : cartItem
-      ));
-    } else {
-      // Yeni ürün, sepete ekle
-      setCart([...cart, { ...item, quantity: 1 }]);
+  useEffect(() => {
+    // CartContext'ten bu satıcıya ait ürünleri filtrele
+    if (vendor) {
+      const vendorItems = cartItems.filter(item => 
+        item.storeName === vendor.name
+      );
+      setLocalCart(vendorItems);
     }
+  }, [cartItems, vendor]);
+
+  const handleAddToCart = (item) => {
+    addToCart({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: 1,
+      storeName: vendor.name,
+      image: item.image || 'https://placehold.co/100'
+    });
   };
 
-  // Sepetten ürün çıkar
-  const removeFromCart = (itemId) => {
-    const existingItem = cart.find(cartItem => cartItem.id === itemId);
-    
-    if (existingItem.quantity === 1) {
-      // Sepetteki son ürün, tamamen kaldır
-      setCart(cart.filter(cartItem => cartItem.id !== itemId));
-    } else {
-      // Miktarı azalt
-      setCart(cart.map(cartItem => 
-        cartItem.id === itemId 
-          ? { ...cartItem, quantity: cartItem.quantity - 1 } 
-          : cartItem
-      ));
-    }
-  };
-
-  // Sepet toplamını hesapla
-  const calculateTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const handleRemoveFromCart = (itemId) => {
+    removeFromCart(itemId);
   };
 
   // Filtrelenmiş ürünler
-  const filteredProducts = vendor?.products.filter(item => 
+  const filteredProducts = vendorProducts?.filter(item => 
     selectedCategory === 'Tümü' || item.category === selectedCategory
-  );
+  ) || [];
 
   if (loading) {
     return (
@@ -164,7 +173,7 @@ export default function WaterVendorDetailPage() {
               Tümü
             </button>
             
-            {vendor.categories.map((category, index) => (
+            {vendor.categories && vendor.categories.map((category, index) => (
               <button 
                 key={index}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -181,114 +190,54 @@ export default function WaterVendorDetailPage() {
           
           {/* Ürün Listesi */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="bg-white rounded-lg shadow-sm p-4">
-                <div className="h-36 bg-gray-100 rounded-md mb-3 flex items-center justify-center">
-                  <span className="text-gray-400 text-sm">Ürün resmi yüklenemiyor</span>
-                </div>
-                <h3 className="font-bold truncate">{product.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">{product.category}</p>
-                <div className="flex justify-between items-center">
-                  <p className="font-bold text-blue-700">{product.price.toFixed(2)} TL</p>
-                  <button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                    onClick={() => addToCart(product)}
-                  >
-                    + Sepete Ekle
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">Bu kategoride ürün bulunamadı.</p>
-            </div>
-          )}
-        </div>
-        
-        {/* Sepet */}
-        <div className="w-full lg:w-1/3">
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-            <h2 className="text-2xl font-bold mb-4">Sepetim</h2>
-            
-            {cart.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <p className="text-gray-500">Sepetiniz boş</p>
-                <p className="text-sm text-gray-400 mt-1">Ürünleri sepete ekleyebilirsiniz</p>
-              </div>
-            ) : (
-              <>
-                <div className="divide-y mb-4">
-                  {cart.map(item => (
-                    <div key={item.id} className="py-3 flex justify-between items-center">
-                      <div>
-                        <div className="flex items-center">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">{item.quantity}x</span>
-                        </div>
-                        <p className="text-sm text-gray-600">{(item.price * item.quantity).toFixed(2)} TL</p>
-                      </div>
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map(product => (
+                <div key={product.id} className="bg-white rounded-lg shadow-sm p-4">
+                  <div className="h-36 bg-gray-100 rounded-md mb-3 flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">Ürün resmi yüklenemiyor</span>
+                  </div>
+                  <h3 className="font-bold truncate">{product.name}</h3>
+                  <p className="text-sm text-gray-500 mb-3">{product.category}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="font-bold text-blue-700">{product.price.toFixed(2)} TL</p>
+                    
+                    {cartItems.find(item => item.id === product.id) ? (
                       <div className="flex items-center">
                         <button 
-                          className="text-red-500 hover:text-red-700 p-1"
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => handleRemoveFromCart(product.id)}
+                          className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                           </svg>
                         </button>
+                        <span className="mx-2 font-medium">
+                          {cartItems.find(item => item.id === product.id).quantity}
+                        </span>
                         <button 
-                          className="text-blue-500 hover:text-blue-700 p-1"
-                          onClick={() => addToCart(item)}
+                          onClick={() => handleAddToCart(product)}
+                          className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
                         </button>
                       </div>
-                    </div>
-                  ))}
+                    ) : (
+                      <button 
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        + Sepete Ekle
+                      </button>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="border-t pt-4">
-                  <div className="flex justify-between mb-2">
-                    <span>Ara Toplam:</span>
-                    <span>{calculateTotal().toFixed(2)} TL</span>
-                  </div>
-                  <div className="flex justify-between mb-2 text-sm text-gray-600">
-                    <span>Teslimat Ücreti:</span>
-                    <span>10.00 TL</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg mt-4">
-                    <span>Toplam:</span>
-                    <span>{(calculateTotal() + 10).toFixed(2)} TL</span>
-                  </div>
-                  
-                  <button 
-                    className={`w-full mt-4 py-3 rounded-md text-white font-medium transition-colors ${
-                      calculateTotal() >= vendor.minOrder 
-                        ? 'bg-blue-600 hover:bg-blue-700' 
-                        : 'bg-gray-400 cursor-not-allowed'
-                    }`}
-                    disabled={calculateTotal() < vendor.minOrder}
-                  >
-                    {calculateTotal() >= vendor.minOrder 
-                      ? 'Siparişi Tamamla' 
-                      : `Min. ${vendor.minOrder} TL sipariş vermelisiniz`}
-                  </button>
-                  
-                  {calculateTotal() < vendor.minOrder && (
-                    <p className="text-sm text-red-500 mt-2 text-center">
-                      Minimum sipariş tutarına {(vendor.minOrder - calculateTotal()).toFixed(2)} TL kaldı
-                    </p>
-                  )}
-                </div>
-              </>
+              ))
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-lg col-span-2">
+                <p className="text-gray-500">Bu kategoride ürün bulunamadı.</p>
+              </div>
             )}
           </div>
         </div>
