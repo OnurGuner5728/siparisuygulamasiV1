@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiArrowLeft, FiCheck, FiX } from 'react-icons/fi';
 
-export default function FilterPage() {
+function FilterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -340,5 +340,23 @@ export default function FilterPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+// Loading komponenti
+function FilterPageLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+    </div>
+  );
+}
+
+// Suspense boundary içerisinde FilterPageContent'i sarıyoruz
+export default function FilterPage() {
+  return (
+    <Suspense fallback={<FilterPageLoading />}>
+      <FilterPageContent />
+    </Suspense>
   );
 } 

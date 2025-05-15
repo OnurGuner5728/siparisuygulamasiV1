@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiSearch, FiFilter, FiX, FiArrowLeft, FiChevronDown, FiStar } from 'react-icons/fi';
@@ -127,7 +127,16 @@ const categories = [
   'Hepsi', 'Yemek', 'Market', 'Su', 'Tatlı', 'Fast Food', 'Kebap', 'Pizza', 'Burger'
 ];
 
-export default function Search() {
+// Loading komponenti
+function SearchLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+    </div>
+  );
+}
+
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchInputRef = useRef(null);
@@ -136,9 +145,9 @@ export default function Search() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('Hepsi');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Hepsi');
   const [sortOption, setSortOption] = useState('relevance'); // relevance, rating, deliveryTime, minPrice
-  const [activeTab, setActiveTab] = useState('stores'); // stores, products
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'stores'); // stores, products
 
   // Arama işlemini gerçekleştir
   useEffect(() => {
@@ -537,5 +546,13 @@ export default function Search() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Search() {
+  return (
+    <Suspense fallback={<SearchLoading />}>
+      <SearchContent />
+    </Suspense>
   );
 } 
