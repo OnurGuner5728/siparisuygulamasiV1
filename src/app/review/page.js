@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiArrowLeft, FiStar, FiUpload, FiThumbsUp, FiXCircle } from 'react-icons/fi';
 
@@ -36,7 +36,16 @@ const demoOrder = {
   }
 };
 
-export default function ReviewPage() {
+// Loading komponenti
+function ReviewPageLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+    </div>
+  );
+}
+
+function ReviewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
@@ -381,5 +390,14 @@ export default function ReviewPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+// Ana bileşeni Suspense ile sarıyoruz
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={<ReviewPageLoading />}>
+      <ReviewPageContent />
+    </Suspense>
   );
 } 
