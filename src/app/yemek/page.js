@@ -93,17 +93,8 @@ export default function YemekPage() {
           <p className="text-gray-600 mb-8">Restoran ve yemek siparişi için aradığınız her şey burada!</p>
         </div>
         
-        {/* Giriş yapılmamışsa giriş butonu göster */}
-        {!isAuthenticated && (
-          <div className="flex flex-col gap-2 md:flex-row mb-4 md:mb-0">
-            <Link href="/login" className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-              Giriş Yap
-            </Link>
-            <Link href="/register" className="text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
-              Kayıt Ol
-            </Link>
-          </div>
-        )}
+      
+      
       </div>
       
       {/* Kampanyalar */}

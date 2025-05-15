@@ -86,45 +86,45 @@ export default function Register() {
     
     if (formData.role === 'customer') {
       // Müşteri validasyonu
-    // Ad kontrolü
-    if (!formData.firstName.trim()) {
-      formErrors.firstName = 'Ad gereklidir';
-    }
-    
-    // Soyad kontrolü
-    if (!formData.lastName.trim()) {
-      formErrors.lastName = 'Soyad gereklidir';
-    }
-    
-    // E-posta kontrolü
-    if (!formData.email) {
-      formErrors.email = 'E-posta adresi gereklidir';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      formErrors.email = 'Geçerli bir e-posta adresi giriniz';
-    }
-    
-    // Şifre kontrolü
-    if (!formData.password) {
-      formErrors.password = 'Şifre gereklidir';
-    } else if (formData.password.length < 6) {
-      formErrors.password = 'Şifre en az 6 karakter olmalıdır';
-    }
-    
-    // Şifre onay kontrolü
-    if (formData.password !== formData.confirmPassword) {
-      formErrors.confirmPassword = 'Şifreler eşleşmiyor';
-    }
-    
-    // Adres kontrolü
-    if (!formData.address.trim()) {
-      formErrors.address = 'Adres gereklidir';
-    }
-    
-    // Telefon kontrolü
-    if (!formData.phone) {
-      formErrors.phone = 'Telefon numarası gereklidir';
-    } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-      formErrors.phone = 'Geçerli bir telefon numarası giriniz';
+      // Ad kontrolü
+      if (!formData.firstName.trim()) {
+        formErrors.firstName = 'Ad gereklidir';
+      }
+      
+      // Soyad kontrolü
+      if (!formData.lastName.trim()) {
+        formErrors.lastName = 'Soyad gereklidir';
+      }
+      
+      // E-posta kontrolü
+      if (!formData.email) {
+        formErrors.email = 'E-posta adresi gereklidir';
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        formErrors.email = 'Geçerli bir e-posta adresi giriniz';
+      }
+      
+      // Şifre kontrolü
+      if (!formData.password) {
+        formErrors.password = 'Şifre gereklidir';
+      } else if (formData.password.length < 6) {
+        formErrors.password = 'Şifre en az 6 karakter olmalıdır';
+      }
+      
+      // Şifre onay kontrolü
+      if (formData.password !== formData.confirmPassword) {
+        formErrors.confirmPassword = 'Şifreler eşleşmiyor';
+      }
+      
+      // Adres kontrolü
+      if (!formData.address.trim()) {
+        formErrors.address = 'Adres gereklidir';
+      }
+      
+      // Telefon kontrolü
+      if (!formData.phone) {
+        formErrors.phone = 'Telefon numarası gereklidir';
+      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
+        formErrors.phone = 'Geçerli bir telefon numarası giriniz';
       }
     } else {
       // İş ortağı validasyonu
@@ -258,72 +258,69 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Yeni Hesap Oluştur
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Zaten hesabınız var mı?{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Giriş yapın
-            </Link>
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {errors.form && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{errors.form}</div>
-            </div>
-          )}
-          
-          <div>
-            <div className="flex items-center mb-4">
-              <input
-                id="role-customer"
-                name="role"
-                type="radio"
-                value="customer"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                checked={formData.role === 'customer'}
-                onChange={handleChange}
-              />
-              <label htmlFor="role-customer" className="ml-2 block text-sm text-gray-900">
-                Müşteri olarak kayıt ol
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                id="role-merchant"
-                name="role"
-                type="radio"
-                value="merchant"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                checked={formData.role === 'merchant'}
-                onChange={handleChange}
-              />
-              <label htmlFor="role-merchant" className="ml-2 block text-sm text-gray-900">
-                İş Ortağı olarak kayıt ol (onay gerektirir)
-              </label>
-            </div>
+    <div className="min-h-screen bg-gradient-to-b from-orange-500 to-red-500 p-4">
+      <div className="bg-white rounded-3xl overflow-hidden max-w-xl mx-auto shadow-xl">
+        <div className="px-8 pt-10 pb-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Hesap Oluştur</h2>
+            <p className="text-gray-500 text-sm">Lütfen bilgilerinizi girin</p>
           </div>
           
-          <div className="rounded-md shadow-sm -space-y-px">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {errors.form && (
+              <div className="bg-red-50 p-3 rounded-xl">
+                <p className="text-red-600 text-sm">{errors.form}</p>
+              </div>
+            )}
+            
+            <div className="bg-orange-50 p-4 rounded-xl mb-6">
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center">
+                  <input
+                    id="role-customer"
+                    name="role"
+                    type="radio"
+                    value="customer"
+                    className="h-5 w-5 text-orange-500 focus:ring-orange-500 border-gray-300"
+                    checked={formData.role === 'customer'}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor="role-customer" className="ml-2 block text-sm font-medium text-gray-700">
+                    Müşteri olarak kayıt ol
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="role-merchant"
+                    name="role"
+                    type="radio"
+                    value="merchant"
+                    className="h-5 w-5 text-orange-500 focus:ring-orange-500 border-gray-300"
+                    checked={formData.role === 'merchant'}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor="role-merchant" className="ml-2 block text-sm font-medium text-gray-700">
+                    İş Ortağı olarak kayıt ol (onay gerektirir)
+                  </label>
+                </div>
+              </div>
+            </div>
+          
             {formData.role === 'merchant' && (
-              <>
-                <div className="mb-4">
+              <div className="space-y-4 bg-gray-50 p-4 rounded-xl">
+                <h3 className="font-semibold text-lg text-gray-800">İşletme Bilgileri</h3>
+                
+                <div>
                   <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-1">İşletme Adı</label>
                   <input
                     id="businessName"
                     name="businessName"
                     type="text"
                     required
-                    className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                      errors.businessName ? 'border-red-300' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                    placeholder="İşletme Adı"
+                    className={`w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                      errors.businessName ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="İşletme Adınız"
                     value={formData.businessName}
                     onChange={handleChange}
                   />
@@ -332,15 +329,15 @@ export default function Register() {
                   )}
                 </div>
                 
-                <div className="mb-4">
+                <div>
                   <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                   <select
                     id="categoryId"
                     name="categoryId"
                     required
-                    className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                      errors.categoryId ? 'border-red-300' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                    className={`w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                      errors.categoryId ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     value={formData.categoryId}
                     onChange={handleChange}
                   >
@@ -357,9 +354,9 @@ export default function Register() {
                 </div>
                 
                 {formData.categoryId && (
-                  <div className="mb-4">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Alt Kategoriler</label>
-                    <div className="max-h-48 overflow-y-auto p-2 border border-gray-300 rounded-md">
+                    <div className="max-h-48 overflow-y-auto p-3 border border-gray-300 rounded-xl bg-white">
                       {filteredSubcategories.map(subcategory => (
                         <div key={subcategory.id} className="flex items-center mb-2">
                           <input
@@ -368,9 +365,9 @@ export default function Register() {
                             value={subcategory.id}
                             checked={selectedSubcategories.includes(subcategory.id)}
                             onChange={handleSubcategoryChange}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-5 w-5 text-orange-500 focus:ring-orange-500 border-gray-300 rounded"
                           />
-                          <label htmlFor={`subcategory-${subcategory.id}`} className="ml-2 block text-sm text-gray-900">
+                          <label htmlFor={`subcategory-${subcategory.id}`} className="ml-2 block text-sm text-gray-700">
                             {subcategory.name}
                           </label>
                         </div>
@@ -382,17 +379,17 @@ export default function Register() {
                   </div>
                 )}
                 
-                <div className="mb-4">
+                <div>
                   <label htmlFor="businessAddress" className="block text-sm font-medium text-gray-700 mb-1">İşletme Adresi</label>
                   <textarea
                     id="businessAddress"
                     name="businessAddress"
                     rows="3"
                     required
-                    className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                      errors.businessAddress ? 'border-red-300' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                    placeholder="İşletme Adresi"
+                    className={`w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                      errors.businessAddress ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="İşletme Adresiniz"
                     value={formData.businessAddress}
                     onChange={handleChange}
                   />
@@ -401,17 +398,17 @@ export default function Register() {
                   )}
                 </div>
                 
-                <div className="mb-4">
+                <div>
                   <label htmlFor="businessPhone" className="block text-sm font-medium text-gray-700 mb-1">İşletme Telefonu</label>
                   <input
                     id="businessPhone"
                     name="businessPhone"
                     type="tel"
                     required
-                    className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                      errors.businessPhone ? 'border-red-300' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                    placeholder="İşletme Telefonu"
+                    className={`w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                      errors.businessPhone ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="05XX XXX XX XX"
                     value={formData.businessPhone}
                     onChange={handleChange}
                   />
@@ -420,17 +417,17 @@ export default function Register() {
                   )}
                 </div>
                 
-                <div className="mb-4">
+                <div>
                   <label htmlFor="businessEmail" className="block text-sm font-medium text-gray-700 mb-1">İşletme E-posta Adresi</label>
                   <input
                     id="businessEmail"
                     name="businessEmail"
                     type="email"
                     required
-                    className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                      errors.businessEmail ? 'border-red-300' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                    placeholder="İşletme E-posta Adresi"
+                    className={`w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                      errors.businessEmail ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="isletme@ornek.com"
                     value={formData.businessEmail}
                     onChange={handleChange}
                   />
@@ -439,14 +436,12 @@ export default function Register() {
                   )}
                 </div>
                 
-                <div className="mt-8 mb-2">
-                  <h3 className="text-lg font-medium text-gray-900">Yetkili Bilgileri</h3>
-                </div>
-              </>
+                <h3 className="font-semibold text-lg text-gray-800 mt-6">Yetkili Bilgileri</h3>
+              </div>
             )}
             
-            <div className="grid grid-cols-1 gap-y-2 gap-x-3 sm:grid-cols-2 mb-4">
-              <div className="col-span-1">
+            <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-2">
+              <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                   {formData.role === 'customer' ? 'Ad' : 'Yetkili Adı'}
                 </label>
@@ -456,10 +451,10 @@ export default function Register() {
                   type="text"
                   autoComplete="given-name"
                   required
-                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                    errors.firstName ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder={formData.role === 'customer' ? 'Ad' : 'Yetkili Adı'}
+                  className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                    errors.firstName ? 'border-red-500' : 'border-transparent'
+                  }`}
+                  placeholder={formData.role === 'customer' ? 'Adınız' : 'Yetkili Adı'}
                   value={formData.firstName}
                   onChange={handleChange}
                 />
@@ -468,7 +463,7 @@ export default function Register() {
                 )}
               </div>
               
-              <div className="col-span-1">
+              <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
                   {formData.role === 'customer' ? 'Soyad' : 'Yetkili Soyadı'}
                 </label>
@@ -478,10 +473,10 @@ export default function Register() {
                   type="text"
                   autoComplete="family-name"
                   required
-                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                    errors.lastName ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder={formData.role === 'customer' ? 'Soyad' : 'Yetkili Soyadı'}
+                  className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                    errors.lastName ? 'border-red-500' : 'border-transparent'
+                  }`}
+                  placeholder={formData.role === 'customer' ? 'Soyadınız' : 'Yetkili Soyadı'}
                   value={formData.lastName}
                   onChange={handleChange}
                 />
@@ -491,7 +486,7 @@ export default function Register() {
               </div>
             </div>
             
-            <div className="mb-4">
+            <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 {formData.role === 'customer' ? 'E-posta Adresi' : 'Yetkili E-posta Adresi'}
               </label>
@@ -501,10 +496,10 @@ export default function Register() {
                 type="email"
                 autoComplete="email"
                 required
-                className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                  errors.email ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder={formData.role === 'customer' ? 'E-posta Adresi' : 'Yetkili E-posta Adresi'}
+                className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                  errors.email ? 'border-red-500' : 'border-transparent'
+                }`}
+                placeholder="ornek@mail.com"
                 value={formData.email}
                 onChange={handleChange}
               />
@@ -513,7 +508,7 @@ export default function Register() {
               )}
             </div>
             
-            <div className="mb-4">
+            <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                 {formData.role === 'customer' ? 'Telefon' : 'Yetkili Telefonu'}
               </label>
@@ -523,10 +518,10 @@ export default function Register() {
                 type="tel"
                 autoComplete="tel"
                 required
-                className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                  errors.phone ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder={formData.role === 'customer' ? 'Telefon Numarası' : 'Yetkili Telefon Numarası'}
+                className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                  errors.phone ? 'border-red-500' : 'border-transparent'
+                }`}
+                placeholder="05XX XXX XX XX"
                 value={formData.phone}
                 onChange={handleChange}
               />
@@ -535,7 +530,7 @@ export default function Register() {
               )}
             </div>
             
-            <div className="mb-4">
+            <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
               <input
                 id="password"
@@ -543,10 +538,10 @@ export default function Register() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                  errors.password ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Şifre"
+                className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                  errors.password ? 'border-red-500' : 'border-transparent'
+                }`}
+                placeholder="• • • • • • • •"
                 value={formData.password}
                 onChange={handleChange}
               />
@@ -555,7 +550,7 @@ export default function Register() {
               )}
             </div>
             
-            <div className="mb-4">
+            <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">Şifre Tekrar</label>
               <input
                 id="confirmPassword"
@@ -563,10 +558,10 @@ export default function Register() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Şifre Tekrar"
+                className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-transparent'
+                }`}
+                placeholder="• • • • • • • •"
                 value={formData.confirmPassword}
                 onChange={handleChange}
               />
@@ -576,39 +571,57 @@ export default function Register() {
             </div>
             
             {formData.role === 'customer' && (
-              <div className="mb-4">
+              <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Adres</label>
-              <textarea
-                id="address"
-                name="address"
-                rows="3"
-                required
-                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                  errors.address ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Teslimat Adresi"
-                value={formData.address}
-                onChange={handleChange}
-              />
-              {errors.address && (
-                <p className="mt-1 text-sm text-red-600">{errors.address}</p>
-              )}
-            </div>
+                <textarea
+                  id="address"
+                  name="address"
+                  rows="3"
+                  required
+                  className={`w-full bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border ${
+                    errors.address ? 'border-red-500' : 'border-transparent'
+                  }`}
+                  placeholder="Teslimat Adresiniz"
+                  value={formData.address}
+                  onChange={handleChange}
+                />
+                {errors.address && (
+                  <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+                )}
+              </div>
             )}
-          </div>
+            
+            <div className="flex items-center mt-4">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                required
+                className="h-4 w-4 text-orange-500 focus:ring-orange-500 rounded border-gray-300"
+              />
+              <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                <span>Kullanım koşullarını ve gizlilik politikasını kabul ediyorum</span>
+              </label>
+            </div>
 
-          <div>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition duration-200 ease-in-out mt-6"
             >
-              {isSubmitting ? 'Kaydınız oluşturuluyor...' : 'Kayıt Ol'}
+              {isSubmitting ? 'Kaydınız Oluşturuluyor...' : 'Kayıt Ol'}
             </button>
-          </div>
-        </form>
+            
+            <div className="text-center mt-4">
+              <p className="text-gray-600 text-sm">
+                Zaten hesabınız var mı?{' '}
+                <Link href="/login" className="text-orange-500 font-medium">
+                  Giriş Yap
+                </Link>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

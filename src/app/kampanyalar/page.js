@@ -90,7 +90,7 @@ function CampaignsContent() {
         router.push(`/${categoryName}/${storeId}`);
       } else {
         // Kategori bulunamazsa genel mağaza sayfasına yönlendir
-        router.push(`/store/${storeId}`);
+        router.push(`/${storeId}`);
       }
     } else {
       console.error(`Mağaza bulunamadı: ${storeId}`);

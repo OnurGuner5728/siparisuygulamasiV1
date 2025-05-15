@@ -1,26 +1,146 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts import */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Nunito+Sans:wght@300;400;600;700&display=swap');
 
 :root {
+  /* Temel renk paletimiz */
+  --color-primary: #FF6B6B;
+  --color-primary-light: #FF8E8E;
+  --color-primary-dark: #E05151;
+  
+  --color-secondary: #4ECDC4;
+  --color-secondary-light: #7AD9D3;
+  --color-secondary-dark: #3AABA3;
+  
+  --color-accent: #FFB347;
+  --color-accent-light: #FFC575;
+  --color-accent-dark: #E09A3A;
+  
+  --color-success: #6BCB77;
+  --color-warning: #FFD166;
+  --color-danger: #EF476F;
+  --color-info: #4EA8DE;
+  
+  /* Gri tonları */
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1F2937;
+  --color-gray-900: #111827;
+  
+  /* Theme-specific colors */
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Karanlık mod desteği */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    
+    /* Karanlık mod için renk geçişleri */
+    --color-gray-50: #1F2937;
+    --color-gray-100: #1E293B;
+    --color-gray-200: #334155;
+    --color-gray-300: #475569;
+    --color-gray-400: #64748B;
+    --color-gray-500: #94A3B8;
+    --color-gray-600: #CBD5E1;
+    --color-gray-700: #E2E8F0;
+    --color-gray-800: #F1F5F9;
+    --color-gray-900: #F8FAFC;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  body {
+    @apply font-sans text-gray-900 bg-white;
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-semibold;
+    line-height: 1.2;
+  }
+}
+
+@layer components {
+  /* Buton hover efektleri */
+  .btn {
+    @apply px-4 py-2 rounded-full transition-all duration-300;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:scale-105 active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-800 hover:bg-gray-200 hover:shadow-md active:bg-gray-300;
+  }
+
+  /* Kart hover efektleri */
+  .card {
+    @apply bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300;
+  }
+
+  .card:hover {
+    @apply shadow-lg -translate-y-1;
+  }
+
+  /* Input stilleri */
+  .input {
+    @apply bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border border-transparent;
+  }
+
+  /* Badge stillleri */
+  .badge {
+    @apply inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-orange {
+    @apply bg-orange-100 text-orange-600;
+  }
+
+  .badge-green {
+    @apply bg-green-100 text-green-600;
+  }
+
+  .badge-blue {
+    @apply bg-blue-100 text-blue-600;
+  }
+
+  .badge-red {
+    @apply bg-red-100 text-red-600;
+  }
+}
+
+@layer utilities {
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-in forwards;
+  }
+
+  @keyframes slideUp {
+    0% { transform: translateY(16px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
 }
