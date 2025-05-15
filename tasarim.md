@@ -17,8 +17,8 @@ Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Ta
 - [x] Giriş Sayfası (Login sayfası) - `/src/app/login/page.js`
 - [x] Kayıt Sayfası (Register sayfası) - `/src/app/register/page.js`
 - [x] Ana Sayfa (Home sayfası) - `/src/app/page.js`
-- [ ] Şifremi Unuttum Sayfası - `/src/app/forgot-password/page.js` (oluşturulması gerekiyor)
-- [ ] Şifre Sıfırlama Sayfası - `/src/app/reset-password/page.js` (oluşturulması gerekiyor)
+- [x] Şifremi Unuttum Sayfası - `/src/app/forgot-password/page.js`
+- [x] Şifre Sıfırlama Sayfası - `/src/app/reset-password/page.js`
 
 ### Onboarding
 - [ ] Onboarding Sayfası 01 - `/src/app/onboarding/page.js` (oluşturulması gerekiyor)
@@ -83,31 +83,31 @@ Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Ta
 - [x] Header - `/src/components/HeaderWrapper.js`
 - [x] Footer - `/src/components/Footer.js`
 - [x] Kampanya Banner - `/src/components/CampaignBanner.js`
-- [ ] Sepet Sidebar - `/src/components/CartSidebar.js`
+- [x] Sepet Sidebar - `/src/components/CartSidebar.js`
 
 ### Form Bileşenleri
 - [x] Input - `/src/components/ui/Input.js`
 - [x] Button - `/src/components/ui/Button.js`
 - [x] Checkbox - `/src/components/ui/Checkbox.js`
-- [ ] Select - `/src/components/ui/Select.js` (oluşturulması gerekiyor)
+- [x] Select - `/src/components/ui/Select.js`
 - [x] Radio Button - `/src/components/ui/RadioButton.js`
-- [ ] Textarea - `/src/components/ui/Textarea.js` (oluşturulması gerekiyor)
+- [x] Textarea - `/src/components/ui/Textarea.js`
 
 ### Kart Bileşenleri
 - [x] Kategori Kartı - `/src/components/cards/CategoryCard.js`
 - [x] Restoran Kartı - `/src/components/cards/RestaurantCard.js`
 - [x] Ürün Kartı - `/src/components/cards/ProductCard.js`
-- [ ] Sipariş Kartı - `/src/components/cards/OrderCard.js` (oluşturulması gerekiyor)
+- [x] Sipariş Kartı - `/src/components/cards/OrderCard.js`
 
 ### Modal ve Popup Bileşenleri
-- [ ] Modal Temel Bileşeni - `/src/components/ui/Modal.js` (oluşturulması gerekiyor)
-- [ ] Uyarı Modalı - `/src/components/modals/AlertModal.js` (oluşturulması gerekiyor)
-- [ ] Filtreleme Modalı - `/src/components/modals/FilterModal.js` (oluşturulması gerekiyor)
+- [x] Modal Temel Bileşeni - `/src/components/ui/Modal.js`
+- [x] Uyarı Modalı - `/src/components/modals/AlertModal.js`
+- [x] Filtreleme Modalı - `/src/components/modals/FilterModal.js`
 
 ### Diğer Bileşenler
 - [x] Yıldız Değerlendirme - `/src/components/ui/Rating.js`
-- [ ] Sayfa Numaralandırma - `/src/components/ui/Pagination.js` (oluşturulması gerekiyor)
-- [ ] Dosya Yükleyici - `/src/components/FileUploader.js`
+- [x] Sayfa Numaralandırma - `/src/components/ui/Pagination.js`
+- [x] Dosya Yükleyici - `/src/components/FileUploader.js`
 
 ## Tasarım İçin Notlar ve Fikirler
 
@@ -140,4 +140,5 @@ Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Ta
 - Öncelikli komponentler: Header, Footer, Ana Sayfa (tamamlandı)
 - Temel UI bileşenleri oluşturuldu: Button, Input, Rating, Checkbox, RadioButton (tamamlandı)
 - Kart bileşenleri oluşturuldu: CategoryCard, RestaurantCard, ProductCard (tamamlandı)
-- Sıradaki görev: Sayfaların oluşturulması ve tasarımın uygulanması 
+- İleri seviye UI bileşenleri oluşturuldu: Modal, AlertModal, FilterModal, Pagination, FileUploader, CartSidebar (tamamlandı)
+- Sıradaki görev: Eksik sayfaların (Profil, Sepet, Onboarding, vb.) oluşturulması ve tasarımın uygulanması 
