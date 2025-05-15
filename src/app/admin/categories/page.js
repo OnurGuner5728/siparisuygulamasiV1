@@ -46,7 +46,7 @@ function AdminCategoriesContent() {
 
   // Ana kategoriler
   const filteredMainCategories = mainCategories.filter(category => 
-    modulePermissions[category.id.toLowerCase()]
+    modulePermissions[category.name.toLowerCase()]
   );
 
   // Arama ve filtreleme

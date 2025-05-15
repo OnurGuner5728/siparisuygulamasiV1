@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
+import { mockOrders } from '@/app/data/mockdatas';
 
 export default function Orders() {
   return (
@@ -22,82 +23,40 @@ function OrdersContent() {
   useEffect(() => {
     // API'den sipariş verilerini çekiyoruz (simülasyon)
     setTimeout(() => {
-      // Örnek sipariş verileri
-      const mockOrders = [
-        {
-          id: 10001,
-          date: '2023-05-10', 
-          store: { id: 1, name: 'Kebapçı Ahmet', type: 'Yemek' }, 
-          total: 185.50,
-          status: 'Teslim Edildi',
-          items: [
-            { id: 1, name: 'Adana Kebap', quantity: 2, price: 70 },
-            { id: 2, name: 'Ayran', quantity: 2, price: 15 },
-            { id: 3, name: 'Künefe', quantity: 1, price: 45 }
-          ],
+      // Kullanıcıya ait siparişleri filtrele
+      const userOrders = mockOrders
+        .filter(order => order.customerId === user?.id)
+        .map(order => ({
+          id: order.id,
+          date: order.orderDate.split('T')[0], 
+          store: { 
+            id: order.storeId, 
+            name: order.storeName, 
+            type: order.category 
+          }, 
+          total: order.total,
+          status: order.status === 'delivered' ? 'Teslim Edildi' : 
+                 order.status === 'in_progress' ? (
+                   order.statusHistory.some(sh => sh.note.includes('Kurye')) ? 'Yolda' : 'Hazırlanıyor'
+                 ) : 'İşleme Alındı',
+          items: order.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price
+          })),
           address: {
-            title: 'Ev',
-            fullAddress: 'Atatürk Mah. Cumhuriyet Cad. No:123 D:5, Kadıköy/İstanbul'
+            title: order.deliveryAddress ? 'Teslimat Adresi' : '',
+            fullAddress: order.deliveryAddress ? 
+              `${order.deliveryAddress.neighborhood}, ${order.deliveryAddress.district}/${order.deliveryAddress.city}, ${order.deliveryAddress.fullAddress}` : ''
           },
-          paymentMethod: 'Kapıda Nakit'
-        },
-        {
-          id: 10002,
-          date: '2023-05-15', 
-          store: { id: 2, name: 'Süpermarket A', type: 'Market' }, 
-          total: 342.75,
-          status: 'Teslim Edildi',
-          items: [
-            { id: 1, name: 'Süt (1L)', quantity: 3, price: 30 },
-            { id: 2, name: 'Ekmek', quantity: 2, price: 7.5 },
-            { id: 3, name: 'Peynir (500g)', quantity: 1, price: 120 },
-            { id: 4, name: 'Yumurta (15\'li)', quantity: 1, price: 75 },
-            { id: 5, name: 'Meyve Suyu (1L)', quantity: 2, price: 40 }
-          ],
-          address: {
-            title: 'Ev',
-            fullAddress: 'Atatürk Mah. Cumhuriyet Cad. No:123 D:5, Kadıköy/İstanbul'
-          },
-          paymentMethod: 'Kapıda Kart'
-        },
-        {
-          id: 10003,
-          date: '2023-05-22', 
-          store: { id: 3, name: 'Hayat Su Bayisi', type: 'Su' }, 
-          total: 80.00,
-          status: 'Hazırlanıyor',
-          items: [
-            { id: 1, name: 'Damacana Su (19L)', quantity: 2, price: 40 }
-          ],
-          address: {
-            title: 'İş',
-            fullAddress: 'Levent Mah. İş Kuleleri No:1 Kat:15, Beşiktaş/İstanbul'
-          },
-          paymentMethod: 'Kapıda Nakit'
-        },
-        {
-          id: 10004,
-          date: '2023-05-23', 
-          store: { id: 1, name: 'Kebapçı Ahmet', type: 'Yemek' }, 
-          total: 220.00, 
-          status: 'Yolda',
-          items: [
-            { id: 1, name: 'Karışık Izgara', quantity: 1, price: 150 },
-            { id: 2, name: 'Salata', quantity: 1, price: 35 },
-            { id: 3, name: 'Kola (330ml)', quantity: 2, price: 20 }
-          ],
-          address: {
-            title: 'Ev',
-            fullAddress: 'Atatürk Mah. Cumhuriyet Cad. No:123 D:5, Kadıköy/İstanbul'
-          },
-          paymentMethod: 'Kapıda Kart'
-        }
-      ];
+          paymentMethod: order.paymentMethod === 'cash' ? 'Kapıda Nakit' : 'Kapıda Kart'
+        }));
       
-      setOrders(mockOrders);
+      setOrders(userOrders);
       setLoading(false);
     }, 1000);
-  }, []);
+  }, [user]);
 
   // Duruma göre filtreleme
   const filteredOrders = statusFilter === 'all' 

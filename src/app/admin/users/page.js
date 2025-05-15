@@ -25,8 +25,13 @@ function AdminUsersContent() {
   useEffect(() => {
     // Mock API çağrısı
     setTimeout(() => {
-      // Gerçek projede burası bir API isteği olacaktır
-      setUsers(mockUsers);
+      // Yöneticinin kendisini listelemiyoruz (gerçek uygulamada bu tür bir filtre API'da yapılabilir)
+      const adminEmail = localStorage.getItem('user') 
+        ? JSON.parse(localStorage.getItem('user')).email 
+        : '';
+      
+      const filteredUsers = mockUsers.filter(user => user.email !== adminEmail);
+      setUsers(filteredUsers);
       setLoading(false);
     }, 1000);
   }, []);

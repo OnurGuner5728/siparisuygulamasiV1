@@ -27,9 +27,9 @@ export default function MarketDetailPage() {
         if (foundMarket) {
           setMarket(foundMarket);
           
-          // Market için ürünleri filtrele
+          // Market için ürünleri filtrele - Şimdi sadece bu mağazaya ait ürünleri gösteriyoruz
           const marketRelatedProducts = mockProducts.filter(p => 
-            p.mainCategory === 'Market'
+            p.storeId === marketId
           );
           
           // Ürünlerin kategorilerini al

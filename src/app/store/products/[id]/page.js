@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import StoreGuard from '@/components/StoreGuard';
+import { mockProducts, mockCategories } from '@/app/data/mockdatas';
 
 export default function EditProduct() {
   return (
@@ -17,7 +18,8 @@ export default function EditProduct() {
 function EditProductContent() {
   const params = useParams();
   const router = useRouter();
-  const productId = params.id;
+  const productId = parseInt(params.id);
+  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -34,83 +36,48 @@ function EditProductContent() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    // Mock kategori ve ürün verilerini yükle
+    // Ürün ve kategori verilerini yükle
     const fetchData = async () => {
       setLoading(true);
       
-      // Kategorileri yükle (gerçek projede bir API isteği yapılacak)
-      const mockCategories = [
-        'Ana Yemekler',
-        'Yan Ürünler',
-        'İçecekler',
-        'Tatlılar',
-        'Atıştırmalıklar'
-      ];
-      
-      // Ürün verilerini yükle (gerçek projede bir API isteği yapılacak)
-      setTimeout(() => {
-        const mockProducts = [
-          {
-            id: 1,
-            name: 'Adana Kebap',
-            description: 'Lezzetli Adana kebap',
-            price: 120.00,
-            category: 'Ana Yemekler',
-            status: 'active',
-            image: 'https://via.placeholder.com/150',
-            rating: 4.8,
-            reviewCount: 120,
-            createdAt: '2023-01-15'
-          },
-          {
-            id: 2,
-            name: 'Urfa Kebap',
-            description: 'Lezzetli Urfa kebap',
-            price: 110.00,
-            category: 'Ana Yemekler',
-            status: 'active',
-            image: 'https://via.placeholder.com/150',
-            rating: 4.7,
-            reviewCount: 95,
-            createdAt: '2023-01-20'
-          },
-          {
-            id: 3,
-            name: 'Ayran',
-            description: 'Soğuk ayran',
-            price: 15.00,
-            category: 'İçecekler',
-            status: 'active',
-            image: 'https://via.placeholder.com/150',
-            rating: 4.5,
-            reviewCount: 200,
-            createdAt: '2023-01-10'
-          }
-        ];
+      // Mevcut mock verileri kullan
+      try {
+        // Kullanıcının mağazasına ait ürünü bul
+        const product = mockProducts.find(p => p.id === productId && p.storeId === user?.id);
         
-        // ID'ye göre ürünü bul
-        const product = mockProducts.find(p => p.id.toString() === productId);
-        
-        if (product) {
-          setFormData({
-            name: product.name,
-            description: product.description,
-            price: product.price.toString(),
-            category: product.category,
-            image: product.image,
-            status: product.status
-          });
-          setCategories(mockCategories);
+        if (!product) {
+          setError('Ürün bulunamadı veya bu ürünü düzenleme yetkiniz yok.');
           setLoading(false);
-        } else {
-          setError('Ürün bulunamadı');
-          setLoading(false);
+          return;
         }
-      }, 1000);
+        
+        // Kategorileri filtreleme (ürünün ana kategorisine ait olanlar)
+        const relevantCategories = mockCategories
+          .filter(c => c.mainCategory === product.mainCategory)
+          .map(c => c.name);
+        
+        setCategories(relevantCategories);
+        
+        // Form verilerini doldur
+        setFormData({
+          name: product.name,
+          description: product.description,
+          price: product.price.toString(),
+          category: product.category,
+          image: product.image,
+          status: product.status
+        });
+        
+      } catch (err) {
+        console.error('Ürün detayları yüklenirken hata:', err);
+        setError('Ürün detayları yüklenirken bir hata oluştu.');
+      }
+      
+      setLoading(false);
     };
 
     fetchData();
-  }, [productId]);
+  }, [productId, user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

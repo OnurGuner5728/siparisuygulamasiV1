@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import StoreGuard from '@/components/StoreGuard';
+import { mockProducts } from '@/app/data/mockdatas';
 
 export default function StoreProducts() {
   return (
@@ -15,6 +16,7 @@ export default function StoreProducts() {
 }
 
 function StoreProductsContent() {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,102 +29,24 @@ function StoreProductsContent() {
   useEffect(() => {
     // Mock API çağrısı
     setTimeout(() => {
-      // Gerçek projede burası bir API isteği olacaktır
-      const mockProducts = [
-        {
-          id: 1,
-          name: 'Adana Kebap',
-          description: 'Lezzetli Adana kebap',
-          price: 120.00,
-          category: 'Ana Yemekler',
-          status: 'active',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.8,
-          reviewCount: 120,
-          createdAt: '2023-01-15'
-        },
-        {
-          id: 2,
-          name: 'Urfa Kebap',
-          description: 'Lezzetli Urfa kebap',
-          price: 110.00,
-          category: 'Ana Yemekler',
-          status: 'active',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.7,
-          reviewCount: 95,
-          createdAt: '2023-01-20'
-        },
-        {
-          id: 3,
-          name: 'Ayran',
-          description: 'Soğuk ayran',
-          price: 15.00,
-          category: 'İçecekler',
-          status: 'active',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.5,
-          reviewCount: 200,
-          createdAt: '2023-01-10'
-        },
-        {
-          id: 4,
-          name: 'Döner Porsiyon',
-          description: 'Lezzetli tavuk döner porsiyon',
-          price: 85.00,
-          category: 'Ana Yemekler',
-          status: 'active',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.5,
-          reviewCount: 110,
-          createdAt: '2023-02-20'
-        },
-        {
-          id: 5,
-          name: 'Patates Kızartması',
-          description: 'Çıtır patates kızartması',
-          price: 35.00,
-          category: 'Yan Ürünler',
-          status: 'active',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.4,
-          reviewCount: 95,
-          createdAt: '2023-02-22'
-        },
-        {
-          id: 6,
-          name: 'Cola 330ml',
-          description: 'Soğuk kola 330ml',
-          price: 25.00,
-          category: 'İçecekler',
-          status: 'inactive',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.3,
-          reviewCount: 85,
-          createdAt: '2023-02-25'
-        },
-        {
-          id: 7,
-          name: 'Künefe',
-          description: 'Sıcak künefe tatlısı',
-          price: 60.00,
-          category: 'Tatlılar',
-          status: 'active',
-          image: 'https://via.placeholder.com/150',
-          rating: 4.9,
-          reviewCount: 150,
-          createdAt: '2023-03-01'
-        }
-      ];
-      
-      // Kategorileri çıkar
-      const uniqueCategories = Array.from(new Set(mockProducts.map(product => product.category)));
-      
-      setProducts(mockProducts);
-      setCategories(uniqueCategories);
+      // Kullanıcının mağazasına ait ürünleri filtrele
+      if (user && user.role === 'store') {
+        const storeProducts = mockProducts
+          .filter(product => product.storeId === user.id)
+          .map(product => ({
+            ...product, 
+            status: product.status || 'active'
+          }));
+        
+        // Kategori listesini oluştur
+        const uniqueCategories = [...new Set(storeProducts.map(p => p.category))];
+        
+        setProducts(storeProducts);
+        setCategories(uniqueCategories);
+      }
       setLoading(false);
     }, 1000);
-  }, []);
+  }, [user]);
 
   // Arama ve filtreleme
   const filteredProducts = products.filter(product => {

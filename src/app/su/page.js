@@ -7,18 +7,21 @@ export default function SuPage() {
   // Dummy data - Gerçek uygulamada API'den gelecek
   const [waterVendors, setWaterVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState([]);
 
   useEffect(() => {
     setTimeout(() => {
       setWaterVendors(mockWaterVendors);
+      
+      // Su kategorisine ait kampanyaları filtrele
+      const filteredCampaigns = mockCampaigns.filter(campaign => 
+        mockWaterVendors.some(v => v.id === campaign.storeId)
+      );
+      setCampaigns(filteredCampaigns);
+      
       setLoading(false);
     }, 500);
   }, []);
-
-  // Kampanyalar için data
-  const campaigns = mockCampaigns.filter(campaign => 
-    mockWaterVendors.some(v => v.name === campaign.store)
-  );
 
   // Su markaları
   const popularBrands = ['Hayat', 'Erikli', 'Saka', 'Sırma', 'Pınar', 'Damla', 'Nestle', 'Buzdağı'];
@@ -79,13 +82,18 @@ export default function SuPage() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Güncel Kampanyalar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map(campaign => (
-              <div key={campaign.id} className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h3 className="text-lg font-bold text-blue-700">{campaign.title}</h3>
-                <p className="text-sm text-blue-600">{campaign.description}</p>
-                <p className="text-xs text-gray-500 mt-2">Geçerli olduğu yer: {campaign.store}</p>
-              </div>
-            ))}
+            {campaigns.map(campaign => {
+              const vendor = mockWaterVendors.find(v => v.id === campaign.storeId);
+              const vendorName = vendor ? vendor.name : 'Bilinmeyen Satıcı';
+              
+              return (
+                <div key={campaign.id} className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h3 className="text-lg font-bold text-blue-700">{campaign.title}</h3>
+                  <p className="text-sm text-blue-600">{campaign.description}</p>
+                  <p className="text-xs text-gray-500 mt-2">Geçerli olduğu yer: {vendorName}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

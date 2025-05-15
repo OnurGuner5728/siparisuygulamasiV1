@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
-import { mockProducts, mockStores } from '@/app/data/mockdatas';
+import { mockProducts, mockStores, mockCategories } from '@/app/data/mockdatas';
 
 export default function EditProduct() {
   return (
@@ -58,7 +58,7 @@ function EditProductContent() {
           setFormData({
             name: product.name,
             description: product.description,
-            price: product.price.toString(),
+            price: parseFloat(product.price),
             storeId: product.storeId.toString(),
             category: product.category,
             mainCategory: product.mainCategory,
@@ -69,19 +69,15 @@ function EditProductContent() {
           // Mağaza seçildiğinde uygun kategorileri yükle
           const store = stores.find(s => s.id === product.storeId);
           if (store) {
-            let storeCategories = [];
+            // Ana kategoriyi bul
+            const mainCategory = mockCategories.find(cat => cat.id === parseInt(store.categoryId));
             
-            if (store.category === 'Yemek') {
-              storeCategories = ['Ana Yemekler', 'İçecekler', 'Yan Ürünler', 'Tatlılar'];
-            } else if (store.category === 'Market') {
-              storeCategories = ['Et Ürünleri', 'Meyve Sebze', 'Kahvaltılık', 'Temizlik'];
-            } else if (store.category === 'Su') {
-              storeCategories = ['İçme Suyu', 'Maden Suyu'];
-            } else if (store.category === 'Aktüel') {
-              storeCategories = ['Elektronik', 'Ev Gereçleri', 'Giyim', 'Oyuncak'];
+            if (mainCategory && mainCategory.subcategories) {
+              const subCategories = mainCategory.subcategories.map(subcat => subcat.name);
+              setCategories(subCategories);
+            } else {
+              setCategories([]);
             }
-            
-            setCategories(storeCategories);
           }
           
           setNotFound(false);
@@ -102,30 +98,25 @@ function EditProductContent() {
       if (store) {
         setFormData(prev => ({
           ...prev,
-          mainCategory: store.category
+          mainCategory: store.categoryId
         }));
 
-        // Seçilen mağazanın kategorisine göre alt kategorileri getir
-        let storeCategories = [];
+        // Ana kategoriyi bul
+        const mainCategory = mockCategories.find(cat => cat.id === parseInt(store.categoryId));
         
-        if (store.category === 'Yemek') {
-          storeCategories = ['Ana Yemekler', 'İçecekler', 'Yan Ürünler', 'Tatlılar'];
-        } else if (store.category === 'Market') {
-          storeCategories = ['Et Ürünleri', 'Meyve Sebze', 'Kahvaltılık', 'Temizlik'];
-        } else if (store.category === 'Su') {
-          storeCategories = ['İçme Suyu', 'Maden Suyu'];
-        } else if (store.category === 'Aktüel') {
-          storeCategories = ['Elektronik', 'Ev Gereçleri', 'Giyim', 'Oyuncak'];
-        }
-        
-        setCategories(storeCategories);
-        
-        // Eğer mevcut kategori bu yeni seçenekler arasında değilse, ilk kategoriyi seç
-        if (!storeCategories.includes(formData.category) && storeCategories.length > 0) {
-          setFormData(prev => ({
-            ...prev,
-            category: storeCategories[0]
-          }));
+        if (mainCategory && mainCategory.subcategories) {
+          const subCategories = mainCategory.subcategories.map(subcat => subcat.name);
+          setCategories(subCategories);
+          
+          // Eğer mevcut kategori bu yeni seçenekler arasında değilse, ilk kategoriyi seç
+          if (!subCategories.includes(formData.category) && subCategories.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              category: subCategories[0]
+            }));
+          }
+        } else {
+          setCategories([]);
         }
       }
     }

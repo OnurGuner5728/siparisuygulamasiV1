@@ -27,9 +27,9 @@ export default function WaterVendorDetailPage() {
         if (foundVendor) {
           setVendor(foundVendor);
           
-          // Su satıcısı için ürünleri filtrele
+          // Su satıcısı için ürünleri filtrele - Şimdi sadece bu satıcıya ait ürünleri gösteriyoruz
           const vendorRelatedProducts = mockProducts.filter(p => 
-            p.mainCategory === 'Su'
+            p.storeId === vendorId
           );
           
           // Ürünlerin kategorilerini al

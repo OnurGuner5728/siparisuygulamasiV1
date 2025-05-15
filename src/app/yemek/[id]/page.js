@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { mockRestaurants } from '@/app/data/mockdatas';
+import { mockStores } from '@/app/data/mockdatas';
 import { useCart } from '@/contexts/CartContext';
 
 export default function RestaurantDetail() {
@@ -19,11 +19,11 @@ export default function RestaurantDetail() {
     setLoading(true);
     
     // ID'ye göre restoran verilerini al
-    const restaurantData = mockRestaurants.find(r => r.id === parseInt(id));
+    const restaurantData = mockStores.find(r => r.id === parseInt(id));
     
     setTimeout(() => {
       setRestaurant(restaurantData);
-      if (restaurantData?.categories?.length > 0) {
+      if (restaurantData?.menuCategories?.length > 0) {
         setActiveCategory('Tümü');
       }
       setLoading(false);
@@ -54,12 +54,12 @@ export default function RestaurantDetail() {
   };
 
   const getFilteredItems = () => {
-    if (!restaurant || !restaurant.menu) return [];
+    if (!restaurant || !restaurant.menuItems) return [];
     
     if (activeCategory === 'Tümü') {
-      return restaurant.menu;
+      return restaurant.menuItems;
     } else {
-      return restaurant.menu.filter(item => item.category === activeCategory);
+      return restaurant.menuItems.filter(item => item.category === activeCategory);
     }
   };
 

@@ -23,7 +23,7 @@ function Header() {
             <Link href="/yemek" className="text-gray-600 hover:text-blue-600">Yemek</Link>
             <Link href="/market" className="text-gray-600 hover:text-blue-600">Market</Link>
             <Link href="/su" className="text-gray-600 hover:text-blue-600">Su</Link>
-            <Link href="/aktuel" className="text-gray-600 hover:text-blue-600">Aktüel</Link>
+            <Link href="/aktuel" className="text-gray-600 hover:text-blue-600">{user?.role === 'admin' || user?.modulePermissions?.aktuel ? 'Aktüel' : ''}</Link>
           </nav>
           <div className="flex items-center space-x-4">
             {!isAuthenticated ? (

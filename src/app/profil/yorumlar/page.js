@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
+import { mockProducts, mockStores, mockOrders } from '@/app/data/mockdatas';
 
 export default function Reviews() {
   return (
@@ -20,40 +21,40 @@ function ReviewsContent() {
   useEffect(() => {
     // API'den değerlendirme verilerini çekiyoruz (simülasyon)
     setTimeout(() => {
-      // Örnek değerlendirme verileri
-      const mockReviews = [
-        {
-          id: 101,
-          storeId: 1,
-          storeName: 'Kebapçı Ahmet',
-          storeType: 'Yemek',
-          orderId: 10001,
-          orderDate: '2023-05-10',
-          rating: 4,
-          comment: 'Kebaplar lezzetliydi fakat servis biraz geç geldi.',
-          photos: [],
-          date: '2023-05-12',
-          likes: 3
-        },
-        {
-          id: 102,
-          storeId: 2,
-          storeName: 'Süpermarket A',
-          storeType: 'Market',
-          orderId: 10002,
-          orderDate: '2023-05-15',
-          rating: 5,
-          comment: 'Ürünler taze ve zamanında teslim edildi. Teşekkürler!',
-          photos: [],
-          date: '2023-05-16',
-          likes: 7
-        }
-      ];
+      // Bu örnekte yorumlar merkezi bir mock datadan gelmiyor.
+      // Gerçek projede bu veriler veritabanından gelecek.
+      // Mevcut mock verileri kullanarak ilişkili yorumlar oluşturuyoruz
       
-      setReviews(mockReviews);
+      // Kullanıcının siparişlerini filtrele
+      const userOrders = mockOrders.filter(order => order.customerId === user?.id);
+      
+      // Her sipariş için rastgele yorum üret (gerçek projede yorumlar veritabanından gelecek)
+      const generatedReviews = userOrders
+        .slice(0, 2) // Sadece 2 sipariş için yorum göster
+        .map((order, index) => {
+          const store = mockStores.find(s => s.id === order.storeId);
+          
+          return {
+            id: 100 + index + 1,
+            storeId: order.storeId,
+            storeName: order.storeName,
+            storeType: order.category,
+            orderId: order.id,
+            orderDate: order.orderDate.split('T')[0],
+            rating: 4 + (index % 2), // 4 veya 5
+            comment: index === 0 
+              ? 'Yemekler lezzetliydi fakat servis biraz geç geldi.' 
+              : 'Ürünler taze ve zamanında teslim edildi. Teşekkürler!',
+            photos: [],
+            date: new Date(new Date(order.orderDate).getTime() + 2*24*60*60*1000).toISOString().split('T')[0], // 2 gün sonra
+            likes: 3 + (index * 4)
+          };
+        });
+      
+      setReviews(generatedReviews);
       setLoading(false);
     }, 1000);
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (

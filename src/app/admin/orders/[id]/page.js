@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
-import { mockOrders } from '@/app/data/mockdatas';
+import { mockOrders, mockAddresses } from '@/app/data/mockdatas';
 
 export default function OrderDetails() {
   return (
@@ -32,7 +32,13 @@ function OrderDetailsContent() {
         const foundOrder = mockOrders.find(order => order.id === orderId);
         
         if (foundOrder) {
-          setOrder(foundOrder);
+          // Teslimat adresini ekle
+          const deliveryAddress = mockAddresses.find(addr => addr.id === foundOrder.deliveryAddressId);
+          
+          setOrder({
+            ...foundOrder,
+            deliveryAddress: deliveryAddress || {} // Eğer adres bulunamazsa boş nesne kullan
+          });
           setNotFound(false);
         } else {
           setNotFound(true);

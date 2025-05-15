@@ -1,24 +1,34 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { mockRestaurants, mockCampaigns } from '@/app/data/mockdatas';
+import { mockStores, mockCampaigns } from '@/app/data/mockdatas';
 
 export default function YemekPage() {
-  // Dummy data - Gerçek uygulamada API'den gelecek
+  // Restoranları ve kampanyaları state olarak tut
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState([]);
 
   useEffect(() => {
+    // API çağrısı simülasyonu
     setTimeout(() => {
-      setRestaurants(mockRestaurants);
+      // Yemek kategorisindeki (modulePermissions.yemek=true) restoranları filtrele ve yükle
+      const yemekStores = mockStores.filter(store => 
+        store.modulePermissions.yemek === true && 
+        store.status === 'active' && 
+        store.approved === true
+      );
+      setRestaurants(yemekStores);
+      
+      // Yemek kategorisine ait kampanyaları filtrele
+      const filteredCampaigns = mockCampaigns.filter(campaign => 
+        yemekStores.some(r => r.id === campaign.storeId)
+      );
+      setCampaigns(filteredCampaigns);
+      
       setLoading(false);
     }, 500);
   }, []);
-
-  // Kampanyalar için data
-  const campaigns = mockCampaigns.filter(campaign => 
-    mockRestaurants.some(r => r.name === campaign.store)
-  );
 
   // Filtreler
   const [filters, setFilters] = useState({
@@ -28,10 +38,12 @@ export default function YemekPage() {
   });
 
   // Filtrelenen restoranlar
-  const [filteredRestaurants, setFilteredRestaurants] = useState(restaurants);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
 
   // Filtre değiştiğinde restoranları filtrele
   useEffect(() => {
+    if (!restaurants.length) return;
+    
     let result = restaurants;
     
     if (filters.cuisine) {
@@ -50,7 +62,9 @@ export default function YemekPage() {
   }, [filters, restaurants]);
 
   // Mutfak tiplerini restaurants dizisinden çıkart
-  const cuisineTypes = [...new Set(restaurants.map(r => r.cuisine))];
+  const cuisineTypes = restaurants.length 
+    ? [...new Set(restaurants.map(r => r.cuisine))]
+    : [];
 
   // Filtre değişikliklerini yönet
   const handleFilterChange = (filterType, value) => {

@@ -7,18 +7,21 @@ export default function MarketPage() {
   // Dummy data - Gerçek uygulamada API'den gelecek
   const [markets, setMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState([]);
 
   useEffect(() => {
     setTimeout(() => {
       setMarkets(mockMarkets);
+      
+      // Market kategorisine ait kampanyaları filtrele
+      const filteredCampaigns = mockCampaigns.filter(campaign => 
+        mockMarkets.some(m => m.id === campaign.storeId)
+      );
+      setCampaigns(filteredCampaigns);
+      
       setLoading(false);
     }, 500);
   }, []);
-
-  // Kampanyalar için data
-  const campaigns = mockCampaigns.filter(campaign => 
-    mockMarkets.some(m => m.name === campaign.store)
-  );
 
   // Kategori listesi
   const productCategories = [
@@ -80,13 +83,18 @@ export default function MarketPage() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Güncel Kampanyalar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map(campaign => (
-              <div key={campaign.id} className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h3 className="text-lg font-bold text-green-700">{campaign.title}</h3>
-                <p className="text-sm text-green-600">{campaign.description}</p>
-                <p className="text-xs text-gray-500 mt-2">Geçerli olduğu yer: {campaign.store}</p>
-              </div>
-            ))}
+            {campaigns.map(campaign => {
+              const store = mockMarkets.find(m => m.id === campaign.storeId);
+              const storeName = store ? store.name : 'Bilinmeyen Mağaza';
+              
+              return (
+                <div key={campaign.id} className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h3 className="text-lg font-bold text-green-700">{campaign.title}</h3>
+                  <p className="text-sm text-green-600">{campaign.description}</p>
+                  <p className="text-xs text-gray-500 mt-2">Geçerli olduğu yer: {storeName}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

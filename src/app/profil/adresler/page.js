@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function AddressesPage() {
-  // Dummy veri - Gerçek uygulamada API'den alınır
+  const { user } = useAuth();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -21,37 +22,21 @@ export default function AddressesPage() {
     isDefault: false
   });
 
-  // Örnek adres verisi yükleme
+  // Kullanıcının adres verilerini yükleme
   useEffect(() => {
     // API çağrısı simülasyonu
     setTimeout(() => {
-      setAddresses([
-        { 
-          id: 1, 
-          title: 'Ev', 
-          fullName: 'Ahmet Yılmaz',
-          phone: '0555 123 4567',
-          city: 'İstanbul',
-          district: 'Kadıköy',
-          neighborhood: 'Atatürk Mahallesi',
-          fullAddress: 'Cumhuriyet Cad. No:123 D:5',
-          isDefault: true 
-        },
-        { 
-          id: 2, 
-          title: 'İş', 
-          fullName: 'Ahmet Yılmaz',
-          phone: '0555 123 4567',
-          city: 'İstanbul',
-          district: 'Beşiktaş',
-          neighborhood: 'Levent Mahallesi',
-          fullAddress: 'İş Kuleleri No:1 Kat:15',
-          isDefault: false 
-        }
-      ]);
+      // Kullanıcının adreslerini mockUsers'dan al
+      // Normalde bu veriler API'den gelecek
+      if (user && user.addresses) {
+        setAddresses(user.addresses);
+      } else {
+        // Eğer kullanıcı adresleri yoksa boş dizi göster
+        setAddresses([]);
+      }
       setLoading(false);
     }, 1000);
-  }, []);
+  }, [user]);
 
   // Form verilerini güncelle
   const handleChange = (e) => {
@@ -93,6 +78,9 @@ export default function AddressesPage() {
       fullAddress: '',
       isDefault: false
     });
+    
+    // Gerçek uygulamada burada API'ye PATCH isteği yapılır
+    // Kullanıcı bilgileri güncellenir
   };
 
   // Adres düzenle

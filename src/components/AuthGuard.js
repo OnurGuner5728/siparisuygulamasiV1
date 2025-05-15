@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
-export default function AuthGuard({ children, requiredRole }) {
+export default function AuthGuard({ children, requiredRole, permissionType = 'view' }) {
   const { isAuthenticated, hasPermission, loading, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -21,34 +21,29 @@ export default function AuthGuard({ children, requiredRole }) {
       return;
     }
 
-    // Eğer giriş yapılmış fakat yetkisi yoksa ana sayfaya yönlendir
-    if (isAuthenticated && requiredRole && !hasPermission(requiredRole)) {
-      alert(`Bu sayfaya erişim için gerekli yetkiye sahip değilsiniz.`);
+    // Özel izin kontrolü: Eğer istenilen role sahip değilse ana sayfaya yönlendir
+    // Bunu hasPermission fonksiyonu ile kontrol ediyoruz
+    if (requiredRole && !hasPermission(requiredRole, permissionType)) {
+      alert('Bu sayfaya erişim için gerekli yetkiye sahip değilsiniz.');
       router.push('/');
       return;
     }
-  }, [isAuthenticated, hasPermission, loading, router, pathname, requiredRole, user]);
+  }, [loading, isAuthenticated, requiredRole, permissionType, router, pathname, hasPermission]);
 
-  // Eğer yükleniyor durumdaysa
+  // Yükleme sırasında bir şey gösterme
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
-  // Korumalı sayfaysa ve giriş yapılmadıysa veya yetkisi yoksa null döndür
-  if (requiredRole) {
-    if (!isAuthenticated) {
-      return null; // useEffect ile yönlendirme yapılacak
-    }
-
-    if (!hasPermission(requiredRole)) {
-      return null; // useEffect ile yönlendirme yapılacak
-    }
+  // Erişim izni yoksa veya yükleme sırasında null döndür
+  if ((requiredRole && !isAuthenticated) || (requiredRole && !hasPermission(requiredRole, permissionType))) {
+    return null;
   }
 
-  // Tüm kontroller tamam, children'ı render et
+  // Erişim izni varsa, çocuk bileşenleri göster
   return children;
 } 
