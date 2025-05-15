@@ -21,40 +21,41 @@ Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Ta
 - [x] Şifre Sıfırlama Sayfası - `/src/app/reset-password/page.js`
 
 ### Onboarding
-- [ ] Onboarding Sayfası 01 - `/src/app/onboarding/page.js` (oluşturulması gerekiyor)
-- [ ] Onboarding Sayfası 02 - Onboarding içine adım olarak eklenecek
-- [ ] Onboarding Sayfası 03 - Onboarding içine adım olarak eklenecek
-- [ ] Onboarding Sayfası 04 - Onboarding içine adım olarak eklenecek
-- [ ] Splash Page 01 - `/src/app/splash/page.js` (oluşturulması gerekiyor)
-- [ ] Splash Page 02 - Alternatif splash tasarımı
+- [x] Onboarding Sayfası 01 - `/src/app/onboarding/page.js`
+- [x] Onboarding Sayfası 02 - Onboarding içine adım olarak eklenecek
+- [x] Onboarding Sayfası 03 - Onboarding içine adım olarak eklenecek
+- [x] Onboarding Sayfası 04 - Onboarding içine adım olarak eklenecek
+- [x] Splash Page 01 - `/src/app/splash/page.js`
+- [x] Splash Page 02 - Alternatif splash tasarımı
 
 ### Kullanıcı Profili ve Hesap
-- [ ] Profil Sayfası - `/src/app/profil/page.js`
-- [ ] Profil Düzenleme Sayfası - `/src/app/profil/edit/page.js`
-- [ ] Adreslerim Sayfası - `/src/app/profil/adresler/page.js`
-- [ ] Yeni Adres Ekleme Sayfası - `/src/app/profil/adresler/yeni/page.js`
-- [ ] Ödeme Yöntemleri Sayfası - `/src/app/profil/payment-methods/page.js`
-- [ ] Kart Ekleme Sayfası - `/src/app/profil/payment-methods/add-card/page.js`
+- [x] Profil Sayfası - `/src/app/profil/page.js`
+- [x] Profil Düzenleme Sayfası - `/src/app/profil/edit/page.js`
+- [x] Adreslerim Sayfası - `/src/app/profil/adresler/page.js`
+- [x] Yeni Adres Ekleme Sayfası - `/src/app/profil/adresler/yeni/page.js`
+- [x] Adres Düzenleme Sayfası - `/src/app/profil/adresler/duzenle/[id]/page.js`
+- [x] Ödeme Yöntemleri Sayfası - `/src/app/profil/payment-methods/page.js`
+- [x] Kart Ekleme Sayfası - `/src/app/profil/payment-methods/add-card/page.js`
 
 ### Sipariş ve Alışveriş
-- [ ] Sepet Sayfası - `/src/app/sepet/page.js`
-- [ ] Sepet Düzenleme Sayfası - `/src/app/sepet/edit/page.js`
-- [ ] Ödeme Başarılı Sayfası - `/src/app/checkout/success/page.js`
+- [x] Sepet Sayfası - `/src/app/sepet/page.js` *giriş yapmadan da sepet görünür olsun
+- [x] Sepet Düzenleme Sayfası - `/src/app/sepet/edit/page.js`
+- [x] Ödeme Başarılı Sayfası - `/src/app/checkout/success/page.js`
 - [ ] Ödeme Çekme Başarılı Sayfası - `/src/app/store/withdraw/success/page.js`
-- [ ] Değerlendirme Ekranı - `/src/app/review/page.js`
-- [ ] Siparişlerim Sayfası 01 - `/src/app/profil/siparisler/page.js`
+- [x] Değerlendirme Ekranı - `/src/app/review/page.js`
+- [x] Siparişlerim Sayfası 01 - `/src/app/profil/siparisler/page.js`
 - [ ] Siparişlerim Sayfası 02 - İkinci bir tasarım alternatifi
-- [ ] Sipariş Takip Sayfası 01 - `/src/app/profil/siparisler/[id]/tracking/page.js`
-- [ ] Sipariş Takip Sayfası 02 - İkinci bir tasarım alternatifi
+- [x] Sipariş Takip Sayfası 01 - `/src/app/profil/siparisler/[id]/tracking/page.js`
+- [x] Sipariş Takip Sayfası 02 - İkinci bir tasarım alternatifi
 
 ### Arama ve Filtreleme
-- [ ] Arama Sayfası - `/src/app/search/page.js`
-- [ ] Filtreleme Sayfası - `/src/app/search/filter/page.js`
+- [x] Arama Sayfası - `/src/app/search/page.js`
+- [x] Filtreleme Sayfası - `/src/app/search/filter/page.js`
 
 ### Restoran ve Ürün
-- [ ] Restoran Görünümü 01 - `/src/app/yemek/store/[id]/page.js`
+- [x] Restoran Görünümü 01 - `/src/app/yemek/store/[id]/page.js`
 - [ ] Restoran Görünümü 02 - İkinci bir tasarım alternatifi
-- [ ] Yemek Detay Sayfası 01 - `/src/app/yemek/[storeId]/[productId]/page.js`
+- [x] Yemek Detay Sayfası 01 - `/src/app/yemek/[storeId]/[productId]/page.js`
 - [ ] Yemek Detay Sayfası 02 - İkinci bir tasarım alternatifi
 - [ ] Yemek Kategorisi (Food - Burgers) - `/src/app/yemek/kategori/[categoryId]/page.js`
 - [ ] Şef Yemek Detayları - `/src/app/store/products/[id]/page.js`
@@ -67,11 +68,11 @@ Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Ta
 ### İletişim ve Bildirimler
 - [ ] Bildirimler Sayfası - `/src/app/notifications/page.js`
 - [ ] Mesajlar Sayfası - `/src/app/messages/page.js`
-- [ ] Kurye Mesaj Ekranı - `/src/app/delivery/[id]/message/page.js`
-- [ ] Kurye Arama Ekranı - `/src/app/delivery/[id]/call/page.js`
+- [x] Kurye Mesaj Ekranı - `/src/app/delivery/[id]/message/page.js`
+- [x] Kurye Arama Ekranı - `/src/app/delivery/[id]/call/page.js`
 
 ### Diğer Sayfalar
-- [ ] Konum Erişim İzni Sayfası - `/src/app/location-access/page.js`
+- [x] Konum Erişim İzni Sayfası - `/src/app/location-access/page.js`
 - [ ] Doğrulama Sayfası - `/src/app/verification/page.js`
 - [ ] Teklif/Fırsat Sayfası - `/src/app/offers/page.js`
 - [ ] Menü Sayfası (Alternatif 1) - `/src/app/menu/page.js`
@@ -141,4 +142,9 @@ Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Ta
 - Temel UI bileşenleri oluşturuldu: Button, Input, Rating, Checkbox, RadioButton (tamamlandı)
 - Kart bileşenleri oluşturuldu: CategoryCard, RestaurantCard, ProductCard (tamamlandı)
 - İleri seviye UI bileşenleri oluşturuldu: Modal, AlertModal, FilterModal, Pagination, FileUploader, CartSidebar (tamamlandı)
-- Sıradaki görev: Eksik sayfaların (Profil, Sepet, Onboarding, vb.) oluşturulması ve tasarımın uygulanması 
+- Adres sayfaları oluşturuldu: Adreslerim, Yeni Adres Ekleme, Adres Düzenleme (tamamlandı)
+- Sepet sayfaları oluşturuldu: Sepet, Sepet Düzenleme (tamamlandı)
+- Sipariş sayfaları oluşturuldu: Siparişlerim, Değerlendirme (tamamlandı)
+- Restoran sayfası oluşturuldu: Restoran Görünümü, Menü ve Ürünleri (tamamlandı)
+- Yemek detay sayfası oluşturuldu: Yemek Detayı, Seçenekler ve Sepete Ekleme (tamamlandı)
+- Sıradaki görev: Kategoriye göre yemek listeleme sayfasının oluşturulması 

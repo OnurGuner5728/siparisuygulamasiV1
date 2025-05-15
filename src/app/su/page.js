@@ -173,7 +173,7 @@ export default function SuPage() {
           filteredVendors.map(vendor => (
             <Link 
               key={vendor.id} 
-              href={`/su/${vendor.id}`}
+              href={`/su/store/${vendor.id}`}
               className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
             >
               <div className="h-48 bg-gray-200 relative">

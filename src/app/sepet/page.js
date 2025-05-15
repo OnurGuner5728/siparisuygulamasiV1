@@ -1,216 +1,337 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../contexts/AuthContext';
-import { useCart } from '../../contexts/CartContext';
+import Link from 'next/link';
+import Image from 'next/image';
+import { FiPlus, FiMinus, FiTrash2, FiArrowLeft, FiShoppingBag, FiClock, FiInfo } from 'react-icons/fi';
 
-export default function Cart() {
-  return <CartContent />;
-}
+// Demo sepet ürünleri (gerçek uygulamada API'dan gelecektir)
+const demoCartItems = [
+  {
+    id: 'item1',
+    productId: 'product1',
+    storeId: 'store1',
+    name: 'Kral Burger Menü',
+    image: '/images/products/product-placeholder.jpg',
+    price: 125.90,
+    quantity: 2,
+    options: ['Orta Boy', 'Cola'],
+    notes: 'Soğansız olsun lütfen'
+  },
+  {
+    id: 'item2',
+    productId: 'product2',
+    storeId: 'store1',
+    name: 'Patates Kızartması (Büyük)',
+    image: '/images/products/product-placeholder.jpg',
+    price: 45.00,
+    quantity: 1,
+    options: ['Ketçap İlave'],
+    notes: ''
+  },
+  {
+    id: 'item3',
+    productId: 'product3',
+    storeId: 'store1',
+    name: 'Çikolatalı Milkshake',
+    image: '/images/products/product-placeholder.jpg',
+    price: 35.50,
+    quantity: 1,
+    options: [],
+    notes: ''
+  }
+];
 
-function CartContent() {
-  const { 
-    cartItems, 
-    removeFromCart,
-    removeItemCompletely,
-    addToCart,
-    calculateSubtotal,
-    calculateDeliveryFee,
-    calculateTotal
-  } = useCart();
-  
-  const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const { isAuthenticated } = useAuth();
+// Demo restoran bilgisi
+const demoStore = {
+  id: 'store1',
+  name: 'Lezzet Durağı Restoran',
+  image: '/images/stores/store-placeholder.jpg',
+  minOrder: 100,
+  deliveryFee: 15,
+  deliveryTime: '25-40 dk',
+  distance: 1.8
+};
+
+export default function CartPage() {
   const router = useRouter();
   
-  const handleRemoveItem = (itemId) => {
-    removeFromCart(itemId);
+  // Sepet durumu
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [store, setStore] = useState(null);
+  
+  // Promosyon kodu
+  const [promoCode, setPromoCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [promoError, setPromoError] = useState('');
+  
+  // Sepet öğelerini yükle
+  useEffect(() => {
+    // Gerçek uygulamada API'den sepet verisi çekilir
+    setLoading(true);
+    
+    // API çağrısı simulasyonu
+    setTimeout(() => {
+      setCartItems(demoCartItems);
+      setStore(demoStore);
+      setLoading(false);
+    }, 500);
+  }, []);
+  
+  // Ürün miktarı artırma
+  const increaseQuantity = (itemId) => {
+    setCartItems(cartItems.map(item => 
+      item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
+    ));
   };
   
-  const handleAddItem = (item) => {
-    addToCart(item);
+  // Ürün miktarı azaltma
+  const decreaseQuantity = (itemId) => {
+    setCartItems(cartItems.map(item => 
+      item.id === itemId && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item
+    ));
   };
   
-  const handleRemoveCompletely = (itemId) => {
-    removeItemCompletely(itemId);
+  // Ürünü sepetten kaldırma
+  const removeItem = (itemId) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
   };
   
-  const handleApplyCoupon = () => {
-    // İndirim kuponu uygulaması (demo amaçlı)
-    if (couponCode.toUpperCase() === 'INDIRIM20') {
-      // %20 indirim
-      const subtotal = calculateSubtotal();
-      setDiscount(subtotal * 0.2);
-      alert('İndirim kuponu başarıyla uygulandı!');
+  // Promosyon kodu uygulama
+  const applyPromoCode = () => {
+    if (promoCode.trim() === '') {
+      setPromoError('Lütfen bir promosyon kodu girin');
+      return;
+    }
+    
+    // Gerçek uygulamada API'ye promosyon kodu gönderilir
+    // Burada örnek olarak basit bir kontrol yapıyoruz
+    if (promoCode.toUpperCase() === 'INDIRIM20') {
+      setDiscount(subtotal * 0.2); // %20 indirim
+      setPromoError('');
     } else {
       setDiscount(0);
-      alert('Geçersiz kupon kodu');
-    }
-  };
-
-  const handleCheckout = () => {
-    if (!isAuthenticated) {
-      // Kullanıcı giriş yapmamışsa, giriş sayfasına yönlendir
-      localStorage.setItem('redirectAfterLogin', '/checkout');
-      router.push('/login');
-    } else {
-      // Kullanıcı giriş yapmışsa, ödeme sayfasına yönlendir
-      router.push('/checkout');
+      setPromoError('Geçersiz promosyon kodu');
     }
   };
   
-  if (cartItems.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Sepetiniz Boş</h1>
-          <p className="text-lg text-gray-600 mb-8">Sepetinize henüz ürün eklemediniz.</p>
-          <Link 
-            href="/" 
-            className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
-            Alışverişe Başla
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
+  // Sepet toplamını hesaplama
+  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const deliveryFee = store ? store.deliveryFee : 0;
+  const total = subtotal + deliveryFee - discount;
+  
+  // Minimum sipariş kontrolü
+  const minOrderMet = store ? subtotal >= store.minOrder : true;
+  
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Sepetim</h1>
-      
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sepet Ürünleri */}
-        <div className="lg:w-2/3">
-          <div className="bg-white rounded-lg shadow-md">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex flex-col md:flex-row items-start md:items-center py-6 px-4 border-b last:border-b-0">
-                <div className="w-full md:w-16 h-16 bg-gray-200 rounded mb-4 md:mb-0 md:mr-6 flex items-center justify-center">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded" />
-                  ) : (
-                    <span className="text-gray-400 text-xs">No Image</span>
-                  )}
-                </div>
-                
-                <div className="flex-grow mb-4 md:mb-0">
-                  <h3 className="text-lg font-semibold">{item.name}</h3>
-                  {item.storeName && (
-                    <p className="text-sm text-gray-500">{item.storeName}</p>
-                  )}
-                  <p className="text-sm text-gray-500 mt-2">{item.price.toFixed(2)} TL</p>
-                </div>
-                
-                <div className="flex items-center">
-                  <button 
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-2 hover:bg-gray-200"
-                    aria-label="Azalt"
-                  >
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                    </svg>
-                  </button>
-                  
-                  <span className="mx-3 font-medium">{item.quantity}</span>
-                  
-                  <button 
-                    onClick={() => handleAddItem(item)}
-                    className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center ml-2 hover:bg-gray-200"
-                    aria-label="Arttır"
-                  >
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </button>
-                  
-                  <button 
-                    onClick={() => handleRemoveCompletely(item.id)}
-                    className="ml-6 text-red-600 hover:text-red-800"
-                    aria-label="Kaldır"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Başlık */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center">
+            <button 
+              onClick={() => router.back()} 
+              className="mr-3 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              aria-label="Geri"
+            >
+              <FiArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-800">Sepetim</h1>
           </div>
         </div>
-        
-        {/* Sipariş Özeti */}
-        <div className="lg:w-1/3">
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Sipariş Özeti</h2>
+      </div>
+      
+      <div className="container mx-auto px-4 py-6 pb-32">
+        {loading ? (
+          // Yükleniyor durumu
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+          </div>
+        ) : cartItems.length === 0 ? (
+          // Boş sepet durumu
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FiShoppingBag className="text-gray-400 text-2xl" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Sepetiniz boş</h3>
+            <p className="text-gray-500 mb-6">Lezzetli yemekler sizi bekliyor!</p>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-6 rounded-lg hover:from-orange-600 hover:to-red-700"
+            >
+              Restoranlara Göz At
+            </Link>
+          </div>
+        ) : (
+          // Dolu sepet
+          <div className="space-y-4">
+            {/* Restoran Bilgisi */}
+            {store && (
+              <div className="bg-white rounded-lg shadow-sm p-4 flex items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400">
+                    <span className="text-xs">Resim</span>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="font-medium text-gray-900">{store.name}</h3>
+                  <div className="flex items-center text-sm text-gray-500 mt-1">
+                    <FiClock className="mr-1" size={14} />
+                    <span>{store.deliveryTime} • {store.distance} km</span>
+                  </div>
+                </div>
+              </div>
+            )}
             
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Ara Toplam</span>
-                <span>{calculateSubtotal().toFixed(2)} TL</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Teslimat Ücreti</span>
-                <span>{calculateDeliveryFee() === 0 ? 'Ücretsiz' : `${calculateDeliveryFee().toFixed(2)} TL`}</span>
-              </div>
-              
-              {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>İndirim</span>
-                  <span>-{discount.toFixed(2)} TL</span>
+            {/* Sepet Öğeleri */}
+            <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-100">
+              {cartItems.map((item) => (
+                <div key={item.id} className="p-4">
+                  <div className="flex items-start">
+                    <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400">
+                        <span className="text-xs">Resim</span>
+                      </div>
+                    </div>
+                    
+                    <div className="ml-4 flex-1">
+                      <div className="flex justify-between">
+                        <h4 className="font-medium text-gray-900">{item.name}</h4>
+                        <span className="font-medium text-gray-900">{(item.price * item.quantity).toFixed(2)} TL</span>
+                      </div>
+                      
+                      {item.options.length > 0 && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {item.options.join(', ')}
+                        </p>
+                      )}
+                      
+                      {item.notes && (
+                        <p className="text-xs text-gray-500 italic mt-1">
+                          Not: {item.notes}
+                        </p>
+                      )}
+                      
+                      <div className="flex justify-between items-center mt-3">
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => decreaseQuantity(item.id)}
+                            className="p-1 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full"
+                            disabled={item.quantity <= 1}
+                          >
+                            <FiMinus size={16} />
+                          </button>
+                          <span className="mx-3 text-gray-800 min-w-[20px] text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => increaseQuantity(item.id)}
+                            className="p-1 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full"
+                          >
+                            <FiPlus size={16} />
+                          </button>
+                        </div>
+                        
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-              
-              <div className="border-t pt-4 mt-4">
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Toplam</span>
-                  <span>{(calculateTotal() - discount).toFixed(2)} TL</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">KDV Dahil</p>
-              </div>
+              ))}
             </div>
             
-            <div className="mb-6">
+            {/* Promosyon Kodu */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <h3 className="font-medium text-gray-800 mb-3">Promosyon Kodu</h3>
               <div className="flex">
                 <input
                   type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-l focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="İndirim Kodu"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Promosyon kodunuzu girin"
+                  className="flex-1 p-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
                 <button
-                  onClick={handleApplyCoupon}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-r hover:bg-gray-300 focus:outline-none"
+                  onClick={applyPromoCode}
+                  className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 rounded-r-lg hover:from-orange-600 hover:to-red-700"
                 >
                   Uygula
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Deneme için: INDIRIM20</p>
+              {promoError && (
+                <p className="text-red-500 text-sm mt-2">{promoError}</p>
+              )}
+              {discount > 0 && (
+                <p className="text-green-600 text-sm mt-2">
+                  %20 indirim uygulandı!
+                </p>
+              )}
             </div>
             
-            <button 
-              onClick={handleCheckout} 
-              className="bg-blue-600 text-white w-full py-3 rounded-md hover:bg-blue-700 transition duration-300"
-            >
-              Siparişi Tamamla
-            </button>
-            
-            <div className="mt-4">
-              <Link href="/" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Alışverişe Devam Et
-              </Link>
+            {/* Hesap Özeti */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <h3 className="font-medium text-gray-800 mb-4">Sipariş Özeti</h3>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-gray-600">
+                  <span>Ara Toplam</span>
+                  <span>{subtotal.toFixed(2)} TL</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Teslimat Ücreti</span>
+                  <span>{deliveryFee.toFixed(2)} TL</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>İndirim</span>
+                    <span>-{discount.toFixed(2)} TL</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-100 pt-2 mt-2"></div>
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>Toplam</span>
+                  <span>{total.toFixed(2)} TL</span>
+                </div>
+              </div>
+              
+              {!minOrderMet && store && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start mb-4">
+                  <FiInfo className="text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <div className="text-sm text-yellow-700">
+                    Minimum sipariş tutarı {store.minOrder.toFixed(2)} TL. Siparişinizi tamamlamak için {(store.minOrder - subtotal).toFixed(2)} TL daha ürün eklemelisiniz.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
+      
+      {/* Alt Butonlar (Sabit) */}
+      {cartItems.length > 0 && (
+        <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm text-gray-600">Toplam</span>
+            <span className="text-lg font-bold text-gray-900">{total.toFixed(2)} TL</span>
+          </div>
+          <button
+            onClick={() => router.push('/checkout')}
+            disabled={!minOrderMet}
+            className={`w-full py-3 px-4 rounded-lg shadow-sm flex justify-center items-center font-semibold ${
+              minOrderMet
+                ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {minOrderMet ? 'Siparişi Tamamla' : `Minimum Tutar: ${store?.minOrder.toFixed(2)} TL`}
+          </button>
+        </div>
+      )}
     </div>
   );
 } 

@@ -169,7 +169,7 @@ export default function YemekPage() {
           filteredRestaurants.map(restaurant => (
             <Link 
               key={restaurant.id} 
-              href={`/yemek/${restaurant.id}`}
+              href={`/yemek/store/${restaurant.id}`}
               className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
             >
               <div className="h-48 bg-gray-200 relative">

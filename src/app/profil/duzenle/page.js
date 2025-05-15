@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { FiArrowLeft, FiUser, FiMail, FiPhone, FiLock, FiEye, FiEyeOff, FiCheck } from 'react-icons/fi';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
 
@@ -14,6 +16,7 @@ export default function EditProfile() {
 
 function EditProfileContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
@@ -26,6 +29,9 @@ function EditProfileContent() {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   useEffect(() => {
     if (user) {
@@ -122,166 +128,227 @@ function EditProfileContent() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Profil Bilgilerimi Düzenle</h1>
-          <Link href="/profil" className="text-blue-600 hover:text-blue-800">
-            Profil Sayfasına Dön
-        </Link>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Başlık */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center">
+            <button 
+              onClick={() => router.back()} 
+              className="mr-3 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              aria-label="Geri"
+            >
+              <FiArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-800">Profil Bilgilerim</h1>
+          </div>
+        </div>
       </div>
       
+      <div className="container mx-auto px-4 py-6">
         {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 flex justify-between items-center">
+          <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6 flex items-center">
+            <FiCheck className="text-green-500 mr-2" size={20} />
             <p>{success}</p>
-            <button 
-              onClick={() => setSuccess(null)}
-              className="text-green-700"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-            </button>
-        </div>
-      )}
-      
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Kişisel Bilgiler</h2>
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit}>
+          {/* Kişisel Bilgiler */}
+          <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
+            <h2 className="text-lg font-medium text-gray-800 mb-4">Kişisel Bilgiler</h2>
             
-            <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Ad Soyad *
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.name ? 'border-red-300' : 'border-gray-300'
-                } rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                E-posta *
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.email ? 'border-red-300' : 'border-gray-300'
-                } rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Telefon *
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.phone ? 'border-red-300' : 'border-gray-300'
-                } rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                placeholder="0555 123 4567"
-              />
-              {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="name">
+                  Ad Soyad
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiUser className="text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-4 py-3 border ${
+                      errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                    } rounded-lg focus:outline-none focus:ring-2`}
+                    placeholder="Ad Soyad"
+                  />
+                </div>
+                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
+                  E-posta
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiMail className="text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-4 py-3 border ${
+                      errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                    } rounded-lg focus:outline-none focus:ring-2`}
+                    placeholder="E-posta"
+                  />
+                </div>
+                {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="phone">
+                  Telefon
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiPhone className="text-gray-400" />
+                  </div>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-4 py-3 border ${
+                      errors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                    } rounded-lg focus:outline-none focus:ring-2`}
+                    placeholder="Telefon Numarası"
+                  />
+                </div>
+                {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+              </div>
             </div>
           </div>
           
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Şifre Değiştir</h2>
-            <p className="text-sm text-gray-600 mb-4">Şifrenizi değiştirmek istemiyorsanız bu alanları boş bırakabilirsiniz.</p>
+          {/* Şifre Değiştirme */}
+          <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
+            <h2 className="text-lg font-medium text-gray-800 mb-4">Şifre Değiştirme</h2>
             
-            <div className="mb-4">
-              <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Mevcut Şifre
-              </label>
-              <input
-                type="password"
-                id="currentPassword"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.currentPassword ? 'border-red-300' : 'border-gray-300'
-                } rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              />
-              {errors.currentPassword && <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>}
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Yeni Şifre
-              </label>
-              <input
-                type="password"
-                id="newPassword"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.newPassword ? 'border-red-300' : 'border-gray-300'
-                } rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              />
-              {errors.newPassword && <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>}
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Yeni Şifre (Tekrar)
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                } rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              />
-              {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="currentPassword">
+                  Mevcut Şifre
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiLock className="text-gray-400" />
+                  </div>
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    id="currentPassword"
+                    name="currentPassword"
+                    value={formData.currentPassword}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-12 py-3 border ${
+                      errors.currentPassword ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                    } rounded-lg focus:outline-none focus:ring-2`}
+                    placeholder="Mevcut Şifre"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
+                  </button>
+                </div>
+                {errors.currentPassword && <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="newPassword">
+                  Yeni Şifre
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiLock className="text-gray-400" />
+                  </div>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    id="newPassword"
+                    name="newPassword"
+                    value={formData.newPassword}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-12 py-3 border ${
+                      errors.newPassword ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                    } rounded-lg focus:outline-none focus:ring-2`}
+                    placeholder="Yeni Şifre"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
+                  </button>
+                </div>
+                {errors.newPassword && <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="confirmPassword">
+                  Yeni Şifre (Tekrar)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiLock className="text-gray-400" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`w-full pl-10 pr-12 py-3 border ${
+                      errors.confirmPassword ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                    } rounded-lg focus:outline-none focus:ring-2`}
+                    placeholder="Yeni Şifre (Tekrar)"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+              </div>
             </div>
           </div>
           
-          <div className="flex justify-end">
-            <Link
-              href="/profil"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2"
-            >
-              İptal
-            </Link>
+          {/* Alt Butonlar (Sabit) */}
+          <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 p-4">
             <button
               type="submit"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 px-4 rounded-lg shadow-sm hover:from-orange-600 hover:to-red-700 flex items-center justify-center"
               disabled={isSubmitting}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
-                isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-              }`}
             >
-              {isSubmitting ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+              {isSubmitting ? (
+                <>
+                  <div className="mr-2 animate-spin rounded-full h-5 w-5 border-t-2 border-r-2 border-white"></div>
+                  Güncelleniyor...
+                </>
+              ) : (
+                'Değişiklikleri Kaydet'
+              )}
             </button>
           </div>
         </form>

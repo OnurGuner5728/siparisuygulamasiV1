@@ -1,19 +1,23 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { FiArrowLeft, FiCheck, FiClock, FiMapPin, FiChevronRight, FiStar, FiAlertCircle, FiFilter } from 'react-icons/fi';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
 import { mockOrders } from '@/app/data/mockdatas';
 
 export default function Orders() {
+  const router = useRouter();
+  
   return (
     <AuthGuard requiredRole="any_auth">
-      <OrdersContent />
+      <OrdersContent router={router} />
     </AuthGuard>
   );
 }
 
-function OrdersContent() {
+function OrdersContent({ router }) {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +88,15 @@ function OrdersContent() {
     return new Date(dateString).toLocaleDateString('tr-TR', options);
   };
 
+  // Saati formatlama fonksiyonu
+  const formatTime = (dateString) => {
+    const options = { 
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Date(dateString).toLocaleTimeString('tr-TR', options);
+  };
+
   // Kategori rengini belirle
   const getCategoryColor = (type) => {
     switch (type) {
@@ -108,9 +121,7 @@ function OrdersContent() {
           color: 'text-green-600',
           bgColor: 'bg-green-100',
           icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+            <FiCheck className="text-green-500" />
           )
         };
       case 'Yolda':
@@ -118,9 +129,7 @@ function OrdersContent() {
           color: 'text-blue-600',
           bgColor: 'bg-blue-100',
           icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <FiClock className="text-orange-500" />
           )
         };
       case 'Hazırlanıyor':
@@ -128,9 +137,7 @@ function OrdersContent() {
           color: 'text-yellow-600',
           bgColor: 'bg-yellow-100',
           icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <FiClock className="text-orange-500" />
           )
         };
       case 'İptal Edildi':
@@ -138,9 +145,7 @@ function OrdersContent() {
           color: 'text-red-600',
           bgColor: 'bg-red-100',
           icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <FiAlertCircle className="text-red-500" />
           )
         };
       default:
@@ -148,9 +153,7 @@ function OrdersContent() {
           color: 'text-gray-600',
           bgColor: 'bg-gray-100',
           icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <FiClock className="text-gray-500" />
           )
         };
     }
@@ -168,226 +171,189 @@ function OrdersContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Üst başlık ve geri dönüş linki */}
-      <div className="mb-6 flex items-center">
-        <Link href="/profil" className="text-indigo-600 hover:text-indigo-800 mr-4">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </Link>
-        <h1 className="text-3xl font-bold">Siparişlerim</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Başlık */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center">
+            <button 
+              onClick={() => router.back()} 
+              className="mr-3 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              aria-label="Geri"
+            >
+              <FiArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-800">Siparişlerim</h1>
+          </div>
+        </div>
       </div>
       
-      {/* Durum filtreleri */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <button 
-          onClick={() => setStatusFilter('all')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            statusFilter === 'all' 
-              ? 'bg-indigo-600 text-white' 
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          Tümü
-        </button>
-        <button 
-          onClick={() => setStatusFilter('active')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            statusFilter === 'active' 
-              ? 'bg-yellow-600 text-white' 
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          Aktif Siparişler
-        </button>
-        <button 
-          onClick={() => setStatusFilter('delivered')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            statusFilter === 'delivered' 
-              ? 'bg-green-600 text-white' 
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          Teslim Edilenler
-        </button>
-        <button 
-          onClick={() => setStatusFilter('cancelled')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            statusFilter === 'cancelled' 
-              ? 'bg-red-600 text-white' 
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          İptal Edilenler
-        </button>
+      {/* Filtreler */}
+      <div className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-2 overflow-x-auto">
+          <div className="flex space-x-2 py-2">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                statusFilter === 'all'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Tümü
+            </button>
+            <button
+              onClick={() => setStatusFilter('active')}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                statusFilter === 'active'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Aktif Siparişler
+            </button>
+            <button
+              onClick={() => setStatusFilter('delivered')}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                statusFilter === 'delivered'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Teslim Edilenler
+            </button>
+            <button
+              onClick={() => setStatusFilter('cancelled')}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                statusFilter === 'cancelled'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              İptal Edilenler
+            </button>
+          </div>
+        </div>
       </div>
       
-      {/* Sipariş listesi ve detay görünümü */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sipariş listesi */}
-        <div className={`lg:col-span-${selectedOrder ? '1' : '3'}`}>
-          {filteredOrders.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-              <p className="text-gray-500 mb-2">Henüz sipariş bulunamadı.</p>
-              <p className="text-sm text-gray-400">Farklı bir filtre seçin veya yeni bir sipariş verin.</p>
+      <div className="container mx-auto px-4 py-6">
+        {loading ? (
+          // Yükleniyor durumu
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          // Sipariş yoksa
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FiFilter className="text-gray-400 text-2xl" />
             </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredOrders.map((order) => {
-                const statusInfo = getStatusInfo(order.status);
-                return (
-                  <div 
-                    key={order.id} 
-                    className={`bg-white rounded-lg shadow-md p-4 cursor-pointer transition-all ${
-                      selectedOrder?.id === order.id ? 'ring-2 ring-indigo-500' : 'hover:shadow-lg'
-                    }`}
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    <div className="flex justify-between items-start mb-2">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Sipariş Bulunamadı</h3>
+            <p className="text-gray-500 mb-6">Seçilen filtre için sipariş bulunamadı.</p>
+            {statusFilter !== 'all' && (
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="inline-flex items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-6 rounded-lg hover:from-orange-600 hover:to-red-700"
+              >
+                Tüm Siparişleri Göster
+              </button>
+            )}
+          </div>
+        ) : (
+          // Siparişleri listele
+          <div className="space-y-4">
+            {filteredOrders.map((order) => {
+              const statusInfo = getStatusInfo(order.status);
+              
+              return (
+                <div 
+                  key={order.id} 
+                  className="bg-white rounded-lg shadow-sm overflow-hidden"
+                >
+                  {/* Sipariş Başlığı */}
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-gray-500 text-sm">Sipariş No: #{order.id}</span>
-                        <h3 className="font-bold">{order.store.name}</h3>
+                        <h3 className="font-medium text-gray-900">{order.store.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {formatDate(order.date)} • {formatTime(order.date)}
+                        </p>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(order.store.type)}`}>
-                        {order.store.type}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600">{formatDate(order.date)}</span>
-                      <span className="font-bold">{order.total.toFixed(2)} TL</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">{order.items.length} ürün</span>
-                      <span className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} ${statusInfo.bgColor}`}>
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center ${statusInfo.bgColor} ${statusInfo.color}`}>
                         {statusInfo.icon}
                         <span className="ml-1">{order.status}</span>
-                      </span>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        
-        {/* Sipariş detayı */}
-        {selectedOrder && (
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedOrder.store.name}</h2>
-                  <p className="text-gray-600">Sipariş No: #{selectedOrder.id}</p>
-                  <p className="text-gray-600">{formatDate(selectedOrder.date)}</p>
-                </div>
-                <button 
-                  onClick={() => setSelectedOrder(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="flex items-center mb-6">
-                {(() => {
-                  const statusInfo = getStatusInfo(selectedOrder.status);
-                  return (
-                    <span className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color} ${statusInfo.bgColor}`}>
-                      {statusInfo.icon}
-                      <span className="ml-1">{selectedOrder.status}</span>
-                    </span>
-                  );
-                })()}
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="font-bold text-gray-700 mb-2">Teslimat Adresi</h3>
-                <p className="text-gray-600">{selectedOrder.address.fullAddress}</p>
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="font-bold text-gray-700 mb-2">Ödeme Bilgisi</h3>
-                <p className="text-gray-600">{selectedOrder.paymentMethod}</p>
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="font-bold text-gray-700 mb-2">Sipariş Detayı</h3>
-                <div className="divide-y">
-                  {selectedOrder.items.map((item, index) => (
-                    <div key={index} className="py-3 flex justify-between">
-                      <div>
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-sm text-gray-500">{item.quantity} adet x {item.price.toFixed(2)} TL</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">{(item.price * item.quantity).toFixed(2)} TL</div>
-                      </div>
+                  
+                  {/* Sipariş Özeti */}
+                  <div className="p-4">
+                    <div className="space-y-1 mb-4">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span className="text-gray-700">
+                            {item.quantity}x {item.name}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                    
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>Toplam</span>
+                      <span>{order.total.toFixed(2)} TL</span>
+                    </div>
+                  </div>
+                  
+                  {/* Sipariş Aksiyonları */}
+                  <div className="p-4 border-t border-gray-100 bg-gray-50">
+                    <div className="flex flex-wrap justify-between items-center">
+                      {order.status === 'Hazırlanıyor' || order.status === 'Yolda' ? (
+                        // Devam eden sipariş
+                        <Link
+                          href={`/profil/siparisler/${order.id}/takip`}
+                          className="flex items-center text-orange-600 font-medium text-sm"
+                        >
+                          <FiMapPin className="mr-1" />
+                          Siparişi Takip Et
+                          <FiChevronRight className="ml-1" size={16} />
+                        </Link>
+                      ) : order.status === 'Teslim Edildi' && !order.isRated ? (
+                        // Teslim edilen ve değerlendirilmemiş sipariş
+                        <Link
+                          href={`/profil/yorumlar/ekle?storeId=${order.store.id}&orderId=${order.id}`}
+                          className="flex items-center text-orange-600 font-medium text-sm"
+                        >
+                          <FiStar className="mr-1" />
+                          Değerlendir
+                          <FiChevronRight className="ml-1" size={16} />
+                        </Link>
+                      ) : order.status === 'Teslim Edildi' && order.isRated ? (
+                        // Teslim edilen ve değerlendirilmiş sipariş
+                        <div className="flex items-center text-gray-600 text-sm">
+                          <div className="flex items-center">
+                            <FiStar className="text-yellow-500 mr-1" size={14} />
+                            <span>{order.rating}</span>
+                          </div>
+                          <span className="ml-2 text-gray-500">Değerlendirildi</span>
+                        </div>
+                      ) : null}
+                      
+                      {/* Ürünleri tekrar sipariş etme */}
+                      {order.status !== 'Hazırlanıyor' && order.status !== 'Yolda' && (
+                        <button
+                          onClick={() => {
+                            router.push(`/yemek/store/${order.store.id}`);
+                          }}
+                          className="mt-2 sm:mt-0 text-sm text-gray-700 font-medium py-2 px-4 bg-gray-200 rounded-lg hover:bg-gray-300"
+                        >
+                          Tekrar Sipariş Ver
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="border-t pt-4">
-                <div className="flex justify-between mb-2">
-                  <span>Ara Toplam:</span>
-                  <span>{(selectedOrder.total - selectedOrder.deliveryFee).toFixed(2)} TL</span>
-                </div>
-                <div className="flex justify-between mb-2 text-sm text-gray-600">
-                  <span>Teslimat Ücreti:</span>
-                  <span>{selectedOrder.deliveryFee.toFixed(2)} TL</span>
-                </div>
-                <div className="flex justify-between font-bold text-lg mt-4">
-                  <span>Toplam:</span>
-                  <span>{selectedOrder.total.toFixed(2)} TL</span>
-                </div>
-              </div>
-              
-              <div className="mt-6 flex justify-end space-x-4">
-                {selectedOrder.status === 'Teslim Edildi' && (
-                  <Link 
-                    href={`/profil/yorumlar/ekle?storeId=${selectedOrder.store.id}&orderId=${selectedOrder.id}`}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors duration-300"
-                  >
-                    Değerlendirme Yap
-                  </Link>
-                )}
-                
-                {(selectedOrder.status === 'Hazırlanıyor' || selectedOrder.status === 'Yolda') && (
-                  <Link
-                    href={`/profil/siparisler/${selectedOrder.id}/takip`}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-300"
-                  >
-                    Siparişi Takip Et
-                  </Link>
-                )}
-                
-                {selectedOrder.status === 'Hazırlanıyor' && (
-                  <button 
-                    className="px-4 py-2 border border-red-500 text-red-500 hover:bg-red-50 rounded-md transition-colors duration-300"
-                  >
-                    Siparişi İptal Et
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => {
-                    // Print işlemi için
-                    window.print();
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-300"
-                >
-                  Siparişi Yazdır
-                </button>
-              </div>
-            </div>
+              );
+            })}
           </div>
         )}
       </div>

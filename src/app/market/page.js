@@ -174,7 +174,7 @@ export default function MarketPage() {
           filteredMarkets.map(market => (
             <Link 
               key={market.id} 
-              href={`/market/${market.id}`}
+              href={`/market/store/${market.id}`}
               className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
             >
               <div className="h-48 bg-gray-200 relative">
