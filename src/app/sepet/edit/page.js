@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiArrowLeft, FiEdit, FiCheck, FiX, FiMinus, FiPlus } from 'react-icons/fi';
 
@@ -74,7 +74,16 @@ const demoCartItem = {
   price: 125.90
 };
 
-export default function EditCartItem() {
+// Loading komponenti
+function CartEditLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+    </div>
+  );
+}
+
+function EditCartItemContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const itemId = searchParams.get('id');
@@ -391,5 +400,14 @@ export default function EditCartItem() {
         </button>
       </div>
     </div>
+  );
+}
+
+// Ana bileşeni Suspense ile sarıyoruz
+export default function EditCartItem() {
+  return (
+    <Suspense fallback={<CartEditLoading />}>
+      <EditCartItemContent />
+    </Suspense>
   );
 } 
