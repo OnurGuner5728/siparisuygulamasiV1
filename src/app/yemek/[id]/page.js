@@ -8,16 +8,13 @@ import { useCart } from '@/contexts/CartContext';
 export default function RestaurantDetail() {
   const { id } = useParams();
   
-  // useCart hook'unu component body içinde doğrudan çağırıyoruz
-  let cartFunctions = { addToCart: () => {}, removeFromCart: () => {}, cartItems: [] };
-  try {
-    // useCart'ı bir değişkene atama, hook çağrısı komponent gövdesinde yapılıyor
-    cartFunctions = useCart();
-  } catch (error) {
-    console.error('CartContext hatası:', error);
-  }
-
-  const { addToCart, removeFromCart, cartItems } = cartFunctions;
+  // useCart hook'unu doğrudan çağırıyoruz - React Hook kuralları gereği koşulsuz olmalı
+  const cartFunctions = useCart();
+  
+  // Hata yönetimini hook çağrısı sonrası yapıyoruz
+  const addToCart = cartFunctions?.addToCart || (() => {});
+  const removeFromCart = cartFunctions?.removeFromCart || (() => {});
+  const cartItems = cartFunctions?.cartItems || [];
   
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
