@@ -2,23 +2,36 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { mockStores, mockCampaigns } from '@/app/data/mockdatas';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function YemekPage() {
+  // Auth context'ten kullanıcı durumunu al
+  const { isAuthenticated } = useAuth();
+
   // Restoranları ve kampanyaları state olarak tut
   const [restaurants, setRestaurants] = useState([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
+
+  // Filtreler
+  const [filters, setFilters] = useState({
+    cuisine: '',
+    rating: 0,
+    isOpen: false,
+  });
 
   useEffect(() => {
     // API çağrısı simülasyonu
     setTimeout(() => {
       // Yemek kategorisindeki (modulePermissions.yemek=true) restoranları filtrele ve yükle
       const yemekStores = mockStores.filter(store => 
-        store.modulePermissions.yemek === true && 
+        store.modulePermissions?.yemek === true && 
         store.status === 'active' && 
         store.approved === true
       );
       setRestaurants(yemekStores);
+      setFilteredRestaurants(yemekStores);
       
       // Yemek kategorisine ait kampanyaları filtrele
       const filteredCampaigns = mockCampaigns.filter(campaign => 
@@ -29,16 +42,6 @@ export default function YemekPage() {
       setLoading(false);
     }, 500);
   }, []);
-
-  // Filtreler
-  const [filters, setFilters] = useState({
-    cuisine: '',
-    rating: 0,
-    isOpen: false,
-  });
-
-  // Filtrelenen restoranlar
-  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
 
   // Filtre değiştiğinde restoranları filtrele
   useEffect(() => {
@@ -63,7 +66,7 @@ export default function YemekPage() {
 
   // Mutfak tiplerini restaurants dizisinden çıkart
   const cuisineTypes = restaurants.length 
-    ? [...new Set(restaurants.map(r => r.cuisine))]
+    ? [...new Set(restaurants.map(r => r.cuisine).filter(Boolean))]
     : [];
 
   // Filtre değişikliklerini yönet
@@ -74,10 +77,34 @@ export default function YemekPage() {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Yemek Siparişi</h1>
-      <p className="text-gray-600 mb-8">Restoran ve yemek siparişi için aradığınız her şey burada!</p>
+      <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Yemek Siparişi</h1>
+          <p className="text-gray-600 mb-8">Restoran ve yemek siparişi için aradığınız her şey burada!</p>
+        </div>
+        
+        {/* Giriş yapılmamışsa giriş butonu göster */}
+        {!isAuthenticated && (
+          <div className="flex flex-col gap-2 md:flex-row mb-4 md:mb-0">
+            <Link href="/login" className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+              Giriş Yap
+            </Link>
+            <Link href="/register" className="text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
+              Kayıt Ol
+            </Link>
+          </div>
+        )}
+      </div>
       
       {/* Kampanyalar */}
       {campaigns.length > 0 && (
@@ -165,12 +192,12 @@ export default function YemekPage() {
               <div className="p-4">
                 <h3 className="text-lg font-bold">{restaurant.name}</h3>
                 <div className="flex items-center text-sm text-gray-600 mt-1">
-                  <span className="mr-2">{restaurant.cuisine}</span>
+                  <span className="mr-2">{restaurant.cuisine || 'Genel'}</span>
                   <span>⭐ {restaurant.rating}</span>
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-sm">
-                  <span>Min. {restaurant.minOrder} TL</span>
-                  <span>{restaurant.deliveryTime}</span>
+                  <span>Min. {restaurant.minOrder || 0} TL</span>
+                  <span>{restaurant.deliveryTime || '30-45 dk'}</span>
                 </div>
               </div>
             </Link>

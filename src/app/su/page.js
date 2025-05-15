@@ -24,7 +24,7 @@ export default function SuPage() {
   }, []);
 
   // Su markaları
-  const popularBrands = ['Hayat', 'Erikli', 'Saka', 'Sırma', 'Pınar', 'Damla', 'Nestle', 'Buzdağı'];
+  const popularBrands = ['Hayat', 'Erikli', 'Saka', 'Pınar', 'Damla', 'Nestle', 'Buzdağı'];
 
   // Filtreler
   const [filters, setFilters] = useState({

@@ -86,45 +86,45 @@ export default function Register() {
     
     if (formData.role === 'customer') {
       // Müşteri validasyonu
-      // Ad kontrolü
-      if (!formData.firstName.trim()) {
-        formErrors.firstName = 'Ad gereklidir';
-      }
-      
-      // Soyad kontrolü
-      if (!formData.lastName.trim()) {
-        formErrors.lastName = 'Soyad gereklidir';
-      }
-      
-      // E-posta kontrolü
-      if (!formData.email) {
-        formErrors.email = 'E-posta adresi gereklidir';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        formErrors.email = 'Geçerli bir e-posta adresi giriniz';
-      }
-      
-      // Şifre kontrolü
-      if (!formData.password) {
-        formErrors.password = 'Şifre gereklidir';
-      } else if (formData.password.length < 6) {
-        formErrors.password = 'Şifre en az 6 karakter olmalıdır';
-      }
-      
-      // Şifre onay kontrolü
-      if (formData.password !== formData.confirmPassword) {
-        formErrors.confirmPassword = 'Şifreler eşleşmiyor';
-      }
-      
-      // Adres kontrolü
-      if (!formData.address.trim()) {
-        formErrors.address = 'Adres gereklidir';
-      }
-      
-      // Telefon kontrolü
-      if (!formData.phone) {
-        formErrors.phone = 'Telefon numarası gereklidir';
-      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-        formErrors.phone = 'Geçerli bir telefon numarası giriniz';
+    // Ad kontrolü
+    if (!formData.firstName.trim()) {
+      formErrors.firstName = 'Ad gereklidir';
+    }
+    
+    // Soyad kontrolü
+    if (!formData.lastName.trim()) {
+      formErrors.lastName = 'Soyad gereklidir';
+    }
+    
+    // E-posta kontrolü
+    if (!formData.email) {
+      formErrors.email = 'E-posta adresi gereklidir';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      formErrors.email = 'Geçerli bir e-posta adresi giriniz';
+    }
+    
+    // Şifre kontrolü
+    if (!formData.password) {
+      formErrors.password = 'Şifre gereklidir';
+    } else if (formData.password.length < 6) {
+      formErrors.password = 'Şifre en az 6 karakter olmalıdır';
+    }
+    
+    // Şifre onay kontrolü
+    if (formData.password !== formData.confirmPassword) {
+      formErrors.confirmPassword = 'Şifreler eşleşmiyor';
+    }
+    
+    // Adres kontrolü
+    if (!formData.address.trim()) {
+      formErrors.address = 'Adres gereklidir';
+    }
+    
+    // Telefon kontrolü
+    if (!formData.phone) {
+      formErrors.phone = 'Telefon numarası gereklidir';
+    } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
+      formErrors.phone = 'Geçerli bir telefon numarası giriniz';
       }
     } else {
       // İş ortağı validasyonu
@@ -578,22 +578,22 @@ export default function Register() {
             {formData.role === 'customer' && (
               <div className="mb-4">
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Adres</label>
-                <textarea
-                  id="address"
-                  name="address"
-                  rows="3"
-                  required
+              <textarea
+                id="address"
+                name="address"
+                rows="3"
+                required
                   className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                    errors.address ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Teslimat Adresi"
-                  value={formData.address}
-                  onChange={handleChange}
-                />
-                {errors.address && (
-                  <p className="mt-1 text-sm text-red-600">{errors.address}</p>
-                )}
-              </div>
+                  errors.address ? 'border-red-300' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                placeholder="Teslimat Adresi"
+                value={formData.address}
+                onChange={handleChange}
+              />
+              {errors.address && (
+                <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+              )}
+            </div>
             )}
           </div>
 

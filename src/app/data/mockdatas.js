@@ -639,13 +639,13 @@ export const mockStores = [
     categoryId: 3,
     description: 'Şişe su dağıtım hizmeti',
     addressId: 7,
-    rating: 0,
-    status: 'pending', // 'pending': Mağaza onay bekliyor
-    isOpen: false,
-    approved: false,
+    rating: 3.8,
+    status: 'active', 
+    isOpen: true,
+    approved: true,
     registrationDate: '2023-05-25',
-    ordersCount: 0,
-    totalRevenue: 0,
+    ordersCount: 25,
+    totalRevenue: 2000.00,
     image: '/water2.jpg',
     modulePermissions: {
       yemek: false,
@@ -668,13 +668,13 @@ export const mockStores = [
     description: 'Haftalık özel aktüel ürünler',
     addressId: 8,
     rating: 4.0,
-    status: 'inactive', // 'inactive': Mağaza geçici olarak kapalı
-    isOpen: false,
+    status: 'active', // Aktif durumda
+    isOpen: true,
     approved: true,
     registrationDate: '2023-03-05',
     ordersCount: 120,
     totalRevenue: 18000.00,
-    image: '/water3.jpg',
+    image: '/aktuel1.jpg',
     modulePermissions: {
       yemek: false,
       market: false,
@@ -1065,6 +1065,7 @@ export const mockUsers = [
     id: 1,
     name: 'Ahmet Yılmaz',
     email: 'ahmet@example.com',
+    password: '123456',
     phone: '0555 111 2233',
     role: 'user',
     status: 'active',
@@ -1090,6 +1091,7 @@ export const mockUsers = [
     id: 2,
     name: 'Admin Kullanıcı',
     email: 'admin@example.com',
+    password: '123456',
     phone: '0532 222 3344',
     role: 'admin',
     status: 'active',
@@ -1115,6 +1117,7 @@ export const mockUsers = [
     id: 3,
     name: 'Kebapçı Ahmet',
     email: 'kebapci@example.com',
+    password: '123456',
     phone: '0505 333 4455',
     role: 'store',
     status: 'active',
@@ -1163,6 +1166,7 @@ export const mockUsers = [
     id: 5,
     name: 'Ayşe Demir',
     email: 'ayse@example.com',
+    password: '123456',
     phone: '0533 555 6677',
     role: 'user',
     status: 'active',
@@ -1554,17 +1558,6 @@ export const mockWaterVendors = [
     rating: 0, // mockStores referansından alındı
     isOpen: false, // mockStores referansından alındı
     image: '/water2.jpg' // mockStores referansından alındı
-  },
-  { 
-    id: 8, // mockStores referansı
-    name: 'Aktüel Ürünler', // mockStores referansından alındı
-    brand: 'Sırma', 
-    minOrder: 40, 
-    deliveryTime: '45-60 dk', 
-    productCategories: ['Damacana', 'Şişe Su'],
-    rating: 4.0, // mockStores referansından alındı
-    isOpen: false, // mockStores referansından alındı
-    image: '/water3.jpg' // mockStores referansından alındı
   }
 ];
 

@@ -7,13 +7,23 @@ import { useCart } from '@/contexts/CartContext';
 export default function AktuelProductDetailPage() {
   const params = useParams();
   const productId = params.id;
-  const { addToCart, removeFromCart, cartItems } = useCart();
+  
+  // useCart hook'unu component body içinde doğrudan çağırıyoruz
+  let cartFunctions = { addToCart: () => {}, removeFromCart: () => {}, cartItems: [] };
+  try {
+    // useCart'ı bir değişkene atama, hook çağrısı komponent gövdesinde yapılıyor
+    cartFunctions = useCart();
+  } catch (error) {
+    console.error('CartContext hatası:', error);
+  }
+
+  const { addToCart, removeFromCart, cartItems } = cartFunctions;
   
   // Dummy veri - Gerçek uygulamada API'den gelecek
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-
+  
   // Sahte veritabanından ürün bilgilerini al
   useEffect(() => {
     // Gerçek uygulamada bir API isteği yapılacak
@@ -190,21 +200,18 @@ export default function AktuelProductDetailPage() {
     }, 500); // Gerçek API çağrısını simüle etmek için kısa gecikme
   }, [productId]);
 
-  // Ürün miktarını arttır
-  const increaseQuantity = () => {
-    if (product && quantity < product.stock) {
-      setQuantity(quantity + 1);
-    }
+  // Ürünün sepette olup olmadığını kontrol et
+  const isInCart = () => {
+    return product ? cartItems.some(item => item.id === product.id) : false;
   };
 
-  // Ürün miktarını azalt
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
+  // Sepetteki miktarı getir
+  const getCartQuantity = () => {
+    if (!product) return 0;
+    const cartItem = cartItems.find(item => item.id === product.id);
+    return cartItem ? cartItem.quantity : 0;
   };
 
-  // Sepete ekle
   const handleAddToCart = () => {
     if (!product) return;
     
@@ -212,13 +219,20 @@ export default function AktuelProductDetailPage() {
       id: product.id,
       name: product.name,
       price: product.discountPrice,
-      quantity: quantity,
-      storeName: 'Aktüel Ürünler',
-      image: product.image || 'https://placehold.co/100'
+      quantity: 1,
+      image: product.image || 'https://placehold.co/100',
+      storeName: 'Aktüel Ürünler'
     });
-    
-    // Kullanıcıya geri bildirim
-    alert('Ürün sepete eklendi!');
+  };
+
+  const handleIncreaseQuantity = () => {
+    setQuantity(prev => prev + 1);
+  };
+
+  const handleDecreaseQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
   };
 
   // Kalan gün sayısını hesapla
@@ -236,18 +250,6 @@ export default function AktuelProductDetailPage() {
     if (stock === 0) return { color: 'bg-red-500', text: 'Tükendi' };
     if (stock < 50) return { color: 'bg-orange-500', text: 'Sınırlı Stok' };
     return { color: 'bg-green-500', text: 'Stokta' };
-  };
-
-  // Ürünün sepette olup olmadığını kontrol et
-  const isInCart = () => {
-    return product ? cartItems.some(item => item.id === product.id) : false;
-  };
-
-  // Sepetteki miktarı getir
-  const getCartQuantity = () => {
-    if (!product) return 0;
-    const cartItem = cartItems.find(item => item.id === product.id);
-    return cartItem ? cartItem.quantity : 0;
   };
 
   if (loading) {

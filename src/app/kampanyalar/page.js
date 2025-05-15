@@ -81,18 +81,21 @@ function CampaignsContent() {
     const store = mockStores.find(store => store.id === storeId);
     
     if (store) {
-      // Kategori ID'si üzerinden kategori adını bul
+      // Kategori ID'sinden kategori adını bul
       const category = mockCategories.find(cat => cat.id === store.categoryId);
+      
       if (category) {
-        // Kategori adına göre yönlendir
-        router.push(`/${category.name.toLowerCase()}/${storeId}`);
+        // Kategori adına göre doğru URL formatını belirle ve yönlendir
+        const categoryName = category.name.toLowerCase();
+        router.push(`/${categoryName}/${storeId}`);
       } else {
         // Kategori bulunamazsa genel mağaza sayfasına yönlendir
-        router.push(`/magaza/${storeId}`);
+        router.push(`/store/${storeId}`);
       }
     } else {
+      console.error(`Mağaza bulunamadı: ${storeId}`);
       // Mağaza bulunamazsa ana sayfaya yönlendir
-      router.push(`/magaza/${storeId}`);
+      router.push('/');
     }
   };
 
@@ -248,76 +251,58 @@ function CampaignsContent() {
                   
                   <p className="text-gray-600 mb-4">{campaign.description}</p>
                   
-                  <div className="flex items-center mb-3">
-                    <span className="text-sm font-medium mr-2">Mağaza:</span>
-                    <span 
-                      className="text-blue-600 hover:text-blue-800 cursor-pointer"
-                      onClick={() => navigateToStore(campaign.storeId)}
-                    >
-                      {getStoreName(campaign.storeId)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <div className="bg-blue-50 px-3 py-1 rounded-md text-sm">
-                      <span className="font-medium">Kod:</span> {campaign.code}
+                  {/* Mağaza bilgisi */}
+                  <div className="flex items-center mt-4">
+                    <div className="mr-3">
+                      <div className="h-10 w-10 bg-gray-200 rounded-full overflow-hidden">
+                        {campaign.storeImage ? (
+                          <img src={campaign.storeImage} alt={getStoreName(campaign.storeId)} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-blue-100 text-blue-500">
+                            <span className="text-lg font-semibold">{getStoreName(campaign.storeId).charAt(0)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    
-                    {campaign.discountType === 'percent' && (
-                      <div className="bg-green-50 px-3 py-1 rounded-md text-sm">
-                        <span className="font-medium">İndirim:</span> %{campaign.discount}
-                      </div>
-                    )}
-                    
-                    {campaign.discountType === 'amount' && (
-                      <div className="bg-green-50 px-3 py-1 rounded-md text-sm">
-                        <span className="font-medium">İndirim:</span> {campaign.discount} TL
-                      </div>
-                    )}
-                    
-                    {campaign.discountType === 'free_delivery' && (
-                      <div className="bg-green-50 px-3 py-1 rounded-md text-sm">
-                        <span className="font-medium">Ücretsiz Teslimat</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="text-sm text-gray-500 mb-4">
                     <div>
-                      <span className="font-medium">Geçerlilik:</span> {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
+                      <h3 
+                        className="text-sm font-medium text-gray-800 hover:text-blue-600 cursor-pointer"
+                        onClick={() => navigateToStore(campaign.storeId)}
+                      >
+                        {getStoreName(campaign.storeId)}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
+                      </p>
                     </div>
-                    {campaign.minOrderAmount && (
-                      <div>
-                        <span className="font-medium">Min. Sipariş:</span> {campaign.minOrderAmount} TL
-                      </div>
-                    )}
                   </div>
                   
-                  <div className="text-xs text-gray-400 border-t pt-3 flex justify-between items-center">
-                    <div>{campaign.conditions}</div>
-                    
-                    {/* Düzenleme butonu - sadece kampanya sahibi veya admin için göster */}
-                    {canEditCampaign(campaign) && (
-                      <button 
-                        onClick={() => handleEditCampaign(campaign.id)}
-                        className="ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                      >
-                        Düzenle
-                      </button>
+                  {/* Kampanya detayları ve butonlar */}
+                  <div className="mt-5 pt-4 border-t border-gray-100 flex justify-between items-center">
+                    <div>
+                      {campaign.discountRate && (
+                        <span className="text-sm font-medium text-green-600">%{campaign.discountRate} İndirim</span>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      {/* Düzenle butonu - sadece yetkililer için */}
+                      {canEditCampaign(campaign) && (
+                        <button
+                          onClick={() => handleEditCampaign(campaign.id)}
+                          className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md text-sm hover:bg-blue-100"
+                        >
+                          Düzenle
+                        </button>
+                      )}
                       
-                    )}
-                    {canEditCampaign(campaign) && (
-                      <button 
-                            onClick={() => toggleCampaignStatus(campaign.id)}
-                            className={`px-2 py-1 rounded-md text-white ${
-                              campaign.status === 'active' 
-                                ? 'bg-red-600 hover:bg-red-700' 
-                                : 'bg-green-600 hover:bg-green-700'
-                            }`}
-                          >
-                            {campaign.status === 'active' ? 'Pasifleştir' : 'Aktifleştir'}
-                          </button>
-                    )}
+                      {/* Mağazaya git butonu */}
+                      <button
+                        onClick={() => navigateToStore(campaign.storeId)}
+                        className="px-3 py-1 bg-gray-50 text-gray-800 rounded-md text-sm hover:bg-gray-100"
+                      >
+                        Mağazaya Git
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

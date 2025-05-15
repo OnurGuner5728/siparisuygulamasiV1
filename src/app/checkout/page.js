@@ -17,7 +17,7 @@ export default function Checkout() {
 
 function CheckoutContent() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { 
     cartItems, 
     calculateSubtotal, 
@@ -46,6 +46,15 @@ function CheckoutContent() {
     // Sepet boşsa ana sayfaya yönlendir
     if (cartItems.length === 0 && !orderCompleted) {
       router.push('/');
+      return;
+    }
+    
+    // Kullanıcı giriş yapmadıysa ve sepette ürün varsa login'e yönlendir
+    if (!isAuthenticated && !orderCompleted) {
+      // Giriş sayfasına yönlendirmeden önce dönüş URLsini kaydet
+      localStorage.setItem('redirectAfterLogin', '/checkout');
+      router.push('/login');
+      return;
     }
     
     // Mock adres verilerini yükle
@@ -83,7 +92,7 @@ function CheckoutContent() {
       ]);
       setSelectedAddress(1);
     }
-  }, [cartItems.length, router, user, orderCompleted]);
+  }, [cartItems.length, router, user, orderCompleted, isAuthenticated]);
 
   const handleCardInfoChange = (e) => {
     const { name, value } = e.target;

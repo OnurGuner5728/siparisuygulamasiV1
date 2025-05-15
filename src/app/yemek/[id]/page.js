@@ -7,12 +7,32 @@ import { useCart } from '@/contexts/CartContext';
 
 export default function RestaurantDetail() {
   const { id } = useParams();
-  const { addToCart, removeFromCart, cartItems } = useCart();
+  
+  // useCart hook'unu component body içinde doğrudan çağırıyoruz
+  let cartFunctions = { addToCart: () => {}, removeFromCart: () => {}, cartItems: [] };
+  try {
+    // useCart'ı bir değişkene atama, hook çağrısı komponent gövdesinde yapılıyor
+    cartFunctions = useCart();
+  } catch (error) {
+    console.error('CartContext hatası:', error);
+  }
+
+  const { addToCart, removeFromCart, cartItems } = cartFunctions;
   
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('Tümü');
   const [cart, setCart] = useState([]);
+  
+  // CartItems değiştiğinde sepeti güncelle
+  useEffect(() => {
+    if (restaurant && cartItems) {
+      const restaurantItems = cartItems.filter(item => 
+        item.storeName === restaurant.name
+      );
+      setCart(restaurantItems);
+    }
+  }, [cartItems, restaurant]);
   
   useEffect(() => {
     // Mock API çağrısı - gerçek bir API'den veri çekersiniz
@@ -29,14 +49,6 @@ export default function RestaurantDetail() {
       setLoading(false);
     }, 1000);
   }, [id]);
-
-  useEffect(() => {
-    // CartContext'ten bu restorana ait ürünleri filtrele
-    const restaurantItems = cartItems.filter(item => 
-      item.storeName === restaurant?.name
-    );
-    setCart(restaurantItems);
-  }, [cartItems, restaurant]);
 
   const handleAddToCart = (item) => {
     addToCart({
@@ -61,6 +73,20 @@ export default function RestaurantDetail() {
     } else {
       return restaurant.menuItems.filter(item => item.category === activeCategory);
     }
+  };
+
+  // Kategori seçimi için restoran kategorilerini al
+  const getCategories = () => {
+    if (!restaurant) return [];
+    
+    // menuCategories varsa kullan, yoksa menüItems'dan kategorileri çıkar
+    if (restaurant.menuCategories && restaurant.menuCategories.length > 0) {
+      return restaurant.menuCategories;
+    } else if (restaurant.menuItems && restaurant.menuItems.length > 0) {
+      // Menü öğelerinden benzersiz kategorileri çıkar
+      return [...new Set(restaurant.menuItems.map(item => item.category))].filter(Boolean);
+    }
+    return [];
   };
 
   const calculateTotal = () => {
@@ -159,7 +185,7 @@ export default function RestaurantDetail() {
               Tümü
             </button>
             
-            {restaurant.categories && restaurant.categories.map((category, index) => (
+            {getCategories().map((category, index) => (
               <button 
                 key={index}
                 onClick={() => setActiveCategory(category)} 

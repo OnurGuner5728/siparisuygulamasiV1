@@ -22,201 +22,204 @@ export function AuthProvider({ children }) {
   // Kullanıcı girişi işlemi - useCallback ile memoization
   const login = useCallback(async (email, password) => {
     try {
-      // mockdatas.js'den alınan kullanıcı verileri ile giriş kontrolü
-      const userFound = mockUsers.find(u => u.email === email);
+      // API çağrısı simülasyonu
+      const foundUser = mockUsers.find(u => u.email === email && u.password === password);
       
-      if (userFound) {
-        // Gerçek uygulamada şifre hashlenerek kontrol edilecektir
-        // Bu örnek için sadece giriş var kabul ediyoruz
-        // Bu kısım ileride backend entegrasyonu ile değiştirilecek
-        
-        localStorage.setItem('user', JSON.stringify(userFound));
-        setUser(userFound);
-        return { success: true, user: userFound };
-      } else {
-        return { success: false, message: 'Kullanıcı bulunamadı.' };
+      if (!foundUser) {
+        throw new Error('Geçersiz e-posta veya şifre');
       }
+      
+      // Şifreyi kullanıcı nesnesinden çıkar
+      const { password: _, ...userWithoutPassword } = foundUser;
+      
+      // Kullanıcıyı set et
+      setUser(userWithoutPassword);
+      
+      // LocalStorage'a kaydet
+      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+      
+      return { success: true, user: userWithoutPassword };
     } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, message: 'Bir hata oluştu.' };
+      console.error('Login error:', error);
+      return { success: false, error: error.message };
     }
   }, []);
 
-  // Kullanıcı kaydı işlemi - useCallback ile memoization
-  const register = useCallback((fullName, email, password, role = 'user', businessData = null) => {
+  // Kullanıcı çıkışı işlemi
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('user');
+  }, []);
+
+  // Yeni kullanıcı kaydı işlemi - store sahipleri ve normal kullanıcılar için
+  const register = useCallback(async (name, email, password, role = 'user', businessData = null) => {
     try {
-      // Email kontrolü
-      const userExists = mockUsers.find(u => u.email === email);
-      if (userExists) {
-        return { success: false, error: 'Bu e-posta adresi ile kayıtlı bir kullanıcı zaten var.' };
-      }
-
-      // Yeni kullanıcı ID'si (en yüksek ID + 1)
-      const newId = Math.max(...mockUsers.map(u => u.id)) + 1;
+      // E-posta kullanılıyor mu kontrolü
+      const emailExists = mockUsers.some(u => u.email === email);
       
-      // Varsayılan kullanıcı izinleri
-      const defaultPermissions = {
-        yemek: true,
-        market: true,
-        su: true,
-        aktuel: role === 'admin',
-        kampanya: {
-          view: true,
-          create: role === 'store' || role === 'admin',
-          admin: role === 'admin'
-        }
-      };
+      if (emailExists) {
+        throw new Error('Bu e-posta adresi zaten kullanılıyor');
+      }
+      
+      // Yeni kullanıcı için ID oluştur
+      const newUserId = Math.max(...mockUsers.map(u => u.id)) + 1;
+      
+      // İsimi parçalara ayırma
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-      // Yeni kullanıcı nesnesi
-      const newUser = {
-        id: newId,
-        name: fullName,
-        email: email,
+      let newUserData = {
+        id: newUserId,
+        name,
+        firstName,
+        lastName,
+        email,
+        password, // Gerçek uygulamada hashlenmelidir
         phone: businessData?.phone || '',
+        address: '',
         role: role,
-        status: role === 'store' ? 'pending' : 'active',
-        addressIds: [],
-        registrationDate: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        orderCount: 0,
-        activeOrder: 0,
-        totalSpent: 0,
-        modulePermissions: defaultPermissions
+        createdAt: new Date().toISOString(),
+        addresses: [],
+        favorites: [],
+        modulePermissions: {}
       };
-
-      // Mağaza kaydı için ek bilgiler
+      
+      // Mock users dizisine ekle
+      mockUsers.push(newUserData);
+      
+      // Store sahibi kaydı ise mağaza bilgilerini de ekle
       if (role === 'store' && businessData) {
-        // Yeni mağaza ID'si (en yüksek ID + 1)
+        // Yeni mağaza için ID oluştur
         const newStoreId = Math.max(...mockStores.map(s => s.id)) + 1;
         
-        // Mock mağaza verisi
         const newStore = {
           id: newStoreId,
+          ownerId: newUserId,
           name: businessData.businessName,
-          ownerName: fullName,
           email: businessData.businessEmail,
           phone: businessData.businessPhone,
-          ownerId: newId,
+          address: businessData.businessAddress,
           categoryId: parseInt(businessData.categoryId),
-          description: '', // Varsayılan boş açıklama
-          addressId: null, // Gerçek uygulamada adres kaydı yapılacak
+          subcategories: businessData.subcategories || [],
+          logo: "https://placehold.co/400x400/png",
+          coverImage: "https://placehold.co/1200x300/png",
           rating: 0,
-          status: 'pending', // Mağaza onay bekliyor
-          isOpen: false,
-          approved: false,
-          registrationDate: new Date().toISOString(),
-          ordersCount: 0,
-          totalRevenue: 0,
-          averageOrderValue: 0,
-          image: '/default-store.jpg',
-          modulePermissions: defaultPermissions,
-          // Alt kategorileri diziye dönüştür
-          subcategories: businessData.subcategories || []
+          reviewCount: 0,
+          status: 'pending', // Yeni mağaza onay bekliyor durumunda
+          createdAt: new Date().toISOString(),
+          description: `${businessData.businessName} mağazası`
         };
-
-        // Mağaza kategorisine göre modül izinlerini ayarla
-        if (parseInt(businessData.categoryId) === 1) { // Yemek
-          newStore.modulePermissions.yemek = true;
-          newStore.modulePermissions.market = false;
-          newStore.modulePermissions.su = false;
-        } else if (parseInt(businessData.categoryId) === 2) { // Market
-          newStore.modulePermissions.yemek = false;
-          newStore.modulePermissions.market = true;
-          newStore.modulePermissions.su = false;
-        } else if (parseInt(businessData.categoryId) === 3) { // Su
-          newStore.modulePermissions.yemek = false;
-          newStore.modulePermissions.market = false;
-          newStore.modulePermissions.su = true;
-        }
-
-        // Mağaza verilerini mockStores dizisine ekle
-        mockStores.push(newStore);
-        console.log('Yeni mağaza kaydı:', newStore);
         
-        // Kullanıcı izinlerini mağaza verisiyle uyumlu olacak şekilde güncelle
-        newUser.modulePermissions = newStore.modulePermissions;
-      }
-
-      // Kullanıcıyı mockUsers'a ekle
-      mockUsers.push(newUser);
-      console.log('Yeni kullanıcı kaydı:', newUser);
-      
-      // Giriş yap (mağaza kullanıcıları onaylanıncaya kadar giriş yapamaz)
-      if (role !== 'store') {
-        localStorage.setItem('user', JSON.stringify(newUser));
-        setUser(newUser);
+        // Mock stores dizisine ekle
+        mockStores.push(newStore);
       }
       
-      return { success: true, user: newUser };
+      // Şifreyi kullanıcı nesnesinden çıkar
+      const { password: _, ...userWithoutPassword } = newUserData;
+      
+      return { success: true, user: userWithoutPassword };
     } catch (error) {
-      console.error("Register error:", error);
-      return { success: false, error: 'Kayıt işlemi sırasında bir hata oluştu.' };
+      console.error('Register error:', error);
+      return { success: false, error: error.message };
     }
   }, []);
 
-  // Kullanıcı çıkışı işlemi - useCallback ile memoization
-  const logout = useCallback(() => {
-    localStorage.removeItem('user');
-    setUser(null);
+  // Kullanıcı verisini güncelle (adres, profil bilgileri, vb.)
+  const updateUserData = useCallback(async (updatedUserData) => {
+    try {
+      // Kullanıcıyı mockUsers dizisinde bul ve güncelle
+      const userIndex = mockUsers.findIndex(u => u.id === updatedUserData.id);
+      
+      if (userIndex === -1) {
+        throw new Error('Kullanıcı bulunamadı');
+      }
+      
+      // mockUsers içindeki kullanıcıyı güncelle (şifre korunmalı)
+      const passwordFromMock = mockUsers[userIndex].password;
+      mockUsers[userIndex] = { ...updatedUserData, password: passwordFromMock };
+      
+      // Şifreyi kullanıcı nesnesinden çıkar
+      const { password, ...userWithoutPassword } = updatedUserData;
+      
+      // State ve localStorage güncelleme
+      setUser(userWithoutPassword);
+      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+      
+      return { success: true, user: userWithoutPassword };
+    } catch (error) {
+      console.error('Update user data error:', error);
+      return { success: false, error: error.message };
+    }
   }, []);
 
-  // İzin kontrolü fonksiyonu - useCallback ile memoization
-  const hasPermission = useCallback((moduleName, permissionType = 'view') => {
+  // Kullanıcı yetkisini kontrol et
+  const hasPermission = useCallback((module, action) => {
     if (!user) return false;
     
-    // Admin her modüle erişebilir
+    // Admin her şeye erişebilir
     if (user.role === 'admin') return true;
     
-    // any_auth kontrolü (yalnızca giriş yapmış herhangi bir kullanıcı yeterli)
-    if (moduleName === 'any_auth') {
-      return Boolean(user);
-    }
-    
-    // Standart modül erişimi (aktüel, yemek, market, su)
-    if (typeof user.modulePermissions[moduleName] === 'boolean') {
-      return user.modulePermissions[moduleName];
-    }
-    
-    // Kampanya gibi detaylı izin kontrolü için
-    if (typeof user.modulePermissions[moduleName] === 'object') {
-      // Eğer istenen izin 'admin' ise, sadece admin kullanıcıları için izin ver
-      if (permissionType === 'admin' && user.role !== 'admin') {
+    // Modül bazlı yetkilendirme
+    switch (module) {
+      case 'kampanya':
+        // Mağaza sahipleri kampanya oluşturabilir
+        if (action === 'create' && user.role === 'store') return true;
+        
+        // Kampanyaları herkes görüntüleyebilir
+        if (action === 'view') return true;
+        
+        // Admin olmayan kullanıcılar admin sayfasına erişemez
+        if (action === 'admin') return false;
+        
         return false;
-      }
-      
-      // Eğer istenen izin 'create' ve kullanıcı 'user' rolündeyse, izin verme
-      if (permissionType === 'create' && user.role === 'user') {
-        return false; // Müşteri kullanıcılar kampanya oluşturamaz
-      }
-      
-      return user.modulePermissions[moduleName][permissionType] || false;
+        
+      case 'siparis':
+        // Kullanıcılar kendi siparişlerini görüntüleyebilir
+        if (action === 'view' && (user.role === 'user' || user.role === 'store')) return true;
+        
+        // Mağaza sahipleri kendilerine gelen siparişleri yönetebilir
+        if ((action === 'manage' || action === 'update') && user.role === 'store') return true;
+        
+        return false;
+        
+      case 'magaza':
+        // Mağaza sahipleri kendi mağazalarını düzenleyebilir
+        if ((action === 'edit' || action === 'manage') && user.role === 'store') return true;
+        
+        // Herkes mağazaları görüntüleyebilir
+        if (action === 'view') return true;
+        
+        return false;
+        
+      default:
+        return false;
     }
-    
-    return false;
   }, [user]);
 
-  // Kullanıcı hesabını doğrulama 
-  const isAuthenticated = !!user;
-
-  // Context değerlerini useMemo ile memoize etme
-  const contextValue = useMemo(() => ({ 
-    user, 
-    login, 
-    logout, 
-    register,
-    isAuthenticated, 
+  // Memoize edilen context değeri
+  const value = useMemo(() => ({
+    user,
     loading,
-    hasPermission 
-  }), [user, login, logout, register, isAuthenticated, loading, hasPermission]);
+    isAuthenticated: !!user,
+    login,
+    logout,
+    register,
+    updateUserData,
+    hasPermission,
+    isAdmin: user?.role === 'admin',
+    isStore: user?.role === 'store',
+    isUser: user?.role === 'user',
+  }), [user, loading, login, logout, register, updateUserData, hasPermission]);
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Auth hook
+// Auth Context hook'u
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === null) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 } 

@@ -13,6 +13,11 @@ export default function AuthGuard({ children, requiredRole, permissionType = 'vi
     // Auth yüklenene kadar bekle
     if (loading) return;
 
+    // Eğer requiredRole "user" ise ve sayfa "/checkout" ise tüm kullanıcılara izin ver
+    if (requiredRole === 'user' && pathname === '/checkout') {
+      return; // Erişime izin ver, hiçbir şey yapma
+    }
+
     // Eğer giriş yapılmadıysa ve korumalı sayfadaysa login'e yönlendir
     if (!isAuthenticated && requiredRole) {
       // Login yapılmadan önce gidilecek sayfayı localStorage'a kaydet
@@ -37,6 +42,11 @@ export default function AuthGuard({ children, requiredRole, permissionType = 'vi
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
+  }
+
+  // Checkout sayfası için özel durum
+  if (requiredRole === 'user' && pathname === '/checkout') {
+    return children; // Herkese erişim izni ver
   }
 
   // Erişim izni yoksa veya yükleme sırasında null döndür

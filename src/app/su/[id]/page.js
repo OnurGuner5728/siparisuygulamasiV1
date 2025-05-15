@@ -8,7 +8,17 @@ import { useCart } from '@/contexts/CartContext';
 export default function WaterVendorDetailPage() {
   const params = useParams();
   const vendorId = params?.id ? parseInt(params.id) : null;
-  const { addToCart, removeFromCart, cartItems } = useCart();
+  
+  // useCart hook'unu component body içinde doğrudan çağırıyoruz
+  let cartFunctions = { addToCart: () => {}, removeFromCart: () => {}, cartItems: [] };
+  try {
+    // useCart'ı bir değişkene atama, hook çağrısı komponent gövdesinde yapılıyor
+    cartFunctions = useCart();
+  } catch (error) {
+    console.error('CartContext hatası:', error);
+  }
+
+  const { addToCart, removeFromCart, cartItems } = cartFunctions;
   
   // Dummy veri - Gerçek uygulamada API'den gelecek
   const [vendor, setVendor] = useState(null);
@@ -16,7 +26,7 @@ export default function WaterVendorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [localCart, setLocalCart] = useState([]);
-
+  
   // Sahte veritabanından satıcı bilgilerini al
   useEffect(() => {
     // Gerçek uygulamada bir API isteği yapılacak
@@ -54,7 +64,7 @@ export default function WaterVendorDetailPage() {
 
   useEffect(() => {
     // CartContext'ten bu satıcıya ait ürünleri filtrele
-    if (vendor) {
+    if (vendor && cartItems) {
       const vendorItems = cartItems.filter(item => 
         item.storeName === vendor.name
       );

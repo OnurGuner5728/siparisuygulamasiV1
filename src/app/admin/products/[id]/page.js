@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import { mockProducts, mockStores, mockCategories } from '@/app/data/mockdatas';
+import FileUploader from '@/components/FileUploader';
+import { useFileUpload } from '@/contexts/FileContext';
 
 export default function EditProduct() {
   return (
@@ -19,6 +21,16 @@ function EditProductContent() {
   const router = useRouter();
   const params = useParams();
   const productId = params?.id ? parseInt(params.id) : null;
+  const { uploadFile } = useFileUpload();
+  
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [notFound, setNotFound] = useState(false);
+  const [stores, setStores] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -30,20 +42,24 @@ function EditProductContent() {
     image: '',
     status: 'active'
   });
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [stores, setStores] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [notFound, setNotFound] = useState(false);
 
+  // Mağaza listesini yükle
   useEffect(() => {
-    // Mağazaları getir
+    // Mock API çağrısı - Mağaza listesi
     setTimeout(() => {
-      setStores(mockStores);
+      const activeStores = mockStores.filter(store => store.status === 'active');
+      setStores(activeStores);
+      
+      // Ana kategorileri yükle
+      const mainCats = mockCategories.map(cat => ({
+        id: cat.id,
+        name: cat.name
+      }));
+      setMainCategories(mainCats);
     }, 500);
   }, []);
-
+  
+  // Ürün verilerini yükle
   useEffect(() => {
     // Ürün verilerini yükle
     if (productId !== null && stores.length > 0) {
@@ -71,6 +87,7 @@ function EditProductContent() {
           if (store) {
             // Ana kategoriyi bul
             const mainCategory = mockCategories.find(cat => cat.id === parseInt(store.categoryId));
+            setSelectedMainCategory(mainCategory);
             
             if (mainCategory && mainCategory.subcategories) {
               const subCategories = mainCategory.subcategories.map(subcat => subcat.name);
@@ -91,54 +108,53 @@ function EditProductContent() {
     }
   }, [productId, stores]);
 
-  useEffect(() => {
-    // Mağaza seçildiğinde kategorileri güncelle
-    if (formData.storeId && !loading) {
-      const store = stores.find(s => s.id === parseInt(formData.storeId));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'storeId' && value) {
+      // Mağaza seçildiğinde uygun kategorileri yükle
+      const store = stores.find(s => s.id === parseInt(value));
       if (store) {
-        setFormData(prev => ({
-          ...prev,
-          mainCategory: store.categoryId
-        }));
-
         // Ana kategoriyi bul
         const mainCategory = mockCategories.find(cat => cat.id === parseInt(store.categoryId));
+        setSelectedMainCategory(mainCategory);
         
         if (mainCategory && mainCategory.subcategories) {
           const subCategories = mainCategory.subcategories.map(subcat => subcat.name);
           setCategories(subCategories);
           
-          // Eğer mevcut kategori bu yeni seçenekler arasında değilse, ilk kategoriyi seç
-          if (!subCategories.includes(formData.category) && subCategories.length > 0) {
-            setFormData(prev => ({
-              ...prev,
-              category: subCategories[0]
-            }));
-          }
-        } else {
-          setCategories([]);
+          // Kategori seçimini sıfırla
+          setFormData(prev => ({ ...prev, [name]: value, category: '' }));
+          return;
         }
       }
+      
+      // Kategori bulunamadıysa kategorileri temizle
+      setCategories([]);
     }
-  }, [formData.storeId, stores, loading]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
     
-    // Fiyat alanı için sayısal kontrol
-    if (name === 'price') {
-      const regex = /^\d*\.?\d{0,2}$/;
-      if (value === '' || regex.test(value)) {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-        }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = async (file) => {
+    if (!file) {
+      setFormData(prev => ({ ...prev, image: '' }));
+      return;
+    }
+
+    try {
+      // FileContext üzerinden dosya yükleme işlemi
+      const fileInfo = await uploadFile(file, {
+        path: 'products',
+        fileName: `product_${productId}_${Date.now()}`
+      });
+      
+      if (fileInfo && fileInfo.url) {
+        setFormData(prev => ({ ...prev, image: fileInfo.url }));
       }
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+    } catch (error) {
+      console.error("Dosya yükleme hatası:", error);
+      setError('Dosya yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
     }
   };
 
@@ -276,34 +292,43 @@ function EditProductContent() {
               <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                 Kategori
               </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                disabled={categories.length === 0}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Kategori Seçin</option>
-                {categories.map((category, index) => (
-                  <option key={index} value={category}>{category}</option>
-                ))}
-              </select>
+              <div className="flex flex-col space-y-2">
+                {selectedMainCategory && (
+                  <div className="text-sm text-gray-500">
+                    Ana Kategori: {selectedMainCategory.name}
+                  </div>
+                )}
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                  disabled={categories.length === 0}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Alt Kategori Seçin</option>
+                  {categories.map((category, index) => (
+                    <option key={index} value={category}>{category}</option>
+                  ))}
+                </select>
+                {categories.length === 0 && formData.storeId && (
+                  <p className="text-xs text-amber-600">Seçilen mağazanın kategorisi için alt kategori bulunamadı.</p>
+                )}
+              </div>
             </div>
 
             <div>
-              <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-                Ürün Görseli URL
-              </label>
-              <input
-                type="text"
-                id="image"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ürün görsel URL'si"
+              <FileUploader
+                defaultImage={formData.image}
+                onImageUpload={handleImageUpload}
+                label="Ürün Görseli"
+                id="productImage"
+                name="productImage"
+                accept="image/*"
+                maxSizeInMB={2}
+                showCropper={true}
+                placeholderImage="/placeholder-product.jpg"
               />
             </div>
 
