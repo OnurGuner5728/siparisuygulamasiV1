@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function Login() {
+// SearchParams için ayrı bir bileşen oluşturuyoruz
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isAuthenticated } = useAuth();
@@ -189,5 +190,22 @@ export default function Login() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-orange-500 to-red-500 p-4">
+        <div className="bg-white rounded-3xl overflow-hidden max-w-md mx-auto shadow-xl">
+          <div className="px-8 pt-10 pb-8 text-center">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Giriş Yap</h2>
+            <p className="text-gray-500">Yükleniyor...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 } 
