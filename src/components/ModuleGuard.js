@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useModule } from '@/contexts/ModuleContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { FiLock } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 /**
  * ModuleGuard - Bir modülün aktif olup olmadığını kontrol eden ve
@@ -19,13 +21,20 @@ export default function ModuleGuard({ moduleName, children, fallbackUrl, fallbac
   const { isModuleEnabled, isLoading } = useModule();
   const { user } = useAuth();
   const [isEnabled, setIsEnabled] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Sayfa client tarafında render edildiğinde modülün durumunu kontrol et
     if (!isLoading) {
-      setIsEnabled(isModuleEnabled(moduleName));
+      const moduleStatus = isModuleEnabled(moduleName);
+      setIsEnabled(moduleStatus);
+      
+      // Eğer modül etkin değilse ve kullanıcı admin değilse ve fallbackUrl varsa yönlendir
+      if (!moduleStatus && !(user && user.role === 'admin') && fallbackUrl) {
+        router.push(fallbackUrl);
+      }
     }
-  }, [isLoading, moduleName, isModuleEnabled]);
+  }, [isLoading, moduleName, isModuleEnabled, user, fallbackUrl, router]);
 
   // Henüz yükleme aşamasındaysa bir şey gösterme
   if (isLoading) {
@@ -35,14 +44,6 @@ export default function ModuleGuard({ moduleName, children, fallbackUrl, fallbac
   // Modül etkinse veya kullanıcı admin ise içeriği göster
   if (isEnabled || (user && user.role === 'admin')) {
     return <>{children}</>;
-  }
-
-  // Fallback URL varsa yönlendir (client side yönlendirme için useEffect kullanılmalı)
-  if (fallbackUrl) {
-    useEffect(() => {
-      window.location.href = fallbackUrl;
-    }, [fallbackUrl]);
-    return null;
   }
 
   // Özel fallback içeriği varsa göster
@@ -57,11 +58,11 @@ export default function ModuleGuard({ moduleName, children, fallbackUrl, fallbac
         <FiLock className="w-12 h-12 mx-auto mb-4" />
         <h2 className="text-xl font-bold mb-2">Bu modül şu anda aktif değil</h2>
         <p className="mb-4">
-          "{moduleName}" modülü sistem yöneticisi tarafından geçici olarak devre dışı bırakılmıştır.
+          &ldquo;{moduleName}&rdquo; modülü sistem yöneticisi tarafından geçici olarak devre dışı bırakılmıştır.
         </p>
-        <a href="/" className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-md">
+        <Link href="/" className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-md">
           Ana Sayfaya Dön
-        </a>
+        </Link>
       </div>
     </div>
   );
