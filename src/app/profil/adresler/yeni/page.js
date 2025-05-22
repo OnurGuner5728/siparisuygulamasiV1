@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiHome, FiMapPin, FiBriefcase, FiCheck, FiNavigation2 } from 'react-icons/fi';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
 
 export default function NewAddress() {
   const router = useRouter();
+  const { user } = useAuth();
   
   // Form durumu
   const [formData, setFormData] = useState({
@@ -23,6 +26,9 @@ export default function NewAddress() {
     directions: '',
     isDefault: false
   });
+  
+  // Loading durumu
+  const [loading, setLoading] = useState(false);
   
   // Location durumları
   const [locationStatus, setLocationStatus] = useState('initial'); // initial, requesting, granted, denied, unavailable
@@ -101,16 +107,54 @@ export default function NewAddress() {
   };
   
   // Form gönderimi
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Gerçek uygulamada burada API'ye kayıt işlemi yapılır
-    console.log('Yeni adres:', formData);
+    if (!user) {
+      alert('Lütfen giriş yapın');
+      return;
+    }
     
-    // Adresler sayfasına geri dön
-    router.push('/profil/adresler');
+    try {
+      setLoading(true);
+      
+      // Adres verilerini hazırla - veritabanı şemasına uygun
+      const fullAddress = `${formData.street} ${formData.buildingNo ? 'No:' + formData.buildingNo : ''} ${formData.floor ? 'Kat:' + formData.floor : ''} ${formData.apartmentNo ? 'Daire:' + formData.apartmentNo : ''}`.trim();
+      
+      const addressData = {
+        user_id: user.id,
+        title: formData.title,
+        type: formData.addressType, // Veritabanında 'type' alanı var
+        full_name: formData.fullName,
+        phone: formData.phone,
+        city: formData.city,
+        district: formData.district,
+        neighborhood: formData.neighborhood,
+        full_address: fullAddress + (formData.directions ? ` - ${formData.directions}` : ''),
+        postal_code: null, // Şimdilik null
+        is_default: formData.isDefault
+      };
+      
+      console.log('Yeni adres:', addressData);
+      
+      // API'ye kayıt işlemi
+      const result = await api.createAddress(addressData);
+      
+      if (result) {
+        // Başarılı kayıt
+        alert('Adres başarıyla eklendi!');
+        router.push('/profil/adresler');
+      } else {
+        alert('Adres eklenirken bir hata oluştu');
+      }
+    } catch (error) {
+      console.error('Adres ekleme hatası:', error);
+      alert('Adres eklenirken bir hata oluştu: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Başlık */}
@@ -322,13 +366,13 @@ export default function NewAddress() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="street">
-                  Cadde/Sokak
+                  Sokak/Cadde
                 </label>
                 <input
                   type="text"
                   id="street"
                   name="street"
-                  placeholder="Cadde/Sokak"
+                  placeholder="Sokak/Cadde"
                   value={formData.street}
                   onChange={handleChange}
                   required
@@ -345,10 +389,9 @@ export default function NewAddress() {
                     type="text"
                     id="buildingNo"
                     name="buildingNo"
-                    placeholder="No"
+                    placeholder="Bina No"
                     value={formData.buildingNo}
                     onChange={handleChange}
-                    required
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                 </div>
@@ -370,13 +413,13 @@ export default function NewAddress() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="apartmentNo">
-                    Daire
+                    Daire No
                   </label>
                   <input
                     type="text"
                     id="apartmentNo"
                     name="apartmentNo"
-                    placeholder="Daire"
+                    placeholder="Daire No"
                     value={formData.apartmentNo}
                     onChange={handleChange}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -386,47 +429,57 @@ export default function NewAddress() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="directions">
-                  Adres Tarifi (İsteğe Bağlı)
+                  Tarif (Opsiyonel)
                 </label>
                 <textarea
                   id="directions"
                   name="directions"
-                  placeholder="Apartman girişi, zil, kapı rengi vb. detaylar"
+                  placeholder="Adres tarifi, ek bilgiler..."
                   value={formData.directions}
                   onChange={handleChange}
-                  rows="3"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                ></textarea>
+                  rows={3}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                />
               </div>
             </div>
           </div>
           
           {/* Varsayılan Adres */}
-          <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
-            <label className="flex items-center cursor-pointer">
+          <div className="bg-white rounded-lg shadow-sm p-5 mb-6">
+            <label className="flex items-center">
               <input
                 type="checkbox"
                 name="isDefault"
                 checked={formData.isDefault}
                 onChange={handleChange}
-                className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                className="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
               />
-              <span className="ml-3 text-gray-700 font-medium">Bu adresi varsayılan adresim yap</span>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                Bu adresi varsayılan adres olarak ayarla
+              </span>
             </label>
           </div>
+          
+          {/* Kaydet Butonu */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+            <div className="container mx-auto">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium py-3 px-4 rounded-lg hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  'Adresi Kaydet'
+                )}
+              </button>
+            </div>
+          </div>
         </form>
-      </div>
-      
-      {/* Alt Butonlar (Sabit) */}
-      <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 p-4">
-        <button
-          type="submit"
-          form="address-form"
-          onClick={handleSubmit}
-          className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 px-4 rounded-lg shadow-sm hover:from-orange-600 hover:to-red-700"
-        >
-          Adresi Kaydet
-        </button>
       </div>
     </div>
   );

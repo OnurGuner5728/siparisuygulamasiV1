@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
-import { mockOrders, mockAddresses } from '@/app/data/mockdatas';
+import api from '@/lib/api'; // API servisini import et
 
 export default function OrderDetails() {
   return (
@@ -17,75 +17,97 @@ export default function OrderDetails() {
 
 function OrderDetailsContent() {
   const params = useParams();
-  const orderId = params?.id ? parseInt(params.id) : null;
+  const orderId = params?.id;
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   useEffect(() => {
-    // Mock veriyi ortak dosyadan kullanıyoruz
-    const fetchOrder = () => {
+    const fetchOrderDetails = async () => {
+      if (!orderId) {
+        setLoading(false);
+        setNotFound(true); // ID yoksa bulunamadı olarak işaretle
+        return;
+      }
       setLoading(true);
-      setTimeout(() => {
-        // Sipariş ID'sine göre siparişi bul
-        const foundOrder = mockOrders.find(order => order.id === orderId);
-        
-        if (foundOrder) {
-          // Teslimat adresini ekle
-          const deliveryAddress = mockAddresses.find(addr => addr.id === foundOrder.deliveryAddressId);
-          
-          setOrder({
-            ...foundOrder,
-            deliveryAddress: deliveryAddress || {} // Eğer adres bulunamazsa boş nesne kullan
-          });
+      try {
+        const orderData = await api.getOrderById(orderId);
+        if (orderData) {
+          setOrder(orderData);
           setNotFound(false);
         } else {
           setNotFound(true);
         }
-        
+      } catch (err) {
+        console.error("Sipariş detayı yüklenirken hata:", err);
+        setError('Sipariş detayı yüklenirken bir sorun oluştu.');
+        setNotFound(true); // Hata durumunda da bulunamadı olarak işaretle
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
-    if (orderId) {
-      fetchOrder();
-    }
+    fetchOrderDetails();
   }, [orderId]);
 
+  // Dropdown dışına tıklandığında kapatma
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showStatusDropdown && !event.target.closest('.status-dropdown')) {
+        setShowStatusDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStatusDropdown]);
+
   // Sipariş durumunu değiştirme
-  const handleChangeStatus = (newStatus) => {
-    const now = new Date();
+  const handleChangeStatus = async (newStatus) => {
+    if (!order) return;
+    const now = new Date().toISOString();
     
-    // Durum güncellemesi
-    setOrder(prev => {
-      // Durum zaten aynıysa değiştirme
-      if (prev.status === newStatus) return prev;
+    try {
+      // Önceki statusHistory'yi al, eğer yoksa boş bir dizi kullan
+      const prevStatusHistory = order.status_history || [];
       
       const statusNote = {
         pending: 'Sipariş beklemede',
-        in_progress: 'Sipariş hazırlanıyor',
+        processing: 'Sipariş hazırlanıyor',
+        shipped: 'Sipariş yolda',
         delivered: 'Sipariş teslim edildi',
         cancelled: 'Sipariş iptal edildi'
       };
-      
-      // Yeni durum geçmişi ekle
+
       const updatedStatusHistory = [
-        ...prev.statusHistory,
+        ...prevStatusHistory,
         {
           status: newStatus,
-          timestamp: now.toISOString(),
+          timestamp: now,
           note: statusNote[newStatus] || 'Durum güncellendi'
         }
       ];
-      
-      return {
-        ...prev,
+
+      const updates = {
         status: newStatus,
-        statusHistory: updatedStatusHistory,
-        ...(newStatus === 'delivered' ? { deliveryDate: now.toISOString() } : {})
+        status_history: updatedStatusHistory,
       };
-    });
+
+      if (newStatus === 'delivered') {
+        updates.delivery_date = now;
+      }
+
+      const updatedOrder = await api.updateOrder(order.id, updates);
+      setOrder(updatedOrder);
+
+    } catch (err) {
+      console.error("Sipariş durumu güncellenirken hata:", err);
+      alert('Sipariş durumu güncellenemedi: ' + (err.message || 'Bilinmeyen hata'));
+    }
   };
 
   // Sipariş durumunu formatla
@@ -93,8 +115,10 @@ function OrderDetailsContent() {
     switch (status) {
       case 'pending':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Beklemede</span>;
-      case 'in_progress':
+      case 'processing':
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Hazırlanıyor</span>;
+      case 'shipped':
+        return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
       case 'cancelled':
@@ -138,12 +162,16 @@ function OrderDetailsContent() {
     );
   }
 
-  if (notFound) {
+  if (notFound || error) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Sipariş Bulunamadı</h1>
-          <p className="text-gray-600 mb-6">İstediğiniz ID ({orderId}) ile eşleşen bir sipariş bulunamadı.</p>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">
+            {error ? 'Hata' : 'Sipariş Bulunamadı'}
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {error || `İstediğiniz ID (${orderId}) ile eşleşen bir sipariş bulunamadı.`}
+          </p>
           <Link 
             href="/admin/orders"
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center"
@@ -157,69 +185,117 @@ function OrderDetailsContent() {
       </div>
     );
   }
-
-  if (!order) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 p-4 rounded-md mb-4">
-          <p className="text-red-700">Sipariş bilgileri yüklenirken bir hata oluştu.</p>
-        </div>
-        <Link 
-          href="/admin/orders"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Sipariş Listesine Dön
-        </Link>
-      </div>
-    );
-  }
+  
+  // order.customer, order.store, order.delivery_address, order.order_items verilerinin varlığını kontrol et
+  const customer = order.customer || {};
+  const store = order.store || {};
+  const deliveryAddress = order.delivery_address || {};
+  const orderItems = order.order_items || [];
+  const statusHistory = order.status_history || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Sipariş Detayı</h1>
-          <p className="text-gray-600 mt-1">Sipariş No: {order.id}</p>
+          <p className="text-gray-600 mt-1">Sipariş No: {order.id.substring(0,8)}...</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative group">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center">
+          <div className="relative status-dropdown">
+            <button 
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
               Durumu Güncelle
-              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className={`w-4 h-4 ml-2 transition-transform duration-200 ${showStatusDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 invisible group-hover:visible z-10">
-              <div className="py-1" role="menu" aria-orientation="vertical">
-                <button
-                  onClick={() => handleChangeStatus('pending')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Beklemede
-                </button>
-                <button
-                  onClick={() => handleChangeStatus('in_progress')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Hazırlanıyor
-                </button>
-                <button
-                  onClick={() => handleChangeStatus('delivered')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Teslim Edildi
-                </button>
-                <button
-                  onClick={() => handleChangeStatus('cancelled')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  İptal Edildi
-                </button>
+            
+            {showStatusDropdown && (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-20 border border-gray-100">
+                <div className="py-2" role="menu" aria-orientation="vertical">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                    Sipariş Durumu Seçin
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('pending');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Beklemede</div>
+                      <div className="text-xs text-gray-500">Sipariş onay bekliyor</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('processing');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-blue-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Hazırlanıyor</div>
+                      <div className="text-xs text-gray-500">Sipariş hazırlanmaya başlandı</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('shipped');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-orange-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Yolda</div>
+                      <div className="text-xs text-gray-500">Sipariş müşteriye gönderildi</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('delivered');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-green-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Teslim Edildi</div>
+                      <div className="text-xs text-gray-500">Sipariş başarıyla teslim edildi</div>
+                    </div>
+                  </button>
+                  
+                  <div className="border-t border-gray-100 mt-1">
+                    <button
+                      onClick={() => {
+                        handleChangeStatus('cancelled');
+                        setShowStatusDropdown(false);
+                      }}
+                      className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-800 transition-all duration-150"
+                    >
+                      <div className="w-3 h-3 bg-red-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                      <div>
+                        <div className="font-medium">İptal Edildi</div>
+                        <div className="text-xs text-gray-500">Sipariş iptal edildi</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <Link 
             href="/admin/orders"
@@ -247,21 +323,21 @@ function OrderDetailsContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <p className="text-sm text-gray-600">Sipariş Tarihi</p>
-                <p className="font-medium">{new Date(order.orderDate).toLocaleString('tr-TR')}</p>
+                <p className="font-medium">{new Date(order.order_date).toLocaleString('tr-TR')}</p>
               </div>
-              {order.deliveryDate && (
+              {order.delivery_date && (
                 <div>
                   <p className="text-sm text-gray-600">Teslim Tarihi</p>
-                  <p className="font-medium">{new Date(order.deliveryDate).toLocaleString('tr-TR')}</p>
+                  <p className="font-medium">{new Date(order.delivery_date).toLocaleString('tr-TR')}</p>
                 </div>
               )}
               <div>
                 <p className="text-sm text-gray-600">Ödeme Yöntemi</p>
-                <p className="font-medium">{formatPaymentMethod(order.paymentMethod)}</p>
+                <p className="font-medium">{formatPaymentMethod(order.payment_method)}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Ödeme Durumu</p>
-                <div>{formatPaymentStatus(order.paymentStatus)}</div>
+                <div>{formatPaymentStatus(order.payment_status)}</div>
               </div>
             </div>
 
@@ -286,10 +362,10 @@ function OrderDetailsContent() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {order.items.map((item) => (
+                    {orderItems.map((item) => (
                       <tr key={item.id}>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm font-medium text-gray-900">{item.product?.name || item.name}</div>
                           {item.notes && <div className="text-xs text-gray-500">Not: {item.notes}</div>}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -299,7 +375,7 @@ function OrderDetailsContent() {
                           <div className="text-sm text-gray-900">{item.price.toFixed(2)} TL</div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{item.total.toFixed(2)} TL</div>
+                          <div className="text-sm font-medium text-gray-900">{(item.price * item.quantity).toFixed(2)} TL</div>
                         </td>
                       </tr>
                     ))}
@@ -314,7 +390,7 @@ function OrderDetailsContent() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Teslimat Ücreti:</span>
-                  <span>{order.deliveryFee.toFixed(2)} TL</span>
+                  <span>{order.delivery_fee.toFixed(2)} TL</span>
                 </div>
                 {order.discount > 0 && (
                   <div className="flex justify-between text-green-600">
@@ -338,24 +414,26 @@ function OrderDetailsContent() {
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-gray-600">Ad Soyad</p>
-                <p className="font-medium">{order.customerName}</p>
+                <p className="font-medium">{customer.name}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Telefon</p>
-                <p className="font-medium">{order.customerPhone}</p>
+                <p className="font-medium">{customer.phone || 'Belirtilmemiş'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">E-posta</p>
-                <p className="font-medium">{order.customerEmail}</p>
+                <p className="font-medium">{customer.email}</p>
               </div>
-              <div className="pt-2">
-                <Link 
-                  href={`/admin/users/${order.customerId}`}
-                  className="text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  Müşteri Profili →
-                </Link>
-              </div>
+              {order.customer_id && (
+                <div className="pt-2">
+                  <Link 
+                    href={`/admin/users/${order.customer_id}`}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    Müşteri Profili →
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
@@ -364,90 +442,103 @@ function OrderDetailsContent() {
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-gray-600">İsim</p>
-                <p className="font-medium">{order.storeName}</p>
+                <p className="font-medium">{store.name}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Telefon</p>
-                <p className="font-medium">{order.storePhone}</p>
+                <p className="font-medium">{store.phone || 'Belirtilmemiş'}</p>
               </div>
-              <div>
+              {/* Kategori bilgisi store objesinden alınabilir, gerekirse api.js'de stores sorgusuna eklenebilir */}
+              {/* <div>
                 <p className="text-sm text-gray-600">Kategori</p>
                 <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                  {order.category}
+                  {order.category} 
                 </span>
-              </div>
-              <div className="pt-2">
-                <Link 
-                  href={`/admin/stores/${order.storeId}`}
-                  className="text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  Mağaza Profili →
-                </Link>
-              </div>
+              </div> */}
+              {order.store_id && (
+                <div className="pt-2">
+                  <Link 
+                    href={`/admin/stores/${order.store_id}`}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    Mağaza Profili →
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Teslimat Adresi</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-600">Ad Soyad</p>
-                <p className="font-medium">{order.deliveryAddress.fullName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Telefon</p>
-                <p className="font-medium">{order.deliveryAddress.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Adres</p>
-                <p className="font-medium">
-                  {order.deliveryAddress.neighborhood}, {order.deliveryAddress.fullAddress}, {order.deliveryAddress.district}/{order.deliveryAddress.city}
-                </p>
+          {deliveryAddress && Object.keys(deliveryAddress).length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Teslimat Adresi</h2>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600">Ad Soyad</p>
+                  <p className="font-medium">{deliveryAddress.full_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Telefon</p>
+                  <p className="font-medium">{deliveryAddress.phone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Adres</p>
+                  <p className="font-medium">
+                    {deliveryAddress.neighborhood}, {deliveryAddress.full_address}, {deliveryAddress.district}/{deliveryAddress.city}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Sipariş Durumu Geçmişi */}
-      <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Sipariş Geçmişi</h2>
-        <div className="relative">
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-          <ul className="space-y-4">
-            {order.statusHistory.map((history, index) => (
-              <li key={index} className="relative pl-10">
-                <div className="absolute left-0 top-1 w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-200 bg-white z-10">
-                  {history.status === 'pending' && (
-                    <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {history.status === 'in_progress' && (
-                    <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {history.status === 'delivered' && (
-                    <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {history.status === 'cancelled' && (
-                    <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-800">{history.note}</p>
-                  <p className="text-sm text-gray-500">{new Date(history.timestamp).toLocaleString('tr-TR')}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+      {statusHistory.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Sipariş Geçmişi</h2>
+          <div className="relative">
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+            <ul className="space-y-4">
+              {statusHistory.map((history, index) => (
+                <li key={index} className="relative pl-10">
+                  <div className="absolute left-0 top-1 w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-200 bg-white z-10">
+                    {history.status === 'pending' && (
+                      <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {history.status === 'processing' && (
+                      <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {history.status === 'shipped' && (
+                      <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h1a1 1 0 010 2H4.414l1.707 1.707a1 1 0 01-.707.707L4 6.586V9a1 1 0 11-2 0V4z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {history.status === 'delivered' && (
+                      <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {history.status === 'cancelled' && (
+                      <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-800">{history.note}</p>
+                    <p className="text-sm text-gray-500">{new Date(history.timestamp).toLocaleString('tr-TR')}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 } 

@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiArrowLeft, FiFilter, FiStar, FiShoppingBag } from 'react-icons/fi';
-import { mockStores, mockProducts } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 
 export default function CategoryPage({ params }) {
   const router = useRouter();
   const { categoryId } = params;
   
   const [products, setProducts] = useState([]);
+  const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterActive, setFilterActive] = useState(false);
   const [sortOption, setSortOption] = useState('popular');
@@ -19,51 +20,49 @@ export default function CategoryPage({ params }) {
   const [ratings, setRatings] = useState([]);
   const [categoryName, setCategoryName] = useState('');
   
-  // Ürünleri yükle
+  // Ürünleri ve mağazaları yükle
   useEffect(() => {
-    // API çağrısı simülasyonu
-    setTimeout(() => {
-      // Tüm mock ürünlerden kategoriye ait olanları filtrele
-      let categoryProducts = [];
-      
-      // Kategorileri belirle
-      const foodCategories = {
-        'burgers': 'Burgerler',
-        'kebabs': 'Kebaplar',
-        'pizzas': 'Pizzalar',
-        'desserts': 'Tatlılar',
-        'drinks': 'İçecekler',
-        'fastfood': 'Fast Food',
-        'breakfast': 'Kahvaltı',
-        'seafood': 'Deniz Ürünleri'
-      };
-      
-      setCategoryName(foodCategories[categoryId] || 'Yemekler');
-      
-      // mockProducts'dan ilgili kategoriye ait ürünleri bul
-      mockStores.forEach(store => {
-        if (store.menuItems) {
-          store.menuItems.forEach(item => {
-            // Eğer kategori eşleşiyorsa ya da tüm yemekleri göster
-            if ((categoryId === 'all') || 
-                (item.category && item.category.toLowerCase().includes(categoryId.toLowerCase())) || 
-                (item.name && item.name.toLowerCase().includes(categoryId.toLowerCase()))) {
-              categoryProducts.push({
-                ...item,
-                storeName: store.name,
-                storeId: store.id
-              });
-            }
-          });
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // Kategori bilgisini al
+        const categoryData = await api.getCategoryById(categoryId);
+        setCategoryName(categoryData?.name || 'Yemekler');
+        
+        // Kategori ID'si ile mağazaları al
+        const storesData = await api.getStoresByCategory(categoryId);
+        setStores(storesData || []);
+        
+        // Her mağazanın ürünlerini al
+        let allProducts = [];
+        for (const store of storesData) {
+          const storeProducts = await api.getProductsByStoreId(store.id);
+          
+          // Ürünlere mağaza bilgisini ekle
+          if (storeProducts && storeProducts.length > 0) {
+            const productsWithStoreInfo = storeProducts.map(product => ({
+              ...product,
+              storeName: store.name,
+              storeId: store.id
+            }));
+            
+            allProducts = [...allProducts, ...productsWithStoreInfo];
+          }
         }
-      });
-      
-      // Ürünleri sırala
-      categoryProducts = sortProducts(categoryProducts, sortOption);
-      
-      setProducts(categoryProducts);
-      setLoading(false);
-    }, 500);
+        
+        // Ürünleri sırala
+        allProducts = sortProducts(allProducts, sortOption);
+        
+        setProducts(allProducts);
+      } catch (error) {
+        console.error('Kategori ve ürün verileri yüklenirken hata:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
   }, [categoryId]);
   
   // Ürünleri sıralama fonksiyonu
@@ -76,88 +75,94 @@ export default function CategoryPage({ params }) {
       case 'price-desc':
         return productsCopy.sort((a, b) => b.price - a.price);
       case 'rating':
-        return productsCopy.sort((a, b) => b.rating - a.rating);
+        return productsCopy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
       case 'popular':
       default:
-        return productsCopy.sort((a, b) => b.reviewCount - a.reviewCount);
+        return productsCopy.sort((a, b) => (b.review_count || 0) - (a.review_count || 0));
     }
   };
   
   // Sıralama değiştiğinde ürünleri güncelle
   useEffect(() => {
-    if (!loading) {
+    if (!loading && products.length > 0) {
       setProducts(sortProducts([...products], sortOption));
     }
   }, [sortOption]);
   
   // Filtreleri uygula
-  const applyFilters = () => {
+  const applyFilters = async () => {
     setFilterActive(false);
     
-    // Tüm ürünleri al ve filtreleri uygula
-    let filteredProducts = [];
-    
-    mockStores.forEach(store => {
-      if (store.menuItems) {
-        store.menuItems.forEach(item => {
-          // Kategori kontrolü
-          if ((categoryId === 'all') || 
-              (item.category && item.category.toLowerCase().includes(categoryId.toLowerCase())) || 
-              (item.name && item.name.toLowerCase().includes(categoryId.toLowerCase()))) {
-            
+    try {
+      // Tüm mağaza ürünlerini tekrar al ve filtreleri uygula
+      let filteredProducts = [];
+      
+      for (const store of stores) {
+        const storeProducts = await api.getProductsByStoreId(store.id);
+        
+        if (storeProducts && storeProducts.length > 0) {
+          // Filtrelerle eşleşen ürünleri seç
+          const matchingProducts = storeProducts.filter(item => {
             // Fiyat aralığı kontrolü
             if (item.price >= priceRange.min && item.price <= priceRange.max) {
-              
               // Yıldız derecelendirme kontrolü
-              if (ratings.length === 0 || ratings.includes(Math.floor(item.rating))) {
-                filteredProducts.push({
-                  ...item,
-                  storeName: store.name,
-                  storeId: store.id
-                });
+              if (ratings.length === 0 || ratings.includes(Math.floor(item.rating || 0))) {
+                return true;
               }
             }
-          }
-        });
+            return false;
+          });
+          
+          // Ürünlere mağaza bilgisini ekle
+          const productsWithStoreInfo = matchingProducts.map(product => ({
+            ...product,
+            storeName: store.name,
+            storeId: store.id
+          }));
+          
+          filteredProducts = [...filteredProducts, ...productsWithStoreInfo];
+        }
       }
-    });
-    
-    // Sıralama
-    filteredProducts = sortProducts(filteredProducts, sortOption);
-    
-    setProducts(filteredProducts);
+      
+      // Sıralama
+      filteredProducts = sortProducts(filteredProducts, sortOption);
+      
+      setProducts(filteredProducts);
+    } catch (error) {
+      console.error('Filtreler uygulanırken hata:', error);
+    }
   };
   
   // Filtreleri sıfırla
-  const resetFilters = () => {
+  const resetFilters = async () => {
     setPriceRange({ min: 0, max: 500 });
     setRatings([]);
     
-    // Tüm ürünleri yeniden yükle
-    setTimeout(() => {
-      let categoryProducts = [];
+    try {
+      // Tüm mağaza ürünlerini tekrar al
+      let allProducts = [];
       
-      mockStores.forEach(store => {
-        if (store.menuItems) {
-          store.menuItems.forEach(item => {
-            if ((categoryId === 'all') || 
-                (item.category && item.category.toLowerCase().includes(categoryId.toLowerCase())) || 
-                (item.name && item.name.toLowerCase().includes(categoryId.toLowerCase()))) {
-              categoryProducts.push({
-                ...item,
-                storeName: store.name,
-                storeId: store.id
-              });
-            }
-          });
+      for (const store of stores) {
+        const storeProducts = await api.getProductsByStoreId(store.id);
+        
+        if (storeProducts && storeProducts.length > 0) {
+          const productsWithStoreInfo = storeProducts.map(product => ({
+            ...product,
+            storeName: store.name,
+            storeId: store.id
+          }));
+          
+          allProducts = [...allProducts, ...productsWithStoreInfo];
         }
-      });
+      }
       
       // Ürünleri sırala
-      categoryProducts = sortProducts(categoryProducts, sortOption);
+      allProducts = sortProducts(allProducts, sortOption);
       
-      setProducts(categoryProducts);
-    }, 100);
+      setProducts(allProducts);
+    } catch (error) {
+      console.error('Filtreler sıfırlanırken hata:', error);
+    }
     
     setFilterActive(false);
   };
@@ -235,7 +240,7 @@ export default function CategoryPage({ params }) {
             {products.map((product) => (
               <Link
                 key={`${product.storeId}-${product.id}`}
-                href={`/yemek/${product.storeId}/${product.id}`}
+                href={`/yemek/store/${product.storeId}`}
                 className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
               >
                 <div className="relative h-40 bg-gray-200">
@@ -248,24 +253,32 @@ export default function CategoryPage({ params }) {
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      Ürün resmi yok
+                      <span>Resim Yok</span>
                     </div>
                   )}
                 </div>
                 
                 <div className="p-4">
-                  <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                  <h2 className="font-semibold text-gray-800 truncate">{product.name}</h2>
                   <p className="text-sm text-gray-500 truncate">{product.storeName}</p>
                   
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex items-center text-sm">
-                      <FiStar className="text-yellow-500 fill-current mr-1" size={14} />
-                      <span>{product.rating || 4.5}</span>
-                      <span className="mx-1 text-gray-300">•</span>
-                      <span className="text-gray-500">{product.reviewCount || 10}+ değerlendirme</span>
-                    </div>
-                    
-                    <span className="font-bold text-gray-900">{product.price.toFixed(2)} TL</span>
+                  <div className="flex items-center mt-2">
+                    {product.rating !== undefined && (
+                      <div className="flex items-center mr-2">
+                        <FiStar className="text-yellow-400 fill-current mr-1" size={14} />
+                        <span className="text-sm text-gray-600">{product.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    <span className="text-sm text-gray-400">
+                      {product.category}
+                    </span>
+                  </div>
+                  
+                  <div className="mt-3 flex justify-between items-center">
+                    <p className="font-bold text-orange-600">{product.price.toFixed(2)} TL</p>
+                    <span className="text-xs text-gray-500">
+                      {product.storeName}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -274,105 +287,92 @@ export default function CategoryPage({ params }) {
         )}
       </div>
       
-      {/* Filtre Yan Menü */}
+      {/* Filtre Modali */}
       {filterActive && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setFilterActive(false)}>
-          <div 
-            className="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col h-full">
-              {/* Filtre Başlık */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-gray-800">Filtreler</h2>
-                  <button 
-                    onClick={() => setFilterActive(false)}
-                    className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
-                  >
-                    <FiArrowLeft size={20} />
-                  </button>
-                </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:items-center justify-center">
+          <div className="bg-white rounded-t-2xl md:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <div className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Filtrele</h3>
+                <button 
+                  onClick={() => setFilterActive(false)} 
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
               
-              {/* Filtre İçeriği */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="mb-6">
-                  <h3 className="font-medium text-gray-800 mb-3">Fiyat Aralığı</h3>
-                  <div className="flex items-center">
-                    <input
-                      type="number"
+              {/* Fiyat Aralığı */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Fiyat Aralığı</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="priceMin" className="block text-xs text-gray-500 mb-1">En Az</label>
+                    <input 
+                      type="number" 
+                      id="priceMin"
                       value={priceRange.min}
-                      onChange={(e) => setPriceRange({ ...priceRange, min: Number(e.target.value) })}
-                      className="w-24 p-2 border border-gray-300 rounded-lg"
-                      min="0"
+                      onChange={(e) => setPriceRange({...priceRange, min: parseInt(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     />
-                    <span className="mx-2 text-gray-400">-</span>
-                    <input
-                      type="number"
-                      value={priceRange.max}
-                      onChange={(e) => setPriceRange({ ...priceRange, max: Number(e.target.value) })}
-                      className="w-24 p-2 border border-gray-300 rounded-lg"
-                      min="0"
-                    />
-                    <span className="ml-2 text-gray-500">TL</span>
                   </div>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="font-medium text-gray-800 mb-3">Değerlendirme</h3>
-                  <div className="space-y-2">
-                    {[5, 4, 3, 2, 1].map((rating) => (
-                      <label key={rating} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={ratings.includes(rating)}
-                          onChange={() => {
-                            if (ratings.includes(rating)) {
-                              setRatings(ratings.filter(r => r !== rating));
-                            } else {
-                              setRatings([...ratings, rating]);
-                            }
-                          }}
-                          className="form-checkbox h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                        />
-                        <div className="ml-2 flex items-center">
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <FiStar
-                              key={index}
-                              className={`${
-                                index < rating
-                                  ? 'text-yellow-500 fill-current'
-                                  : 'text-gray-300'
-                              } mr-0.5`}
-                              size={16}
-                            />
-                          ))}
-                          {rating === 5 && <span className="ml-1 text-sm text-gray-600">ve üzeri</span>}
-                        </div>
-                      </label>
-                    ))}
+                  <div>
+                    <label htmlFor="priceMax" className="block text-xs text-gray-500 mb-1">En Çok</label>
+                    <input 
+                      type="number" 
+                      id="priceMax"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange({...priceRange, max: parseInt(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
                   </div>
                 </div>
               </div>
               
-              {/* Filtre Alt Kısmı */}
-              <div className="p-4 border-t border-gray-200">
-                <div className="flex space-x-3">
-                  <button
-                    onClick={resetFilters}
-                    className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
-                  >
-                    Sıfırla
-                  </button>
-                  
-                  <button
-                    onClick={applyFilters}
-                    className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-red-700"
-                  >
-                    Uygula
-                  </button>
+              {/* Değerlendirme */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Değerlendirme</h4>
+                <div className="space-y-2">
+                  {[5, 4, 3, 2, 1].map((star) => (
+                    <div key={star} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`rating-${star}`}
+                        checked={ratings.includes(star)}
+                        onChange={() => {
+                          if (ratings.includes(star)) {
+                            setRatings(ratings.filter(r => r !== star));
+                          } else {
+                            setRatings([...ratings, star]);
+                          }
+                        }}
+                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor={`rating-${star}`} className="ml-2 text-sm text-gray-700 flex items-center">
+                        <span>{star}</span>
+                        <FiStar className="text-yellow-400 fill-current ml-1" size={16} />
+                        <span className="ml-1">ve üzeri</span>
+                      </label>
+                    </div>
+                  ))}
                 </div>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={resetFilters}
+                  className="flex-1 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium"
+                >
+                  Sıfırla
+                </button>
+                <button
+                  onClick={applyFilters}
+                  className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-medium"
+                >
+                  Uygula
+                </button>
               </div>
             </div>
           </div>

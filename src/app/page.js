@@ -2,17 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { mainCategories, mockCategories, mockStores } from '@/app/data/mockdatas';
+import { useModule } from '@/contexts/ModuleContext';
+import api from '@/lib/api';
 import CampaignBanner from '@/components/CampaignBanner';
 import CategoryCard from '@/components/cards/CategoryCard';
 import Button from '@/components/ui/Button';
 
 export default function Home() {
   // AuthContext'ten kullanıcı bilgileri ve yetki kontrolü için useAuth hook'unu kullanıyoruz
-  const { user, loading, isAuthenticated, hasPermission } = useAuth();
+  const { user, loading: authLoading, isAuthenticated, hasPermission } = useAuth();
+  const { isModuleEnabled, isLoading: moduleLoading } = useModule();
   const [categories, setCategories] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
+  const [stores, setStores] = useState([]);
   const [storeCountByCategory, setStoreCountByCategory] = useState({});
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Debug için kullanıcı bilgilerini göster - sadece development'ta  useEffect(() => {    if (process.env.NODE_ENV === 'development') {      if (user) {        console.log("Giriş yapmış kullanıcı:", user.email);        console.log("Kullanıcı rolü:", user.role);      }    }  }, [user]);
 
   // Kategori arka plan rengini belirle
   const getCategoryColor = (categoryId) => {
@@ -32,51 +39,90 @@ export default function Home() {
 
   // Kategorinin açık olup olmadığını kontrol et (en az bir aktif ve açık mağazası varsa)
   const isCategoryOpen = (categoryId) => {
-    const stores = mockStores.filter(store => 
-      store.categoryId === categoryId && 
-      store.approved === true &&
-      store.isOpen === true
+    const categoryStores = stores.filter(store => 
+      store.category_id === categoryId && 
+      store.status === 'active'
     );
-    return stores.length > 0;
+    return categoryStores.length > 0;
+  };
+
+  // Kategori adından modül adını belirle
+  const getModuleNameFromCategory = (category) => {
+    if (!category || !category.name) return null;
+    
+    const name = category.name.toLowerCase();
+    if (name.includes('yemek')) return 'yemek';
+    if (name.includes('market')) return 'market';
+    if (name.includes('su')) return 'su';
+    if (name.includes('aktüel')) return 'aktuel';
+    return null;
+  };
+
+  // Kategori ID'sinden modül adını belirle
+  const getModuleNameFromCategoryId = (categoryId) => {
+    switch (categoryId) {
+      case 1: return 'yemek';
+      case 2: return 'market';
+      case 3: return 'su';
+      case 4: return 'aktuel';
+      default: return null;
+    }
   };
 
   useEffect(() => {
-    // API çağrısı simülasyonu
-    setTimeout(() => {
-      let filteredCategories = [...mockCategories];
-      
-      // Kullanıcı giriş yapmamışsa veya admin değilse aktüel kategorisini gösterme
-      if (!user || user.role !== 'admin') {
-        filteredCategories = filteredCategories.filter(cat => cat.name.toLowerCase() !== 'aktüel');
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // Ana kategorileri yükle - Yönetici yetkisiyle
+        const mainCategoriesData = await api.getMainCategories(true);
+        setMainCategories(mainCategoriesData);
+        
+        // Kategorileri yükle - Yönetici yetkisiyle
+        const categoriesData = await api.getCategories(true);
+        
+        // Kullanıcı giriş yapmamışsa veya admin değilse, modül izinlerine göre kategorileri filtrele
+        let filteredCategories = categoriesData;
+        if (!moduleLoading) {
+          filteredCategories = categoriesData.filter(cat => {
+            const moduleName = getModuleNameFromCategory(cat);
+            // Modül adı yoksa veya modül aktifse göster
+            return !moduleName || isModuleEnabled(moduleName);
+          });
+        }
+        
+        setCategories(filteredCategories);
+        
+        // Mağazaları yükle - Yönetici yetkisiyle
+        const storesData = await api.getStores({
+          status: 'active'
+        }, true);
+        setStores(storesData);
+        
+        // Her kategori için mağaza sayısını hesapla
+        const storeCount = {};
+        
+        // Mağazaları kategorilere göre grupla
+        categoriesData.forEach(category => {
+          const categoryStores = storesData.filter(store => 
+            store.category_id === category.id && 
+            store.status === 'active'
+          );
+          storeCount[category.id] = categoryStores.length;
+        });
+        
+        setStoreCountByCategory(storeCount);
+      } catch (error) {
+        console.error("Ana sayfa verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      setCategories(filteredCategories);
+    }
+    
+    fetchData();
+  }, [user, moduleLoading, isModuleEnabled]);
 
-      // Her kategori için mağaza sayısını hesapla
-      const storeCount = {};
-      
-      console.log("Tüm mağazalar:", mockStores.map(s => `${s.name} (id:${s.id}, cat:${s.categoryId}, status:${s.status}, approved:${s.approved})`));
-      
-      const yemekMagazalari = mockStores.filter(s => s.categoryId === 1 && s.approved === true);
-      const marketMagazalari = mockStores.filter(s => s.categoryId === 2 && s.approved === true);
-      const suMagazalari = mockStores.filter(s => s.categoryId === 3 && s.approved === true);
-      const aktuelMagazalari = mockStores.filter(s => s.categoryId === 4 && s.approved === true);
-      
-      storeCount[1] = yemekMagazalari.length; // Yemek
-      storeCount[2] = marketMagazalari.length; // Market
-      storeCount[3] = suMagazalari.length; // Su
-      storeCount[4] = aktuelMagazalari.length; // Aktüel
-      
-      console.log("Yemek mağazaları:", yemekMagazalari.map(s => `${s.name} (${s.status})`));
-      console.log("Market mağazaları:", marketMagazalari.map(s => `${s.name} (${s.status})`));
-      console.log("Su mağazaları:", suMagazalari.map(s => `${s.name} (${s.status})`));
-      console.log("Aktüel mağazaları:", aktuelMagazalari.map(s => `${s.name} (${s.status})`));
-      
-      setStoreCountByCategory(storeCount);
-    }, 500);
-  }, [user]);
-
-  if (loading) {
+  if (loading || authLoading || moduleLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
@@ -134,116 +180,178 @@ export default function Home() {
           ))}
         </div>
         
-        {/* Popüler Restoranlar */}
-        <div className="mt-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Popüler Restoranlar</h2>
-            <Button href="/yemek" variant="text">Tümünü Gör</Button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {mockStores
-              .filter(store => store.categoryId === 1 && store.approved && store.isOpen)
-              .slice(0, 4)
-              .map(store => (
-                <Link key={store.id} href={`/yemek/store/${store.id}`} className="group">
-                  <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                    <div className="h-32 bg-gray-200">
-                      {/* Restoran resmi burada olacak */}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-gray-800">{store.name}</h3>
-                      <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Lezzetli yemekler'}</p>
-                      <div className="flex items-center mt-2">
-                        <div className="text-yellow-500 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="ml-1 text-xs">4.8</span>
+        {/* Popüler Restoranlar - Yemek modülü aktifse göster */}
+        {isModuleEnabled('yemek') && (
+          <div className="mt-12">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Popüler Restoranlar</h2>
+              <Button href="/yemek" variant="text">Tümünü Gör</Button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {stores
+                .filter(store => store.category_id === 1)
+                .slice(0, 4)
+                .map(store => (
+                  <Link key={store.id} href={`/yemek/store/${store.id}`} className="group">
+                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                      <div className="h-32 bg-gray-200 relative">
+                        {store.logo && (
+                          <img 
+                            src={store.logo} 
+                            alt={store.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-gray-800">{store.name}</h3>
+                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Lezzetli yemekler'}</p>
+                        <div className="flex items-center mt-2">
+                          <div className="text-yellow-500 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
+                          </div>
+                          <span className="mx-2 text-gray-300">•</span>
+                          <span className="text-xs text-gray-500">30-45 dk</span>
                         </div>
-                        <span className="mx-2 text-gray-300">•</span>
-                        <span className="text-xs text-gray-500">30-45 dk</span>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
+        )}
         
-        {/* Yakındaki Marketler */}
-        <div className="mt-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Yakındaki Marketler</h2>
-            <Button href="/market" variant="text">Tümünü Gör</Button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {mockStores
-              .filter(store => store.categoryId === 2 && store.approved && store.isOpen)
-              .slice(0, 4)
-              .map(store => (
-                <Link key={store.id} href={`/market/store/${store.id}`} className="group">
-                  <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                    <div className="h-32 bg-gray-200">
-                      {/* Market resmi burada olacak */}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-gray-800">{store.name}</h3>
-                      <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Taze ürünler'}</p>
-                      <div className="flex items-center mt-2">
-                        <div className="text-yellow-500 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="ml-1 text-xs">4.6</span>
+        {/* Yakındaki Marketler - Market modülü aktifse göster */}
+        {isModuleEnabled('market') && (
+          <div className="mt-12">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Yakındaki Marketler</h2>
+              <Button href="/market" variant="text">Tümünü Gör</Button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {stores
+                .filter(store => store.category_id === 2)
+                .slice(0, 4)
+                .map(store => (
+                  <Link key={store.id} href={`/market/store/${store.id}`} className="group">
+                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                      <div className="h-32 bg-gray-200 relative">
+                        {store.logo && (
+                          <img 
+                            src={store.logo} 
+                            alt={store.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-gray-800">{store.name}</h3>
+                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Taze ürünler'}</p>
+                        <div className="flex items-center mt-2">
+                          <div className="text-yellow-500 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
+                          </div>
+                          <span className="mx-2 text-gray-300">•</span>
+                          <span className="text-xs text-gray-500">15-25 dk</span>
                         </div>
-                        <span className="mx-2 text-gray-300">•</span>
-                        <span className="text-xs text-gray-500">15-25 dk</span>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
+        )}
         
-        {/* Su Satıcıları */}
-        <div className="mt-12 pb-10">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Su Satıcıları</h2>
-            <Button href="/su" variant="text">Tümünü Gör</Button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {mockStores
-              .filter(store => store.categoryId === 3 && store.approved && store.isOpen)
-              .slice(0, 4)
-              .map(store => (
-                <Link key={store.id} href={`/su/store/${store.id}`} className="group">
-                  <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                    <div className="h-32 bg-gray-200">
-                      {/* Su satıcı resmi burada olacak */}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-gray-800">{store.name}</h3>
-                      <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Kaliteli içme suyu'}</p>
-                      <div className="flex items-center mt-2">
-                        <div className="text-yellow-500 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="ml-1 text-xs">4.7</span>
+        {/* Su Satıcıları - Su modülü aktifse göster */}
+        {isModuleEnabled('su') && (
+          <div className="mt-12 pb-10">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Su Satıcıları</h2>
+              <Button href="/su" variant="text">Tümünü Gör</Button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {stores
+                .filter(store => store.category_id === 3)
+                .slice(0, 4)
+                .map(store => (
+                  <Link key={store.id} href={`/su/store/${store.id}`} className="group">
+                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                      <div className="h-32 bg-gray-200 relative">
+                        {store.logo && (
+                          <img 
+                            src={store.logo} 
+                            alt={store.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-gray-800">{store.name}</h3>
+                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Kaliteli içme suyu'}</p>
+                        <div className="flex items-center mt-2">
+                          <div className="text-yellow-500 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
+                          </div>
+                          <span className="mx-2 text-gray-300">•</span>
+                          <span className="text-xs text-gray-500">45-60 dk</span>
                         </div>
-                        <span className="mx-2 text-gray-300">•</span>
-                        <span className="text-xs text-gray-500">45-60 dk</span>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
+        )}
+        
+        {/* Aktüel Ürünler - Aktüel modülü aktifse göster */}
+        {isModuleEnabled('aktuel') && (
+          <div className="mt-12 pb-10">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Aktüel Ürünler</h2>
+              <Button href="/aktuel" variant="text">Tümünü Gör</Button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {stores
+                .filter(store => store.category_id === 4)
+                .slice(0, 4)
+                .map(store => (
+                  <Link key={store.id} href={`/aktuel/store/${store.id}`} className="group">
+                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                      <div className="h-32 bg-gray-200 relative">
+                        {store.logo && (
+                          <img 
+                            src={store.logo} 
+                            alt={store.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-gray-800">{store.name}</h3>
+                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Güncel kampanyalar'}</p>
+                        <div className="flex items-center mt-2">
+                          <span className="text-xs text-gray-500">Yeni Kampanyalar</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

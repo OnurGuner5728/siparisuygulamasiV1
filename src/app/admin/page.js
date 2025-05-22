@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FiUser, FiShoppingBag, FiHome, FiPackage, FiLayers, FiBarChart2, FiAlertCircle, FiChevronRight } from 'react-icons/fi';
+import { FiUser, FiShoppingBag, FiHome, FiPackage, FiLayers, FiBarChart2, FiAlertCircle, FiChevronRight, FiDatabase } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import AuthGuard from '../../components/AuthGuard';
 
@@ -134,6 +134,22 @@ function AdminPanelContent() {
             description="Kampanyaları ve indirimleri yönet."
             href="/admin/kampanyalar"
             icon={<FiShoppingBag className="w-6 h-6" />}
+          />
+          
+          {/* Veri Göçü */}
+         {/* <MenuCard 
+            title="Veri Göçü Yönetimi" 
+            description="Mock verilerden Supabase'e veri göçünü gerçekleştir."
+            href="/admin/data-migration"
+            icon={<FiDatabase className="w-6 h-6" />}
+          />*/}
+          
+          {/* Modül Yönetimi */}
+          <MenuCard 
+            title="Modül Yönetimi" 
+            description="Uygulama modüllerinin erişim ayarlarını yönet."
+            href="/admin/modules"
+            icon={<FiLayers className="w-6 h-6" />}
           />
         </div>
       </div>

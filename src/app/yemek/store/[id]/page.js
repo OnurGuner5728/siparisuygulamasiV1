@@ -2,66 +2,80 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiArrowLeft, FiStar, FiClock, FiMapPin, FiInfo, FiShoppingBag, FiChevronDown, FiChevronUp, FiMinus, FiPlus } from 'react-icons/fi';
-import { mockStores, mockProducts } from '@/app/data/mockdatas';
+import api from '@/lib/api';
+import { useCart } from '@/contexts/CartContext';
 
 export default function StoreDetailPage({ params }) {
   const router = useRouter();
-  const { id } = params;
+  // Next.js params artık Promise olduğu için React.use ile çözümlüyoruz
+  const resolvedParams = use(params);
+  const { id } = resolvedParams;
   
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
-  const [cartItems, setCartItems] = useState([]);
   const [showCart, setShowCart] = useState(false);
+  
+  // CartContext'ten sepet fonksiyonlarını al
+  const { 
+    cartItems, 
+    addToCart: contextAddToCart, 
+    removeFromCart,
+    removeItemCompletely,
+    clearCart: contextClearCart,
+    calculateSubtotal
+  } = useCart();
+  
+  // Sadece bu mağazaya ait ürünleri filtreleme
+  const storeCartItems = cartItems.filter(item => 
+    item.store_id === id && item.store_type === 'yemek'
+  );
   
   // Restoran ve ürün verilerini yükle
   useEffect(() => {
-    // API çağrısı simülasyonu
-    setTimeout(() => {
-      // Restoran bilgilerini al
-      const storeData = mockStores.find(s => s.id === Number(id));
-      if (storeData) {
-        setStore(storeData);
-        
-        // İlk kategoriyi aktif olarak ayarla
-        if (storeData.menuCategories && storeData.menuCategories.length > 0) {
-          setActiveCategory(storeData.menuCategories[0]);
-        }
-        
-        // Kategorileri genişletilmiş olarak başlat
-        const initialExpandedState = {};
-        storeData.menuCategories?.forEach(category => {
-          initialExpandedState[category] = true;
-        });
-        setExpandedCategories(initialExpandedState);
-        
-        // Ürünleri al
-        setProducts(storeData.menuItems || []);
-      }
-      
-      setLoading(false);
-    }, 500);
-    
-    // LocalStorage'dan sepet öğelerini al
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
+    async function fetchData() {
       try {
-        setCartItems(JSON.parse(savedCart));
+        setLoading(true);
+        // Restoran bilgilerini al
+        const storeData = await api.getStoreById(id);
+        
+        if (storeData) {
+          setStore(storeData);
+          
+          // Ürünleri al
+          const productsData = await api.getProducts({ store_id: id });
+          setProducts(productsData || []);
+          
+          // Ürün kategorilerini belirle
+          const categories = [...new Set(productsData.map(p => p.category))].filter(Boolean);
+          
+          // İlk kategoriyi aktif olarak ayarla
+          if (categories.length > 0) {
+            setActiveCategory(categories[0]);
+          }
+          
+          // Kategorileri genişletilmiş olarak başlat
+          const initialExpandedState = {};
+          categories.forEach(category => {
+            initialExpandedState[category] = true;
+          });
+          setExpandedCategories(initialExpandedState);
+        }
       } catch (error) {
-        console.error('Sepet yüklenirken hata oluştu:', error);
+        console.error('Restoran ve ürün verilerini yüklerken hata:', error);
+      } finally {
+        setLoading(false);
       }
     }
+    
+    fetchData();
   }, [id]);
-  
-  // Sepeti güncelleme ve localStorage'a kaydetme
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
   
   // Kategori geçişi
   const handleCategoryClick = (category) => {
@@ -81,75 +95,61 @@ export default function StoreDetailPage({ params }) {
     });
   };
   
-  // Ürünü sepete ekle
+  // Sepete ürünü ekle
   const addToCart = (product) => {
-    const existingItem = cartItems.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      // Eğer ürün zaten sepette varsa, miktarını artır
-      setCartItems(
-        cartItems.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
-            : item
-        )
-      );
-    } else {
-      // Yeni ürün ekle
-      setCartItems([
-        ...cartItems,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: 1,
-          total: product.price,
-          storeId: store.id,
-          storeName: store.name
-        }
-      ]);
+    try {
+      // CartContext'i kullanarak sepete ekle
+      contextAddToCart({
+        product_id: product.id,
+        name: product.name,
+        price: parseFloat(product.price) || 0,
+        quantity: 1,
+        image: product.image || null,
+        store_id: store?.id || null,
+        store_name: store?.name || '',
+        store_type: 'yemek',
+        category: product.category || '',
+        notes: ''
+      });
+      
+      // Sepeti göster
+      setShowCart(true);
+    } catch (error) {
+      console.error("Sepete ekleme hatası:", error);
+      alert("Ürün sepete eklenirken bir hata oluştu. Lütfen tekrar deneyin.");
     }
-    
-    // Sepeti göster
-    setShowCart(true);
   };
   
   // Ürün miktarını artır
-  const increaseQuantity = (productId) => {
-    setCartItems(
-      cartItems.map(item =>
-        item.id === productId
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
-          : item
-      )
-    );
+  const increaseQuantity = (product) => {
+    addToCart(product);
   };
   
   // Ürün miktarını azalt
   const decreaseQuantity = (productId) => {
-    setCartItems(
-      cartItems.map(item =>
-        item.id === productId && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1, total: (item.quantity - 1) * item.price }
-          : item
-      ).filter(item => !(item.id === productId && item.quantity === 1))
-    );
+    removeFromCart(productId, id);
   };
   
   // Sepeti temizle
   const clearCart = () => {
     if (confirm('Sepeti temizlemek istediğinize emin misiniz?')) {
-      setCartItems([]);
+      // Sadece bu restorana ait ürünleri temizle
+      storeCartItems.forEach(item => {
+        removeItemCompletely(item.product_id, item.store_id);
+      });
     }
   };
   
   // Sepet toplamını hesapla
-  const cartTotal = cartItems.reduce((total, item) => total + item.total, 0);
+  const cartTotal = storeCartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   
   // Kategoriye göre ürünleri filtrele
   const getProductsByCategory = (category) => {
     return products.filter(product => product.category === category);
   };
+  
+  // Tüm benzersiz ürün kategorilerini elde et
+  const categories = [...new Set(products.map(p => p.category))].filter(Boolean);
   
   if (loading) {
     return (
@@ -198,9 +198,9 @@ export default function StoreDetailPage({ params }) {
       {/* Restoran Bilgileri */}
       <div className="bg-white shadow-sm">
         <div className="h-40 bg-gradient-to-r from-orange-500 to-red-600 relative">
-          {store.image ? (
+          {store.cover_image_url ? (
             <Image
-              src={store.image}
+              src={store.cover_image_url}
               alt={store.name}
               layout="fill"
               objectFit="cover"
@@ -217,23 +217,23 @@ export default function StoreDetailPage({ params }) {
           <div className="flex flex-col md:flex-row md:items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">{store.name}</h2>
-              <p className="text-gray-600 mt-1">{store.description}</p>
+              <p className="text-gray-600 mt-1">{store.description || 'Bu restoran hakkında bilgi bulunmamaktadır.'}</p>
               
               <div className="flex items-center flex-wrap mt-2">
                 <div className="flex items-center text-sm text-yellow-500 mr-4">
                   <FiStar className="fill-current mr-1" />
-                  <span>{store.rating}</span>
-                  <span className="text-gray-400 ml-1">(120+ Değerlendirme)</span>
+                  <span>{store.rating || '0.0'}</span>
+                  <span className="text-gray-400 ml-1">({store.review_count || '0'} Değerlendirme)</span>
                 </div>
                 
                 <div className="flex items-center text-sm text-gray-500 mr-4">
                   <FiClock className="mr-1" />
-                  <span>{store.deliveryTime}</span>
+                  <span>{store.delivery_time_estimation || 'Belirtilmemiş'}</span>
                 </div>
                 
                 <div className="flex items-center text-sm text-gray-500">
                   <FiMapPin className="mr-1" />
-                  <span>2.5 km</span>
+                  <span>{store.address ? `${store.address.substring(0, 20)}...` : 'Adres belirtilmemiş'}</span>
                 </div>
               </div>
             </div>
@@ -241,209 +241,196 @@ export default function StoreDetailPage({ params }) {
             <div className="mt-4 md:mt-0">
               <div className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-sm font-medium inline-flex items-center">
                 <FiInfo className="mr-1" size={14} />
-                Min. sipariş: {store.minOrder} TL
+                Min. sipariş: {store.min_order_amount || 0} TL
               </div>
             </div>
           </div>
         </div>
       </div>
       
-      {/* Kategoriler (Yatay Kaydırılabilir) */}
-      <div className="bg-white shadow-sm sticky top-16 z-20">
-        <div className="container mx-auto">
-          <div className="flex overflow-x-auto py-3 px-4 gap-2 hide-scrollbar">
-            {store.menuCategories.map((category) => (
-              <button
-                key={category}
-                onClick={() => handleCategoryClick(category)}
-                className={`px-4 py-2 whitespace-nowrap rounded-full text-sm font-medium ${
-                  activeCategory === category
-                    ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      {/* Ürünler */}
-      <div className="container mx-auto px-4 py-6">
-        {store.menuCategories.map((category) => (
-          <div 
-            key={category} 
-            id={`category-${category.replace(/\s+/g, '-').toLowerCase()}`}
-            className="mb-8"
-          >
-            <div 
-              className="flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm cursor-pointer"
-              onClick={() => toggleCategory(category)}
-            >
-              <h3 className="text-lg font-medium text-gray-800">{category}</h3>
-              {expandedCategories[category] ? (
-                <FiChevronUp className="text-gray-500" />
-              ) : (
-                <FiChevronDown className="text-gray-500" />
-              )}
-            </div>
-            
-            {expandedCategories[category] && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {getProductsByCategory(category).map((product) => (
-                  <div 
-                    key={product.id} 
-                    className="bg-white rounded-lg shadow-sm overflow-hidden flex"
-                  >
-                    <div className="p-4 flex-1">
-                      <h4 className="font-medium text-gray-900">{product.name}</h4>
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.description}</p>
-                      <div className="mt-2 flex justify-between items-center">
-                        <span className="font-medium text-gray-900">{product.price.toFixed(2)} TL</span>
-                        <button
-                          onClick={() => addToCart(product)}
-                          className="p-2 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full hover:from-orange-600 hover:to-red-700"
-                          aria-label="Sepete Ekle"
-                        >
-                          <FiPlus size={18} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="w-24 h-24 bg-gray-100 relative">
-                      {product.image ? (
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          layout="fill"
-                          objectFit="cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                          Resim Yok
-                        </div>
-                      )}
-                    </div>
-                  </div>
+      {/* İçerik */}
+      <div className="container mx-auto px-4 pt-6">
+        <div className="flex flex-col lg:flex-row">
+          {/* Kategori Menüsü */}
+          <div className="w-full lg:w-1/4 lg:pr-6 mb-6 lg:mb-0">
+            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-20">
+              <h3 className="font-bold text-gray-800 mb-4">Menü</h3>
+              
+              <ul className="space-y-2">
+                {categories.map((category) => (
+                  <li key={category}>
+                    <button
+                      className={`w-full text-left py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                        activeCategory === category 
+                          ? 'bg-orange-100 text-orange-700' 
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      onClick={() => handleCategoryClick(category)}
+                    >
+                      {category}
+                    </button>
+                  </li>
                 ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      
-      {/* Sepet Özeti (Sabit Alt Çubuk) */}
-      {cartItems.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 p-4 z-30">
-          <div className="container mx-auto">
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="text-sm text-gray-500">{cartItems.reduce((total, item) => total + item.quantity, 0)} Ürün</span>
-                <div className="text-lg font-bold text-gray-900">{cartTotal.toFixed(2)} TL</div>
-              </div>
-              
-              <Link
-                href="/sepet"
-                className="bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 px-6 rounded-lg font-medium hover:from-orange-600 hover:to-red-700 flex items-center"
-              >
-                <FiShoppingBag className="mr-2" />
-                Sepete Git
-              </Link>
+              </ul>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Sepet Yan Panel (Mobil için genişleyebilir) */}
-      {showCart && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowCart(false)}>
-          <div 
-            className="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col h-full">
-              {/* Sepet Başlık */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-gray-800">Sepetim</h2>
-                  <button 
-                    onClick={() => setShowCart(false)}
-                    className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
+          
+          {/* Ürünler */}
+          <div className="w-full lg:w-2/4">
+            {categories.map((category) => {
+              const categoryProducts = getProductsByCategory(category);
+              
+              return (
+                <div 
+                  key={category}
+                  id={`category-${category.replace(/\s+/g, '-').toLowerCase()}`}
+                  className="mb-8"
+                >
+                  <div 
+                    className="flex items-center justify-between bg-white p-4 rounded-t-lg shadow-sm cursor-pointer"
+                    onClick={() => toggleCategory(category)}
                   >
-                    <FiArrowLeft size={20} />
-                  </button>
+                    <h3 className="font-bold text-gray-800">{category}</h3>
+                    {expandedCategories[category] ? (
+                      <FiChevronUp className="text-gray-500" />
+                    ) : (
+                      <FiChevronDown className="text-gray-500" />
+                    )}
+                  </div>
+                  
+                  {expandedCategories[category] && (
+                    <div className="bg-white rounded-b-lg shadow-sm divide-y">
+                      {categoryProducts.map((product) => (
+                        <div key={product.id} className="p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900">{product.name}</h4>
+                              <p className="text-sm text-gray-600 mt-1">{product.description || 'Ürün açıklaması bulunmuyor.'}</p>
+                              <p className="text-orange-600 font-medium mt-2">{product.price.toFixed(2)} TL</p>
+                            </div>
+                            
+                            <div className="ml-4">
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-20 h-20 object-cover rounded-md"
+                                />
+                              ) : (
+                                <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center">
+                                  <span className="text-gray-400 text-xs text-center">Resim yok</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            {storeCartItems.find(item => item.product_id === product.id) ? (
+                              <div className="flex items-center">
+                                <button 
+                                  onClick={() => decreaseQuantity(product.id)}
+                                  className="p-1 text-gray-500 hover:text-orange-600"
+                                >
+                                  <FiMinus size={14} />
+                                </button>
+                                
+                                <span className="mx-2 text-sm font-medium">
+                                  {storeCartItems.find(item => item.product_id === product.id).quantity}
+                                </span>
+                                
+                                                                <button                                   onClick={() => increaseQuantity(product)}                                  className="p-1 text-gray-500 hover:text-orange-600"                                >                                  <FiPlus size={14} />                                </button>                              </div>                            ) : (                              <button                                 onClick={() => addToCart(product)}                                className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 py-1 px-3 rounded-full transition-colors"                              >                                Sepete Ekle                              </button>                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              );
+            })}
+          </div>
+          
+          {/* Sepet */}
+          <div className="w-full lg:w-1/4 lg:pl-6">
+            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-20">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-800">Sepetim</h3>
+                <button 
+                  onClick={clearCart}
+                  className={`text-xs text-gray-500 hover:text-red-500 ${storeCartItems.length === 0 ? 'invisible' : ''}`}
+                >
+                  Temizle
+                </button>
               </div>
               
-              {/* Sepet İçeriği */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {cartItems.length === 0 ? (
-                  <div className="text-center py-10">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FiShoppingBag className="text-gray-400 text-xl" />
-                    </div>
-                    <p className="text-gray-500">Sepetiniz boş</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{item.name}</h4>
-                          <span className="text-sm text-gray-500">{item.price.toFixed(2)} TL</span>
+              {storeCartItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <FiShoppingBag className="mx-auto text-gray-300" size={32} />
+                  <p className="text-gray-500 mt-2">Sepetiniz boş</p>
+                  <p className="text-gray-400 text-sm mt-1">Menüden ürün ekleyin</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 space-y-3">
+                    {storeCartItems.map((item) => (
+                      <div key={item.product_id} className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                          <p className="text-xs text-gray-500">{item.price.toFixed(2)} TL</p>
                         </div>
                         
                         <div className="flex items-center">
-                          <button
-                            onClick={() => decreaseQuantity(item.id)}
-                            className="p-1 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full"
+                          <button 
+                            onClick={() => decreaseQuantity(item.product_id)}
+                            className="p-1 text-gray-500 hover:text-orange-600"
                           >
-                            <FiMinus size={16} />
+                            <FiMinus size={14} />
                           </button>
-                          <span className="mx-2 min-w-[20px] text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => increaseQuantity(item.id)}
-                            className="p-1 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full"
+                          
+                          <span className="mx-2 text-sm font-medium">{item.quantity}</span>
+                          
+                          <button 
+                            onClick={() => {
+                              const foundProduct = products.find(p => p.id === item.product_id);
+                              if (foundProduct) increaseQuantity(foundProduct);
+                            }}
+                            className="p-1 text-gray-500 hover:text-orange-600"
                           >
-                            <FiPlus size={16} />
+                            <FiPlus size={14} />
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-              
-              {/* Sepet Alt Kısmı */}
-              {cartItems.length > 0 && (
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="font-medium">Toplam</span>
-                    <span className="font-bold text-gray-900">{cartTotal.toFixed(2)} TL</span>
+                  
+                  <div className="border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-600">Ara Toplam</span>
+                      <span className="font-medium">{cartTotal.toFixed(2)} TL</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm mb-4">
+                      <span className="text-gray-600">Teslimat Ücreti</span>
+                      <span className="font-medium">9.90 TL</span>
+                    </div>
+                    
+                    <div className="flex justify-between font-bold">
+                      <span>Toplam</span>
+                      <span>{(cartTotal + 9.9).toFixed(2)} TL</span>
+                    </div>
                   </div>
                   
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={clearCart}
-                      className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
-                    >
-                      Sepeti Temizle
-                    </button>
-                    
-                    <Link
-                      href="/sepet"
-                      className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-red-700 text-center"
-                    >
-                      Sepete Git
-                    </Link>
-                  </div>
-                </div>
+                  <Link 
+                    href="/sepet"
+                    className="block w-full text-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-700 mt-4"
+                  >
+                    Siparişi Tamamla
+                  </Link>
+                </>
               )}
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 } 

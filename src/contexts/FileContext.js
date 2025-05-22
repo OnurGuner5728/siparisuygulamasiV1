@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback } from 'react';
+import supabase from '@/lib/supabase';
 
 // Dosya yükleme için Context oluşturma
 const FileContext = createContext();
@@ -17,8 +18,7 @@ export const useFileUpload = () => {
 /**
  * Dosya işlemleri için Provider bileşeni
  * 
- * Mock bir API olduğu için gerçek bir upload işlemi yapmak yerine
- * dosyaları local storage'da saklar ve base64 formatında döndürür.
+ * Supabase Storage kullanarak dosya yükleme, silme ve getirme işlemlerini gerçekleştirir.
  */
 export function FileProvider({ children }) {
   // Yüklenmiş dosyaları saklamak için state
@@ -27,10 +27,11 @@ export function FileProvider({ children }) {
   const [uploadErrors, setUploadErrors] = useState({});
   
   /**
-   * Dosya yükleme işlemi
+   * Supabase Storage'a dosya yükleme işlemi
    * 
    * @param {File} file - Yüklenecek dosya
    * @param {Object} options - Yükleme seçenekleri
+   * @param {string} options.bucket - Dosyanın yükleneceği bucket (varsayılan: 'public')
    * @param {string} options.path - Yükleme yolu (dosya kategorisi)
    * @param {string} options.fileName - Dosya adı (belirtilmezse orijinal isim kullanılır)
    * @param {function} options.onProgress - İlerleme durumu callback fonksiyonu
@@ -42,6 +43,7 @@ export function FileProvider({ children }) {
     if (!file) return null;
     
     const {
+      bucket = 'public',
       path = 'general',
       fileName = file.name,
       onProgress,
@@ -49,29 +51,53 @@ export function FileProvider({ children }) {
       onError
     } = options;
     
-    // Benzersiz bir ID oluştur
-    const fileId = `${path}_${Date.now()}_${fileName}`;
+    // Dosya adını temizleme (özel karakterler ve boşlukları kaldırma)
+    const cleanFileName = fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9.]/gi, '_')
+      .toLowerCase();
+    
+    // Benzersiz bir dosya adı oluştur
+    const uniqueFileName = `${Date.now()}_${cleanFileName}`;
+    
+    // Tam dosya yolu
+    const filePath = path ? `${path}/${uniqueFileName}` : uniqueFileName;
+    
+    // İlerleme durumunu takip etmek için dosya ID'si
+    const fileId = `${bucket}_${filePath}`;
     
     // İlerleme durumunu güncelle
     setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
     
     try {
-      // Base64 formatına dönüştürme
-      const base64String = await fileToBase64(file, (progress) => {
-        setUploadProgress(prev => ({ ...prev, [fileId]: progress }));
-        if (onProgress) onProgress(progress);
-      });
+      // Supabase Storage'a dosyayı yükle
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) throw error;
+      
+      // Dosya URL'ini al
+      const { data: urlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
       
       // Dosya bilgilerini oluştur
       const fileInfo = {
         id: fileId,
         originalName: file.name,
-        fileName: fileName,
+        fileName: uniqueFileName,
+        bucket: bucket,
         path: path,
+        filePath: filePath,
         mimeType: file.type,
         size: file.size,
         uploadedAt: new Date().toISOString(),
-        url: base64String,
+        url: urlData.publicUrl,
       };
       
       // Dosyayı kaydet
@@ -92,72 +118,52 @@ export function FileProvider({ children }) {
   }, []);
 
   /**
-   * Dosyayı base64 formatına dönüştürür
-   * 
-   * @param {File} file - Dönüştürülecek dosya
-   * @param {function} onProgress - İlerleme durumu callback fonksiyonu
-   * @returns {Promise<string>} - Base64 formatındaki dosya
-   */
-  const fileToBase64 = (file, onProgress) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onloadstart = () => {
-        if (onProgress) onProgress(0);
-      };
-      
-      reader.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          onProgress(progress);
-        }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error('Dosya okunamadı.'));
-      };
-      
-      reader.onload = () => {
-        if (onProgress) onProgress(100);
-        resolve(reader.result);
-      };
-      
-      reader.readAsDataURL(file);
-    });
-  };
-
-  /**
-   * Yüklenmiş bir dosyayı kaldırır
+   * Yüklenmiş bir dosyayı Supabase Storage'dan kaldırır
    * 
    * @param {string} fileId - Kaldırılacak dosyanın ID'si
-   * @returns {boolean} - İşlem başarılı ise true
+   * @returns {Promise<boolean>} - İşlem başarılı ise true
    */
-  const removeFile = useCallback((fileId) => {
+  const removeFile = useCallback(async (fileId) => {
     if (!fileId || !uploadedFiles[fileId]) return false;
     
-    setUploadedFiles(prev => {
-      const newFiles = { ...prev };
-      delete newFiles[fileId];
-      return newFiles;
-    });
+    const fileInfo = uploadedFiles[fileId];
     
-    setUploadProgress(prev => {
-      const newProgress = { ...prev };
-      delete newProgress[fileId];
-      return newProgress;
-    });
-    
-    setUploadErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[fileId];
-      return newErrors;
-    });
-    
-    return true;
+    try {
+      // Supabase Storage'dan dosyayı sil
+      const { error } = await supabase.storage
+        .from(fileInfo.bucket)
+        .remove([fileInfo.filePath]);
+      
+      if (error) throw error;
+      
+      // Dosya bilgilerini state'ten kaldır
+      setUploadedFiles(prev => {
+        const newFiles = { ...prev };
+        delete newFiles[fileId];
+        return newFiles;
+      });
+      
+      setUploadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[fileId];
+        return newProgress;
+      });
+      
+      setUploadErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fileId];
+        return newErrors;
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Dosya silme hatası:', error);
+      return false;
+    }
   }, [uploadedFiles]);
 
   /**
-   * Dosyayı URL'inden alır
+   * Dosyayı ID'sinden alır
    * 
    * @param {string} fileId - Dosyanın ID'si
    * @returns {Object|null} - Dosya bilgileri veya null
@@ -170,14 +176,57 @@ export function FileProvider({ children }) {
    * Belirli bir klasördeki tüm dosyaları getirir
    * 
    * @param {string} path - Klasör yolu
-   * @returns {Array<Object>} - Dosya bilgileri dizisi
+   * @param {string} bucket - Dosyaların bulunduğu bucket (varsayılan: 'public')
+   * @returns {Promise<Array<Object>>} - Dosya bilgileri dizisi
    */
-  const getFilesByPath = useCallback((path) => {
-    return Object.values(uploadedFiles).filter(file => file.path === path);
-  }, [uploadedFiles]);
+  const getFilesByPath = useCallback(async (path, bucket = 'public') => {
+    try {
+      // Supabase Storage'dan dosyaları listele
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .list(path, {
+          sortBy: { column: 'name', order: 'asc' }
+        });
+      
+      if (error) throw error;
+      
+      // Dosya URL'lerini al
+      const filesWithUrls = await Promise.all(
+        data.map(async (item) => {
+          if (item.id) {
+            const filePath = path ? `${path}/${item.name}` : item.name;
+            const { data: urlData } = supabase.storage
+              .from(bucket)
+              .getPublicUrl(filePath);
+            
+            return {
+              id: `${bucket}_${filePath}`,
+              originalName: item.name,
+              fileName: item.name,
+              bucket: bucket,
+              path: path,
+              filePath: filePath,
+              size: item.metadata?.size,
+              mimeType: item.metadata?.mimetype,
+              uploadedAt: item.created_at,
+              url: urlData.publicUrl,
+            };
+          }
+          return null;
+        })
+      );
+      
+      // null değerleri filtrele
+      return filesWithUrls.filter(Boolean);
+    } catch (error) {
+      console.error('Dosya listeleme hatası:', error);
+      return [];
+    }
+  }, []);
 
   /**
-   * Tüm yüklenmiş dosyaları temizler
+   * Tüm yüklenmiş dosyaları cache'ten temizler
+   * Not: Bu işlem Supabase Storage'dan dosyaları silmez
    */
   const clearAllFiles = useCallback(() => {
     setUploadedFiles({});

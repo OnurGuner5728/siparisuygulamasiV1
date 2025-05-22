@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockCampaigns, campaignCategories, mockStores, mockCategories } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 import AuthGuard from '@/components/AuthGuard';
 import { useRouter } from 'next/navigation';
 
@@ -17,141 +17,129 @@ export default function CampaignsPage() {
 function CampaignsContent() {
   const { user, hasPermission } = useAuth();
   const [campaigns, setCampaigns] = useState([]);
+  const [allMainCategories, setAllMainCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [error, setError] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
-  // Kampanya verilerini yükle
   useEffect(() => {
-    // API çağrısı simülasyonu
-    setTimeout(() => {
-      // Aktif kampanyaları filtrele
-      const activeCampaigns = mockCampaigns.filter(c => c.status === 'active');
-      setCampaigns(activeCampaigns);
-      setLoading(false);
-    }, 500);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [campaignsData, categoriesData] = await Promise.all([
+          api.getCampaigns(),
+          api.getMainCategories()
+        ]);
+        
+        // Kampanyaları getir ve her kampanya için ilgili mağaza bilgilerini yükle
+        const enhancedCampaigns = await Promise.all(
+          (campaignsData || []).map(async (campaign) => {
+            if (campaign.store_id) {
+              try {
+                const storeData = await api.getStoreById(campaign.store_id);
+                
+                // Mağaza kategorisini bul
+                let storeCategory = null;
+                if (storeData.category_id) {
+                  const category = categoriesData.find(c => c.id === storeData.category_id);
+                  storeCategory = category || null;
+                }
+                
+                return {
+                  ...campaign,
+                  store: {
+                    ...storeData,
+                    category: storeCategory
+                  }
+                };
+              } catch (error) {
+                console.error(`Kampanya ${campaign.id} için mağaza bilgileri yüklenirken hata:`, error);
+                return campaign;
+              }
+            }
+            return campaign;
+          })
+        );
+        
+        setCampaigns(enhancedCampaigns);
+        setAllMainCategories(categoriesData || []);
+      } catch (err) {
+        console.error("Kampanya ve kategori verileri yüklenirken hata:", err);
+        setError("Veriler yüklenirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // Mağaza adını ID'ye göre bul
-  const getStoreName = (storeId) => {
-    const store = mockStores.find(s => s.id === storeId);
-    return store ? store.name : 'Bilinmeyen Mağaza';
-  };
-
-  // Kategori adını ID'ye göre bul
-  const getCategoryName = (categoryId) => {
-    const category = mockCategories.find(c => c.id === categoryId);
-    return category ? category.name : 'Genel';
-  };
-
-  // Kategori filtrelemesi için filtrelenmiş kampanyalar
   const filteredCampaigns = campaigns.filter(campaign => {
-    // Kategori filtresi
-    if (filter !== 'all') {
-      const categoryName = getCategoryName(campaign.categoryId);
-      if (categoryName !== filter) {
-        return false;
-      }
-    }
-    
-    // Arama filtresi
-    if (searchTerm.trim() !== '') {
-      const search = searchTerm.toLowerCase();
-      const storeName = getStoreName(campaign.storeId).toLowerCase();
-      return (
-        campaign.title.toLowerCase().includes(search) ||
-        campaign.description.toLowerCase().includes(search) ||
-        storeName.includes(search)
-      );
-    }
-    
-    return true;
+    const storeName = campaign.store?.name?.toLowerCase() || '';
+    const storeCategoryName = campaign.store?.category?.name?.toLowerCase() || '';
+
+    const matchesSearch = 
+      (campaign.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (campaign.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      storeName.includes(searchTerm.toLowerCase()) ||
+      storeCategoryName.includes(searchTerm.toLowerCase());
+
+    const matchesCategory = categoryFilter === 'all' || 
+      (campaign.store?.category_id && campaign.store.category_id.toString() === categoryFilter) ||
+      (campaign.main_category_id && campaign.main_category_id.toString() === categoryFilter);
+
+    return matchesSearch && matchesCategory;
   });
 
-  // Kullanıcının kampanya oluşturma yetkisi var mı?
   const canCreateCampaign = hasPermission('kampanya', 'create');
-  
-  // Kullanıcının kampanya yönetim paneline erişim yetkisi var mı?
   const canAccessAdmin = hasPermission('kampanya', 'admin');
 
-  // Mağaza sayfasına yönlendirme
-  const navigateToStore = (storeId) => {
-    // Mağazayı ID'sine göre bul
-    const store = mockStores.find(store => store.id === storeId);
-    
-    if (store) {
-      // Kategori ID'sinden kategori adını bul
-      const category = mockCategories.find(cat => cat.id === store.categoryId);
+  const navigateToStore = (campaign) => {
+    if (campaign.store && campaign.store.id) {
+      // Mağaza kategorisine göre yönlendirme yapılması
+      const categoryMapping = {
+        1: 'yemek',
+        2: 'market',
+        3: 'su',
+        4: 'cicek',
+        5: 'tatli'
+      };
       
-      if (category) {
-        // Kategori adına göre doğru URL formatını belirle ve yönlendir
-        const categoryName = category.name.toLowerCase();
-        router.push(`/${categoryName}/${storeId}`);
-      } else {
-        // Kategori bulunamazsa genel mağaza sayfasına yönlendir
-        router.push(`/${storeId}`);
-      }
+      const categorySlug = categoryMapping[campaign.store.category_id] || 'yemek';
+      const storeId = campaign.store.id;
+      
+      router.push(`/${categorySlug}/${storeId}`);
     } else {
-      console.error(`Mağaza bulunamadı: ${storeId}`);
-      // Mağaza bulunamazsa ana sayfaya yönlendir
-      router.push('/');
+      console.warn("Kampanyaya ait mağaza bilgisi eksik:", campaign);
+      router.push('/'); 
     }
   };
+  
+  function getCategoryColor(categoryId) {
+    const colors = {
+      1: 'bg-red-500',    // Yemek
+      2: 'bg-blue-500',   // Market
+      3: 'bg-sky-500',    // Su
+      4: 'bg-pink-500',   // Çiçek
+      5: 'bg-yellow-500', // Tatlı
+      default: 'bg-indigo-500'
+    };
+    return colors[categoryId] || colors.default;
+  }
 
-  // Kampanya düzenleme sayfasına yönlendirme
-  const handleEditCampaign = (campaignId) => {
-    router.push(`/kampanyalar/duzenle/${campaignId}`);
-  };
-  // Kampanya durumunu güncelle
-  const toggleCampaignStatus = (campaignId) => {
-    setCampaigns(prevCampaigns =>
-      prevCampaigns.map(campaign => {
-        if (campaign.id === campaignId) {
-          return {
-            ...campaign,
-            status: campaign.status === 'active' ? 'inactive' : 'active'
-          };
-        }
-        return campaign;
-      })
-    );
-  };
-
-  // Kullanıcının kampanyayı düzenleme yetkisi var mı?
-  const canEditCampaign = (campaign) => {
-    // Admin her kampanyayı düzenleyebilir
-    if (hasPermission('kampanya', 'admin')) {
-      return true;
-    }
-    
-    // Oluşturma yetkisi olanlar kendi kampanyalarını düzenleyebilir
-    if (canCreateCampaign && user && campaign.createdBy) {
-      return campaign.createdBy.id === user.id;
-    }
-    
-    return false;
-  };
-
-  // Kullanıcının mağazalarını getir (artık email değil, ID ile filtreleme yapılıyor)
-  const getUserStores = () => {
-    // Kullanıcı ID'sini al
-    const userId = user?.id;
-    if (!userId) return [];
-
-    // Kullanıcı ID'sine göre mağazaları filtrele
-    return mockStores.filter(store => store.ownerId === userId);
-  };
-
-  // Kullanıcının mağazalarına ait kampanyaları getir
-  const getUserCampaigns = () => {
-    // Kullanıcının mağazalarının ID'lerini al
-    const userStoreIds = getUserStores().map(store => store.id);
-    if (userStoreIds.length === 0) return [];
-
-    // Mağaza ID'lerine göre kampanyaları filtrele
-    return mockCampaigns.filter(campaign => userStoreIds.includes(campaign.storeId));
-  };
+  function getCategoryBadgeClass(categoryId) {
+    const badges = {
+      1: 'bg-red-100 text-red-800',       // Yemek
+      2: 'bg-blue-100 text-blue-800',     // Market
+      3: 'bg-sky-100 text-sky-800',       // Su
+      4: 'bg-pink-100 text-pink-800',     // Çiçek
+      5: 'bg-yellow-100 text-yellow-800', // Tatlı
+      default: 'bg-indigo-100 text-indigo-800'
+    };
+    return badges[categoryId] || badges.default;
+  }
 
   if (loading) {
     return (
@@ -163,6 +151,24 @@ function CampaignsContent() {
       </div>
     );
   }
+  
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 text-3xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-red-700 mb-2">Bir Hata Oluştu</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Yeniden Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -170,7 +176,6 @@ function CampaignsContent() {
         <h1 className="text-3xl font-bold mb-4 md:mb-0">Kampanyalar</h1>
         
         <div className="flex flex-col sm:flex-row gap-2">
-          {/* Kampanya yönetim paneli linki - Sadece admin için */}
           {canAccessAdmin && (
             <Link 
               href="/admin/kampanyalar" 
@@ -180,7 +185,6 @@ function CampaignsContent() {
             </Link>
           )}
           
-          {/* Kampanya oluşturma linki */}
           {canCreateCampaign && (
             <Link 
               href="/kampanyalar/olustur" 
@@ -192,7 +196,6 @@ function CampaignsContent() {
         </div>
       </div>
       
-      {/* Filtreler */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="w-full md:w-1/3">
@@ -212,12 +215,12 @@ function CampaignsContent() {
             <select
               id="category"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="all">Tüm Kategoriler</option>
-              {campaignCategories.map(category => (
-                <option key={category.id} value={category.id}>
+              {allMainCategories.map(category => (
+                <option key={category.id} value={category.id.toString()}>
                   {category.name}
                 </option>
               ))}
@@ -226,83 +229,72 @@ function CampaignsContent() {
         </div>
       </div>
       
-      {/* Kampanya Listesi */}
       {filteredCampaigns.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
           {filteredCampaigns.map(campaign => {
-            const categoryName = getCategoryName(campaign.categoryId);
+            const categoryId = campaign.store?.category_id || campaign.main_category_id;
+            const categoryName = campaign.store?.category?.name || allMainCategories.find(c => c.id === campaign.main_category_id)?.name || 'Genel';
+            
             return (
-              <div key={campaign.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className={`h-2 ${getCategoryColor(categoryName)}`}></div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h2 
-                      className="text-xl font-bold hover:text-blue-600 cursor-pointer"
-                      onClick={() => navigateToStore(campaign.storeId)}
-                    >
-                      {campaign.title}
-                    </h2>
-                    <div className="flex space-x-1">
-                      <span className={`text-xs px-2 py-1 rounded-full ${getCategoryBadgeClass(categoryName)}`}>
-                        {categoryName}
-                      </span>
+              <div 
+                key={campaign.id} 
+                className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl flex flex-col"
+              >
+                <div className="relative">
+                  {campaign.image_url ? (
+                    <img 
+                      src={campaign.image_url} 
+                      alt={campaign.title} 
+                      className="w-full h-48 object-cover" 
+                    />
+                  ) : (
+                    <div className={`w-full h-48 flex items-center justify-center ${getCategoryColor(categoryId)}`}>
+                      <span className="text-white text-2xl font-semibold px-4 text-center">{campaign.store?.name || campaign.title || 'Kampanya'}</span>
                     </div>
+                  )}
+                  <div className={`absolute top-0 right-0 m-2 px-2 py-1 text-xs font-semibold rounded-full shadow-sm ${getCategoryBadgeClass(categoryId)}`}>
+                    {categoryName}
                   </div>
+                </div>
+                
+                <div className="p-5 flex flex-col flex-grow">
+                  <h3 className="text-lg font-bold mb-2 line-clamp-2">{campaign.title}</h3>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">{campaign.description}</p>
                   
-                  <p className="text-gray-600 mb-4">{campaign.description}</p>
-                  
-                  {/* Mağaza bilgisi */}
-                  <div className="flex items-center mt-4">
-                    <div className="mr-3">
-                      <div className="h-10 w-10 bg-gray-200 rounded-full overflow-hidden">
-                        {campaign.storeImage ? (
-                          <img src={campaign.storeImage} alt={getStoreName(campaign.storeId)} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center bg-blue-100 text-blue-500">
-                            <span className="text-lg font-semibold">{getStoreName(campaign.storeId).charAt(0)}</span>
+                  <div className="mt-auto pt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        {campaign.store && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${getCategoryColor(categoryId)}`}>
+                              {campaign.store.name[0].toUpperCase()}
+                            </div>
+                            <span className="ml-2 font-medium truncate max-w-[120px]">{campaign.store.name}</span>
                           </div>
                         )}
+                        
+                        {!campaign.store_id && campaign.main_category_id && (
+                          <span className="text-sm text-gray-500">
+                            Tüm {categoryName} mağazalarında
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    <div>
-                      <h3 
-                        className="text-sm font-medium text-gray-800 hover:text-blue-600 cursor-pointer"
-                        onClick={() => navigateToStore(campaign.storeId)}
-                      >
-                        {getStoreName(campaign.storeId)}
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Kampanya detayları ve butonlar */}
-                  <div className="mt-5 pt-4 border-t border-gray-100 flex justify-between items-center">
-                    <div>
-                      {campaign.discountRate && (
-                        <span className="text-sm font-medium text-green-600">%{campaign.discountRate} İndirim</span>
-                      )}
-                    </div>
-                    <div className="flex space-x-2">
-                      {/* Düzenle butonu - sadece yetkililer için */}
-                      {canEditCampaign(campaign) && (
-                        <button
-                          onClick={() => handleEditCampaign(campaign.id)}
-                          className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md text-sm hover:bg-blue-100"
+                      
+                      {campaign.store && (
+                        <button 
+                          onClick={() => navigateToStore(campaign)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         >
-                          Düzenle
+                          Mağazaya Git
                         </button>
                       )}
-                      
-                      {/* Mağazaya git butonu */}
-                      <button
-                        onClick={() => navigateToStore(campaign.storeId)}
-                        className="px-3 py-1 bg-gray-50 text-gray-800 rounded-md text-sm hover:bg-gray-100"
-                      >
-                        Mağazaya Git
-                      </button>
                     </div>
+                    
+                    {campaign.end_date && (
+                      <div className="mt-3 text-xs text-gray-500">
+                        Son geçerlilik: {new Date(campaign.end_date).toLocaleDateString('tr-TR')}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -310,33 +302,25 @@ function CampaignsContent() {
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <p className="text-gray-500">Aradığınız kriterlere uygun kampanya bulunamadı.</p>
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Kampanya Bulunamadı</h2>
+          <p className="text-gray-600 mb-6">Arama kriterlerinize uygun kampanya bulunamadı.</p>
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              setCategoryFilter('all');
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Filtreleri Temizle
+          </button>
         </div>
       )}
     </div>
   );
-}
-
-// Tarih formatlama fonksiyonu
-function formatDate(dateString) {
-  const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString('tr-TR', options);
-}
-
-// Kategori rengini belirleme fonksiyonu
-function getCategoryColor(categoryName) {
-  switch (categoryName) {
-    case 'Yemek': return 'bg-blue-500';
-    case 'Market': return 'bg-green-500';
-    case 'Su': return 'bg-indigo-500';
-    case 'Aktüel': return 'bg-purple-500';
-    default: return 'bg-gray-500';
-  }
-}
-
-// Kategori badge sınıfını belirleme fonksiyonu
-function getCategoryBadgeClass(categoryName) {
-  const found = campaignCategories.find(c => c.id === categoryName);
-  return found ? found.color : 'bg-gray-100 text-gray-800';
 } 

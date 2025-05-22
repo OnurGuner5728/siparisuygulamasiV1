@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -18,14 +18,26 @@ function AddUserContent() {
   const router = useRouter();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     phone: '',
     role: 'user',
+    status: 'active',
+    avatar_url: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // first_name ve last_name değiştiğinde name alanını otomatik güncelle
+  useEffect(() => {
+    const fullName = `${formData.first_name} ${formData.last_name}`.trim();
+    setFormData(prev => ({
+      ...prev,
+      name: fullName
+    }));
+  }, [formData.first_name, formData.last_name]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -46,7 +58,10 @@ function AddUserContent() {
         formData.name,
         formData.email,
         formData.password,
-        formData.role
+        formData.role,
+        {
+          phone: formData.phone
+        }
       );
 
       if (result.success) {
@@ -90,18 +105,49 @@ function AddUserContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
+              <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Ad
+              </label>
+              <input
+                type="text"
+                id="first_name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Adı girin"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Soyad
+              </label>
+              <input
+                type="text"
+                id="last_name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Soyadı girin"
+              />
+            </div>
+            
+            <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Kullanıcı Adı
+                Tam Ad (Otomatik Oluşturulur)
               </label>
               <input
                 type="text"
                 id="name"
                 name="name"
                 value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Kullanıcı adını girin"
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
+                placeholder="Ad ve soyad otomatik birleştirilecek"
               />
             </div>
 
@@ -168,6 +214,39 @@ function AddUserContent() {
                 <option value="store">Mağaza</option>
                 <option value="admin">Admin</option>
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                Durum
+              </label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="active">Aktif</option>
+                <option value="inactive">Pasif</option>
+                <option value="pending">Onay Bekliyor</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="avatar_url" className="block text-sm font-medium text-gray-700 mb-1">
+                Profil Resmi URL
+              </label>
+              <input
+                type="text"
+                id="avatar_url"
+                name="avatar_url"
+                value={formData.avatar_url}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Profil resmi URL'si (opsiyonel)"
+              />
             </div>
           </div>
 

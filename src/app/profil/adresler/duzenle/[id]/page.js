@@ -1,74 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { FiArrowLeft, FiHome, FiMapPin, FiBriefcase, FiCheck, FiNavigation2 } from 'react-icons/fi';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
 
-// Demo adresler (gerçek uygulamada API'dan gelecektir)
-const demoAddresses = [
-  {
-    id: 'addr1',
-    title: 'Ev',
-    icon: 'home',
-    fullName: 'Ahmet Yılmaz',
-    phone: '05551234567',
-    addressType: 'home',
-    city: 'İstanbul',
-    district: 'Bahçelievler',
-    neighborhood: 'Bahçelievler Mah.',
-    street: '1234 Sk.',
-    buildingNo: '5',
-    floor: '3',
-    apartmentNo: '7',
-    directions: 'Marketin karşısındaki sarı bina',
-    isDefault: true
-  },
-  {
-    id: 'addr2',
-    title: 'İş',
-    icon: 'work',
-    fullName: 'Ahmet Yılmaz',
-    phone: '05551234567',
-    addressType: 'work',
-    city: 'İstanbul',
-    district: 'Levent',
-    neighborhood: 'Levent Mah.',
-    street: 'Plaza Cad.',
-    buildingNo: '15',
-    floor: '3',
-    apartmentNo: '',
-    directions: 'B Blok, Resepsiyonda bilgi verilecek',
-    isDefault: false
-  },
-  {
-    id: 'addr3',
-    title: 'Annemin Evi',
-    icon: 'other',
-    fullName: 'Fatma Yılmaz',
-    phone: '05557654321',
-    addressType: 'other',
-    city: 'İstanbul',
-    district: 'Çamlık',
-    neighborhood: 'Çamlık Mah.',
-    street: 'Güneş Sk.',
-    buildingNo: '12',
-    floor: '2',
-    apartmentNo: '4',
-    directions: '',
-    isDefault: false
-  }
-];
-
-export default function EditAddress({ params }) {
+export default function EditAddress() {
   const router = useRouter();
-  const { id } = params;
+  const params = useParams();
+  const { user } = useAuth();
+  const addressId = params.id;
   
   // Form durumu
   const [formData, setFormData] = useState({
     title: '',
     fullName: '',
     phone: '',
-    addressType: 'home', // home, work, other
+    addressType: 'home',
     city: '',
     district: '',
     neighborhood: '',
@@ -80,36 +29,11 @@ export default function EditAddress({ params }) {
     isDefault: false
   });
   
-  // Location durumları
-  const [locationStatus, setLocationStatus] = useState('initial'); // initial, requesting, granted, denied, unavailable
+  // Loading durumları
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('initial');
   const [locationError, setLocationError] = useState(null);
-  
-  // Sayfa yüklendiğinde adresi getir
-  useEffect(() => {
-    // Gerçek uygulamada API'den adres bilgisi alınır
-    const address = demoAddresses.find(addr => addr.id === id);
-    
-    if (address) {
-      setFormData({
-        title: address.title,
-        fullName: address.fullName,
-        phone: address.phone,
-        addressType: address.addressType,
-        city: address.city,
-        district: address.district,
-        neighborhood: address.neighborhood,
-        street: address.street,
-        buildingNo: address.buildingNo,
-        floor: address.floor,
-        apartmentNo: address.apartmentNo,
-        directions: address.directions,
-        isDefault: address.isDefault
-      });
-    } else {
-      // Adres bulunamazsa adresler sayfasına yönlendir
-      router.push('/profil/adresler');
-    }
-  }, [id, router]);
   
   // Adres tipi seçenekleri
   const addressTypes = [
@@ -117,6 +41,69 @@ export default function EditAddress({ params }) {
     { id: 'work', name: 'İş', icon: <FiBriefcase /> },
     { id: 'other', name: 'Diğer', icon: <FiMapPin /> }
   ];
+  
+  // Adresi yükle
+  useEffect(() => {
+    const loadAddress = async () => {
+      if (!user || !addressId) return;
+      
+      try {
+        setLoading(true);
+        const addresses = await api.getUserAddresses(user.id);
+        const address = addresses.find(addr => addr.id === addressId);
+        
+        if (address) {
+          // Veritabanından gelen adresi form formatına çevir
+          const fullAddressParts = address.full_address?.split(' - ') || ['', ''];
+          const addressPart = fullAddressParts[0] || '';
+          const directions = fullAddressParts[1] || '';
+          
+          // Adres parçalarını ayır (basit parsing)
+          const addressTokens = addressPart.split(' ');
+          let street = '', buildingNo = '', floor = '', apartmentNo = '';
+          
+          for (let i = 0; i < addressTokens.length; i++) {
+            const token = addressTokens[i];
+            if (token.startsWith('No:')) {
+              buildingNo = token.replace('No:', '');
+            } else if (token.startsWith('Kat:')) {
+              floor = token.replace('Kat:', '');
+            } else if (token.startsWith('Daire:')) {
+              apartmentNo = token.replace('Daire:', '');
+            } else if (!token.includes(':')) {
+              street += (street ? ' ' : '') + token;
+            }
+          }
+          
+          setFormData({
+            title: address.title || '',
+            fullName: address.full_name || '',
+            phone: address.phone || '',
+            addressType: address.type || 'home',
+            city: address.city || '',
+            district: address.district || '',
+            neighborhood: address.neighborhood || '',
+            street: street,
+            buildingNo: buildingNo,
+            floor: floor,
+            apartmentNo: apartmentNo,
+            directions: directions,
+            isDefault: address.is_default || false
+          });
+        } else {
+          alert('Adres bulunamadı');
+          router.push('/profil/adresler');
+        }
+      } catch (error) {
+        console.error('Adres yükleme hatası:', error);
+        alert('Adres yüklenirken bir hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadAddress();
+  }, [user, addressId, router]);
   
   // Form değişikliği işleyicisi
   const handleChange = (e) => {
@@ -147,11 +134,9 @@ export default function EditAddress({ params }) {
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // Başarılı konum alma işlemi
         setLocationStatus('granted');
         
-        // Gerçek uygulamada bu koordinatlarla bir geocoding API'sine istek yapılır
-        // ve adres bilgileri alınır. Burada demo olarak sabit değer kullanıyoruz
+        // Demo olarak sabit değer kullanıyoruz
         setTimeout(() => {
           setFormData(prev => ({
             ...prev,
@@ -184,16 +169,62 @@ export default function EditAddress({ params }) {
   };
   
   // Form gönderimi
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Gerçek uygulamada burada API'ye güncelleme işlemi yapılır
-    console.log('Güncellenen adres:', formData);
+    if (!user) {
+      alert('Lütfen giriş yapın');
+      return;
+    }
     
-    // Adresler sayfasına geri dön
-    router.push('/profil/adresler');
+    try {
+      setSaving(true);
+      
+      // Adres verilerini hazırla
+      const fullAddress = `${formData.street} ${formData.buildingNo ? 'No:' + formData.buildingNo : ''} ${formData.floor ? 'Kat:' + formData.floor : ''} ${formData.apartmentNo ? 'Daire:' + formData.apartmentNo : ''}`.trim();
+      
+      const addressData = {
+        title: formData.title,
+        type: formData.addressType,
+        full_name: formData.fullName,
+        phone: formData.phone,
+        city: formData.city,
+        district: formData.district,
+        neighborhood: formData.neighborhood,
+        full_address: fullAddress + (formData.directions ? ` - ${formData.directions}` : ''),
+        is_default: formData.isDefault
+      };
+      
+      console.log('Adres güncelleme:', addressData);
+      
+      // API'ye güncelleme işlemi
+      const result = await api.updateAddress(addressId, addressData);
+      
+      if (result) {
+        alert('Adres başarıyla güncellendi!');
+        router.push('/profil/adresler');
+      } else {
+        alert('Adres güncellenirken bir hata oluştu');
+      }
+    } catch (error) {
+      console.error('Adres güncelleme hatası:', error);
+      alert('Adres güncellenirken bir hata oluştu: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
-  
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Adres yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Başlık */}
@@ -207,7 +238,7 @@ export default function EditAddress({ params }) {
             >
               <FiArrowLeft size={20} />
             </button>
-            <h1 className="text-xl font-bold text-gray-800">Adresi Düzenle</h1>
+            <h1 className="text-xl font-bold text-gray-800">Adres Düzenle</h1>
           </div>
         </div>
       </div>
@@ -216,8 +247,8 @@ export default function EditAddress({ params }) {
         {/* Konum Erişimi */}
         <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-800">Konumumu Güncelle</h2>
-            <div className="text-xs text-gray-500">Adres alanlarını güncel konumla doldurur</div>
+            <h2 className="text-lg font-medium text-gray-800">Konumumu Kullan</h2>
+            <div className="text-xs text-gray-500">Adres alanlarını otomatik doldurur</div>
           </div>
           
           <button
@@ -243,7 +274,7 @@ export default function EditAddress({ params }) {
             ) : (
               <>
                 <FiNavigation2 className="mr-2" size={18} />
-                {locationStatus === 'denied' ? 'Tekrar Dene' : 'Güncel Konumumu Kullan'}
+                {locationStatus === 'denied' ? 'Tekrar Dene' : 'Konumumu Kullan'}
               </>
             )}
           </button>
@@ -261,7 +292,7 @@ export default function EditAddress({ params }) {
           )}
         </div>
         
-        <form id="address-form" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           {/* Adres Tipi Seçimi */}
           <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
             <h2 className="text-lg font-medium text-gray-800 mb-4">Adres Tipi</h2>
@@ -405,13 +436,13 @@ export default function EditAddress({ params }) {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="street">
-                  Cadde/Sokak
+                  Sokak/Cadde
                 </label>
                 <input
                   type="text"
                   id="street"
                   name="street"
-                  placeholder="Cadde/Sokak"
+                  placeholder="Sokak/Cadde"
                   value={formData.street}
                   onChange={handleChange}
                   required
@@ -428,10 +459,9 @@ export default function EditAddress({ params }) {
                     type="text"
                     id="buildingNo"
                     name="buildingNo"
-                    placeholder="No"
+                    placeholder="Bina No"
                     value={formData.buildingNo}
                     onChange={handleChange}
-                    required
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                 </div>
@@ -453,13 +483,13 @@ export default function EditAddress({ params }) {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="apartmentNo">
-                    Daire
+                    Daire No
                   </label>
                   <input
                     type="text"
                     id="apartmentNo"
                     name="apartmentNo"
-                    placeholder="Daire"
+                    placeholder="Daire No"
                     value={formData.apartmentNo}
                     onChange={handleChange}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -469,46 +499,57 @@ export default function EditAddress({ params }) {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="directions">
-                  Adres Tarifi (İsteğe Bağlı)
+                  Tarif (Opsiyonel)
                 </label>
                 <textarea
                   id="directions"
                   name="directions"
-                  placeholder="Apartman girişi, zil, kapı rengi vb. detaylar"
+                  placeholder="Adres tarifi, ek bilgiler..."
                   value={formData.directions}
                   onChange={handleChange}
-                  rows="3"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                ></textarea>
+                  rows={3}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                />
               </div>
             </div>
           </div>
           
           {/* Varsayılan Adres */}
-          <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
-            <label className="flex items-center cursor-pointer">
+          <div className="bg-white rounded-lg shadow-sm p-5 mb-6">
+            <label className="flex items-center">
               <input
                 type="checkbox"
                 name="isDefault"
                 checked={formData.isDefault}
                 onChange={handleChange}
-                className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                className="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
               />
-              <span className="ml-3 text-gray-700 font-medium">Bu adresi varsayılan adresim yap</span>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                Bu adresi varsayılan adres olarak ayarla
+              </span>
             </label>
           </div>
+          
+          {/* Kaydet Butonu */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+            <div className="container mx-auto">
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium py-3 px-4 rounded-lg hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  'Adresi Güncelle'
+                )}
+              </button>
+            </div>
+          </div>
         </form>
-      </div>
-      
-      {/* Alt Butonlar (Sabit) */}
-      <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 p-4">
-        <button
-          type="submit"
-          form="address-form"
-          className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 px-4 rounded-lg shadow-sm hover:from-orange-600 hover:to-red-700"
-        >
-          Değişiklikleri Kaydet
-        </button>
       </div>
     </div>
   );

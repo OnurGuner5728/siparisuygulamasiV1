@@ -4,89 +4,154 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import StoreGuard from '@/components/StoreGuard';
-import { storeOrdersData } from '@/app/data/mockdatas';
+import AuthGuard from '@/components/AuthGuard';
+import api from '@/lib/api';
 
 export default function StoreOrderDetail() {
   return (
-    <StoreGuard>
+    <AuthGuard requiredRole="store" permissionType="view">
       <StoreOrderDetailContent />
-    </StoreGuard>
+    </AuthGuard>
   );
 }
 
 function StoreOrderDetailContent() {
-    const params = useParams();
-    const router = useRouter();
-    const orderId = params?.id ? parseInt(params.id) : null;
+  const params = useParams();
+  const router = useRouter();
+  const orderId = params?.id;
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
+  const [store, setStore] = useState(null);
 
   useEffect(() => {
-    // Mock veriyi ortak dosyadan kullanıyoruz
-    const fetchOrderDetails = () => {
-      setLoading(true);
-      setTimeout(() => {
-        // Sipariş ID'sine göre siparişi bul
-        const orderData = storeOrdersData.find(o => o.id === orderId);
+    // Sipariş detaylarını API'den al
+    const fetchOrderDetails = async () => {
+      if (!user?.id || !orderId) return;
+      
+      try {
+        setLoading(true);
         
-        if (orderData) {
-          setOrder(orderData);
-          setNotFound(false);
-        } else {
-          setNotFound(true);
+        // Kullanıcının mağazasını bul
+        const userStores = await api.getStores({ owner_id: user.id });
+        
+        if (!userStores || userStores.length === 0) {
+          setError('Mağaza bilgisi bulunamadı.');
+          setLoading(false);
+          return;
         }
         
+        const storeData = userStores[0]; // İlk mağazayı al
+        setStore(storeData);
+        
+        // Sipariş detaylarını getir
+        const orderData = await api.getOrderById(orderId);
+        
+        if (!orderData) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Siparişin mağazaya ait olup olmadığını kontrol et
+        if (orderData.store_id !== storeData.id) {
+          setError('Bu siparişi görüntüleme yetkiniz yok.');
+          setLoading(false);
+          return;
+        }
+        
+        // Sipariş ürünlerini getir
+        const orderItems = await api.getOrderItems(orderId);
+        
+        // Kullanıcı bilgilerini getir
+        let customerInfo = { name: 'Bilinmeyen Kullanıcı' };
+        if (orderData.user_id) {
+          try {
+            const userData = await api.getUserById(orderData.user_id);
+            if (userData) {
+              customerInfo = userData;
+            }
+          } catch (e) {
+            console.error('Kullanıcı bilgileri alınamadı:', e);
+          }
+        }
+        
+        // Tam sipariş nesnesi oluştur
+        const completeOrder = {
+          ...orderData,
+          items: orderItems || [],
+          customer: customerInfo,
+          statusHistory: orderData.status_history || []
+        };
+        
+        setOrder(completeOrder);
+        setNotFound(false);
+      } catch (err) {
+        console.error('Sipariş detayları yüklenirken hata:', err);
+        setError('Sipariş detayları yüklenirken bir hata oluştu.');
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
-    if (orderId) {
+    if (orderId && user?.id) {
       fetchOrderDetails();
     }
-  }, [orderId]);
+  }, [orderId, user]);
 
   // Sipariş durumunu güncelleme
-  const handleChangeStatus = (newStatus) => {
-    if (!order) return;
+  const handleChangeStatus = async (newStatus) => {
+    if (!order || !orderId) return;
     
-    const statusMap = {
-      'preparing': 'Hazırlanıyor',
-      'onway': 'Yola Çıktı',
-      'delivered': 'Teslim Edildi',
-      'cancelled': 'İptal Edildi'
-    };
-    
-    // Yeni durum geçmişi oluştur
-    const newStatusHistory = [
-      ...order.statusHistory,
-      { 
-        status: newStatus, 
-        date: new Date().toISOString(), 
-        note: `Durum "${statusMap[newStatus]}" olarak güncellendi` 
-      }
-    ];
-    
-    setOrder({
-      ...order,
-      status: newStatus,
-      statusHistory: newStatusHistory
-    });
+    try {
+      // API üzerinden sipariş durumunu güncelle
+      await api.updateOrder(orderId, { status: newStatus });
+      
+      // Yeni durum geçmişi oluştur
+      const statusMap = {
+        'pending': 'Onay Bekliyor',
+        'preparing': 'Hazırlanıyor',
+        'on_the_way': 'Yola Çıktı',
+        'delivered': 'Teslim Edildi',
+        'cancelled': 'İptal Edildi'
+      };
+      
+      const newStatusHistory = [
+        ...(order.statusHistory || []),
+        { 
+          status: newStatus, 
+          date: new Date().toISOString(), 
+          note: `Durum "${statusMap[newStatus] || newStatus}" olarak güncellendi` 
+        }
+      ];
+      
+      // UI'ı güncelle
+      setOrder({
+        ...order,
+        status: newStatus,
+        statusHistory: newStatusHistory
+      });
+      
+    } catch (error) {
+      console.error('Sipariş durumu güncellenirken hata:', error);
+      alert('Sipariş durumu güncellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+    }
   };
 
   // Sipariş durumunu formatla
   const formatStatus = (status) => {
     switch (status) {
+      case 'pending':
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Onay Bekliyor</span>;
       case 'preparing':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Hazırlanıyor</span>;
-      case 'onway':
+      case 'on_the_way':
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
-      case 'cancelled':
-        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">İptal Edildi</span>;
+            case 'cancelled':        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">İptal Edildi</span>;
       default:
         return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Bilinmiyor</span>;
     }
@@ -94,6 +159,7 @@ function StoreOrderDetailContent() {
 
   // Formatlanmış tarih
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleString('tr-TR', {
       year: 'numeric',
@@ -132,11 +198,30 @@ function StoreOrderDetailContent() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">
+          {error}
+        </div>
+        <Link 
+          href="/store/orders"
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Siparişlere Dön
+        </Link>
+      </div>
+    );
+  }
+
   if (!order) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">
-          {error || 'Sipariş bilgileri yüklenirken bir hata oluştu.'}
+          Sipariş bilgileri yüklenirken bir hata oluştu.
         </div>
         <Link 
           href="/store/orders"
@@ -156,7 +241,7 @@ function StoreOrderDetailContent() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Sipariş Detayı</h1>
-          <p className="text-gray-600 mt-1">#{order.id}</p>
+          <p className="text-gray-600 mt-1">#{order.id?.substring(0, 8)}</p>
         </div>
         <Link 
           href="/store/orders"
@@ -175,23 +260,31 @@ function StoreOrderDetailContent() {
           <div className="flex flex-col md:flex-row md:justify-between md:items-center">
             <div>
               <div className="flex items-center">
-                <div className="text-xl font-semibold text-gray-800 mr-4">Sipariş #{order.id}</div>
+                <div className="text-xl font-semibold text-gray-800 mr-4">Sipariş #{order.id?.substring(0, 8)}</div>
                 {formatStatus(order.status)}
               </div>
               <div className="text-sm text-gray-600 mt-1">
-                {formatDate(order.date)}
+                {formatDate(order.order_date || order.created_at)}
               </div>
             </div>
             <div className="mt-4 md:mt-0 flex flex-col md:flex-row gap-2">
+              {order.status === 'pending' && (
+                <button 
+                  onClick={() => handleChangeStatus('preparing')}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+                >
+                  Kabul Et
+                </button>
+              )}
               {order.status === 'preparing' && (
                 <button 
-                  onClick={() => handleChangeStatus('onway')}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md"
+                  onClick={() => handleChangeStatus('on_the_way')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
                 >
                   Yola Çıktı İşaretle
                 </button>
               )}
-              {order.status === 'onway' && (
+              {order.status === 'on_the_way' && (
                 <button 
                   onClick={() => handleChangeStatus('delivered')}
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
@@ -199,9 +292,13 @@ function StoreOrderDetailContent() {
                   Teslim Edildi İşaretle
                 </button>
               )}
-              {(order.status === 'preparing' || order.status === 'onway') && (
+              {(order.status === 'pending' || order.status === 'preparing') && (
                 <button 
-                  onClick={() => handleChangeStatus('cancelled')}
+                  onClick={() => {
+                    if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
+                      handleChangeStatus('cancelled');
+                    }
+                  }}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
                 >
                   İptal Et
@@ -235,125 +332,119 @@ function StoreOrderDetailContent() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {order.items.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
+                  {order.items && order.items.map((item, index) => (
+                    <tr key={item.id || index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        <div className="text-sm font-medium text-gray-900">{item.product_name || item.name}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{item.price.toFixed(2)} TL</div>
+                        <div className="text-sm text-gray-900">{(item.price || 0).toFixed(2)} TL</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">x{item.quantity}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{item.total.toFixed(2)} TL</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {((item.price || 0) * (item.quantity || 1)).toFixed(2)} TL
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
-                    <td colSpan="3" className="px-6 py-3 text-right text-sm font-medium text-gray-500">
-                      Ara Toplam
+                    <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                      Ara Toplam:
                     </td>
-                    <td className="px-6 py-3 text-left text-sm font-medium text-gray-900">
-                      {order.subtotal.toFixed(2)} TL
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {(order.subtotal || 0).toFixed(2)} TL
+                      </div>
                     </td>
                   </tr>
-                  {order.discount > 0 && (
-                    <tr>
-                      <td colSpan="3" className="px-6 py-3 text-right text-sm font-medium text-gray-500">
-                        İndirim
-                      </td>
-                      <td className="px-6 py-3 text-left text-sm font-medium text-green-600">
-                        -{order.discount.toFixed(2)} TL
-                      </td>
-                    </tr>
-                  )}
-                  {order.deliveryFee > 0 && (
-                    <tr>
-                      <td colSpan="3" className="px-6 py-3 text-right text-sm font-medium text-gray-500">
-                        Teslimat Ücreti
-                      </td>
-                      <td className="px-6 py-3 text-left text-sm font-medium text-gray-900">
-                        {order.deliveryFee.toFixed(2)} TL
-                      </td>
-                    </tr>
-                  )}
                   <tr>
-                    <td colSpan="3" className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
-                      Toplam
+                    <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                      Teslimat Ücreti:
                     </td>
-                    <td className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      {order.total.toFixed(2)} TL
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {(order.delivery_fee || 0).toFixed(2)} TL
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                      Toplam:
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-lg font-bold text-gray-900">
+                        {(order.total || 0).toFixed(2)} TL
+                      </div>
                     </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-
-            {/* Sipariş Geçmişi */}
-            <h2 className="text-lg font-semibold text-gray-800 mt-8 mb-4">Sipariş Geçmişi</h2>
-            <div className="relative">
-              <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-              <div className="space-y-4">
-                {order.statusHistory.map((history, index) => (
-                  <div key={index} className="relative pl-10">
-                    <div className="absolute left-0 top-1 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center border-2 border-white">
-                      <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <div className="flex justify-between">
-                        <div className="font-medium">{
-                          history.status === 'preparing' ? 'Hazırlanıyor' :
-                          history.status === 'onway' ? 'Yola Çıktı' :
-                          history.status === 'delivered' ? 'Teslim Edildi' :
-                          history.status === 'cancelled' ? 'İptal Edildi' : 'Bilinmiyor'
-                        }</div>
-                        <div className="text-sm text-gray-500">{formatDate(history.date)}</div>
-                      </div>
-                      {history.note && (
-                        <div className="text-sm text-gray-600 mt-1">{history.note}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* Sağ Kısım - Müşteri Bilgileri */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Müşteri Bilgileri</h2>
-            <div className="bg-gray-50 p-4 rounded-md mb-6">
-              <div className="text-sm font-medium text-gray-900 mb-1">{order.customer.name}</div>
-              <div className="text-sm text-gray-600 mb-1">{order.customer.phone}</div>
-              <div className="text-sm text-gray-600">{order.customer.fullAddress}</div>
+          {/* Sağ Kısım - Müşteri ve Teslimat Bilgileri */}
+          <div className="md:col-span-1">
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Müşteri Bilgileri</h2>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="text-sm font-medium text-gray-800">{order.customer?.name || 'Bilinmeyen Kullanıcı'}</div>
+                {order.customer?.phone && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium">Telefon: </span>{order.customer.phone}
+                  </div>
+                )}
+                {order.customer?.email && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium">E-posta: </span>{order.customer.email}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Teslimat Bilgileri</h2>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="text-sm text-gray-600 mb-2">
+                  <span className="font-medium">Adres: </span>
+                  {order.delivery_address || 'Adres bilgisi bulunamadı'}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Teslimat Notu: </span>
+                  {order.delivery_note || 'Not belirtilmemiş'}
+                </div>
+              </div>
             </div>
 
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Sipariş Bilgileri</h2>
-            <div className="bg-gray-50 p-4 rounded-md space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Sipariş Tarihi</span>
-                <p className="text-sm font-medium">{formatDate(order.date)}</p>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Sipariş Durumu Geçmişi</h2>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <ul className="space-y-3">
+                  {order.statusHistory && order.statusHistory.length > 0 ? 
+                    order.statusHistory.map((history, index) => (
+                      <li key={index} className="text-sm">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                          <div className="font-medium">{formatStatus(history.status)}</div>
+                        </div>
+                        <div className="ml-5 mt-1 text-gray-600">
+                          {formatDate(history.date)}
+                        </div>
+                        {history.note && (
+                          <div className="ml-5 mt-1 text-gray-600">
+                            {history.note}
+                          </div>
+                        )}
+                      </li>
+                    )) : 
+                    <li className="text-sm text-gray-600">Durum geçmişi bulunamadı</li>
+                  }
+                </ul>
               </div>
-              <div>
-                <span className="text-sm text-gray-500">Ödeme Yöntemi</span>
-                <p className="text-sm font-medium">{order.paymentMethod === 'card' ? 'Kredi Kartı' : 'Nakit'}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Tahmini Teslimat</span>
-                <p className="text-sm font-medium">{order.deliveryTime}</p>
-              </div>
-              {order.notes && (
-                <div>
-                  <span className="text-sm text-gray-500">Sipariş Notu</span>
-                  <p className="text-sm font-medium">{order.notes}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>

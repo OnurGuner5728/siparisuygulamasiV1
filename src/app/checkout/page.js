@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import AuthGuard from '../../components/AuthGuard';
+import api from '@/lib/api';
 
 export default function Checkout() {
   return (
@@ -41,6 +42,7 @@ function CheckoutContent() {
   
   // Kullanıcı adresleri
   const [addresses, setAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
   
   useEffect(() => {
     // Sepet boşsa ana sayfaya yönlendir
@@ -57,41 +59,32 @@ function CheckoutContent() {
       return;
     }
     
-    // Mock adres verilerini yükle
-    if (user && user.addresses) {
-      setAddresses(user.addresses);
-      if (user.addresses.length > 0) {
-        const defaultAddress = user.addresses.find(addr => addr.isDefault) || user.addresses[0];
-        setSelectedAddress(defaultAddress.id);
-      }
-    } else {
-      // Eğer kullanıcının adresi yoksa, mock adresler
-      setAddresses([
-        {
-          id: 1,
-          title: 'Ev',
-          fullName: 'Ahmet Yılmaz',
-          phone: '0555 111 2233',
-          city: 'İstanbul',
-          district: 'Kadıköy',
-          neighborhood: 'Göztepe',
-          fullAddress: 'Örnek Sokak No:1 D:5',
-          isDefault: true
-        },
-        {
-          id: 2,
-          title: 'İş',
-          fullName: 'Ahmet Yılmaz',
-          phone: '0555 111 2233',
-          city: 'İstanbul',
-          district: 'Şişli',
-          neighborhood: 'Mecidiyeköy',
-          fullAddress: 'İş Merkezi No:10 Kat:5',
-          isDefault: false
+    // Kullanıcı adreslerini yükle
+    const loadAddresses = async () => {
+      if (!user) return;
+      
+      setLoadingAddresses(true);
+      try {
+        const userAddresses = await api.getUserAddresses(user.id);
+        
+        if (userAddresses && userAddresses.length > 0) {
+          setAddresses(userAddresses);
+          
+          // Varsayılan adres veya ilk adresi seç
+          const defaultAddress = userAddresses.find(addr => addr.is_default) || userAddresses[0];
+          setSelectedAddress(defaultAddress.id);
+        } else {
+          // Kullanıcının adresi yoksa
+          console.log('Kullanıcının kayıtlı adresi bulunamadı');
         }
-      ]);
-      setSelectedAddress(1);
-    }
+      } catch (err) {
+        console.error('Adresler yüklenirken hata:', err);
+      } finally {
+        setLoadingAddresses(false);
+      }
+    };
+    
+    loadAddresses();
   }, [cartItems.length, router, user, orderCompleted, isAuthenticated]);
 
   const handleCardInfoChange = (e) => {
@@ -185,19 +178,90 @@ function CheckoutContent() {
     return true;
   };
 
-  const handleCompleteOrder = () => {
+  const handleCompleteOrder = async () => {
+    console.log('🚀 Sipariş tamamlama başlatıldı');
+    console.log('📦 CartItems:', cartItems);
+    console.log('👤 User:', user);
+    console.log('📍 SelectedAddress:', selectedAddress);
+    console.log('💳 PaymentMethod:', paymentMethod);
+    
+    if (!selectedAddress) {
+      alert('Lütfen bir adres seçin');
+      return;
+    }
+    
+    if (!user || !user.id) {
+      alert('Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+      return;
+    }
+    
+    if (!cartItems || cartItems.length === 0) {
+      alert('Sepetiniz boş. Lütfen ürün ekleyin.');
+      return;
+    }
+    
+    const storeId = cartItems[0]?.store_id;
+    if (!storeId) {
+      alert('Mağaza bilgisi bulunamadı. Lütfen sepeti yenileyin.');
+      console.error('Store ID bulunamadı:', cartItems[0]);
+      return;
+    }
+    
     setLoading(true);
     
-    // Mock sipariş tamamlama
-    setTimeout(() => {
-      // Rastgele sipariş numarası oluştur
-      const randomOrderNumber = Math.floor(10000000 + Math.random() * 90000000).toString();
-      setOrderNumber(randomOrderNumber);
+    try {
+      // Sepet öğelerinden sipariş öğeleri oluştur
+      const orderItems = cartItems.map(item => ({
+        product_id: item.product_id || item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity,
+        notes: item.notes || ''
+      }));
       
+      console.log('🛍️ OrderItems:', orderItems);
+      
+      // Seçilen adresi bul
+      const address = addresses.find(addr => addr.id === selectedAddress);
+      console.log('🏠 Selected address:', address);
+      
+      // Sipariş verisi oluştur
+      const orderData = {
+        customer_id: user.id,
+        store_id: storeId,
+        subtotal: calculateSubtotal(),
+        delivery_fee: calculateDeliveryFee(),
+        total: calculateTotal(),
+        discount: 0,
+        payment_method: paymentMethod === 'online' ? 'credit_card' : 'cash',
+        delivery_address_id: selectedAddress,
+        estimated_delivery: '30-45 dakika',
+        delivery_note: ''
+      };
+      
+      console.log('📋 OrderData:', orderData);
+      
+      // Siparişi oluştur
+      console.log('🔄 API çağrısı başlatılıyor...');
+      const result = await api.createOrder(orderData, orderItems);
+      console.log('✅ API sonucu:', result);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Sipariş oluşturulamadı');
+      }
+      
+      setOrderNumber(result.data.id);
       setOrderCompleted(true);
       clearCart(); // Sepeti temizle
+      console.log('🎉 Sipariş başarıyla tamamlandı!');
+      
+    } catch (err) {
+      console.error('❌ Sipariş oluşturulurken hata:', err);
+      alert('Sipariş oluşturulurken bir hata oluştu: ' + err.message);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   const getSelectedAddressDetails = () => {
@@ -296,7 +360,7 @@ function CheckoutContent() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-lg font-medium">{address.title}</h3>
-                          {address.isDefault && (
+                          {address.is_default && (
                             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                               Varsayılan
                             </span>
@@ -502,8 +566,8 @@ function CheckoutContent() {
             <h2 className="text-lg font-semibold text-gray-700 mb-4">Sipariş Özeti</h2>
             
             <div className="max-h-[300px] overflow-y-auto mb-4">
-              {cartItems.map(item => (
-                <div key={item.id} className="py-3 border-b last:border-b-0 flex justify-between items-center">
+              {cartItems.map((item, index) => (
+                <div key={`${item.product_id}-${item.store_id}-${index}`} className="py-3 border-b last:border-b-0 flex justify-between items-center">
                   <div>
                     <div className="flex items-center">
                       <span className="font-medium">{item.name}</span>

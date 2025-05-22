@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import StoreGuard from '@/components/StoreGuard';
+import api from '@/lib/api';
 
 export default function AddProduct() {
   return (
@@ -16,6 +17,7 @@ export default function AddProduct() {
 
 function AddProductContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -27,25 +29,31 @@ function AddProductContent() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
+  const [store, setStore] = useState(null);
 
   useEffect(() => {
-    // Mock kategori verilerini yükle
-    const fetchCategories = () => {
-      // Gerçek projede bir API isteği yapılacak
-      setTimeout(() => {
-        const mockCategories = [
-          'Ana Yemekler',
-          'Yan Ürünler',
-          'İçecekler',
-          'Tatlılar',
-          'Atıştırmalıklar'
-        ];
-        setCategories(mockCategories);
-      }, 500);
+    // Kategori verilerini ve mağaza bilgilerini yükle
+    const fetchData = async () => {
+      try {
+        // Kullanıcının mağaza bilgilerini al
+        if (user) {
+          const storeData = await api.getStoreByUserId(user.id);
+          if (storeData) {
+            setStore(storeData);
+            
+            // Mağaza kategorisine uygun alt kategorileri getir
+            const categoriesData = await api.getCategoriesByMainCategory(storeData.category_id);
+            setCategories(categoriesData);
+          }
+        }
+      } catch (err) {
+        console.error('Veri yüklenirken hata:', err);
+        setError('Kategoriler yüklenirken bir hata oluştu');
+      }
     };
 
-    fetchCategories();
-  }, []);
+    fetchData();
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -69,7 +77,7 @@ function AddProductContent() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -89,11 +97,21 @@ function AddProductContent() {
       return;
     }
 
-    // Gerçek projede bir API isteği yapılır
-    setTimeout(() => {
-      // İşlem tamamlandı, ürünler sayfasına yönlendir
+    try {
+      // Ürünü ekle
+      const productData = {
+        ...formData,
+        store_id: store.id,
+        price: parseFloat(formData.price)
+      };
+      
+      await api.createProduct(productData);
       router.push('/store/products');
-    }, 1000);
+    } catch (err) {
+      console.error('Ürün eklenirken hata:', err);
+      setError('Ürün eklenirken bir hata oluştu');
+      setLoading(false);
+    }
   };
 
   return (
@@ -174,8 +192,8 @@ function AddProductContent() {
                 required
               >
                 <option value="">Kategori Seçin</option>
-                {categories.map((category, index) => (
-                  <option key={index} value={category}>{category}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </select>
             </div>
@@ -255,9 +273,11 @@ function AddProductContent() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Ekleniyor...
+                  İşleniyor...
                 </>
-              ) : 'Ürünü Ekle'}
+              ) : (
+                'Ürünü Kaydet'
+              )}
             </button>
           </div>
         </form>

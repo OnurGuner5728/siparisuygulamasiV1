@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockCampaigns, mockUsers, mockStores, mockCategories } from '@/app/data/mockdatas';
+import api from '@/lib/api'; // API servisini import et
 import AuthGuard from '@/components/AuthGuard';
 import { useRouter } from 'next/navigation';
 
@@ -68,6 +68,8 @@ function AdminCampaignsContent() {
 // Kampanya Yönetimi Bileşeni
 function CampaignsManagement() {
   const [campaigns, setCampaigns] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -75,38 +77,50 @@ function CampaignsManagement() {
 
   // Mağaza adını ID'ye göre bul
   const getStoreName = (storeId) => {
-    const store = mockStores.find(s => s.id === storeId);
+    const store = stores.find(s => s.id === storeId);
     return store ? store.name : 'Bilinmeyen Mağaza';
   };
 
   // Kategori adını ID'ye göre bul
   const getCategoryName = (categoryId) => {
-    const category = mockCategories.find(c => c.id === categoryId);
+    const category = categories.find(c => c.id === categoryId);
     return category ? category.name : 'Genel';
   };
 
   // Kampanya verilerini yükle
   useEffect(() => {
-    // API çağrısı simülasyonu
-    setTimeout(() => {
-      setCampaigns(mockCampaigns);
-      setLoading(false);
-    }, 500);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const campaignsData = await api.getCampaigns();
+        const storesData = await api.getStores();
+        const categoriesData = await api.getCategories();
+        setCampaigns(campaignsData);
+        setStores(storesData);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Kampanya verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
   // Kampanya durumunu güncelle
-  const toggleCampaignStatus = (campaignId) => {
-    setCampaigns(prevCampaigns =>
-      prevCampaigns.map(campaign => {
-        if (campaign.id === campaignId) {
-          return {
-            ...campaign,
-            status: campaign.status === 'active' ? 'inactive' : 'active'
-          };
-        }
-        return campaign;
-      })
-    );
+  const toggleCampaignStatus = async (campaignId, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await api.updateCampaign(campaignId, { status: newStatus }); // updateCampaign API'de olmalı
+      setCampaigns(prevCampaigns =>
+        prevCampaigns.map(campaign => 
+          campaign.id === campaignId ? { ...campaign, status: newStatus } : campaign
+        )
+      );
+    } catch (error) {
+      console.error("Kampanya durumu güncellenirken hata:", error);
+      alert('Kampanya durumu güncellenemedi.');
+    }
   };
 
   // Kampanya düzenleme sayfasına yönlendir
@@ -116,36 +130,27 @@ function CampaignsManagement() {
 
   // Mağaza sayfasına yönlendir
   const navigateToStore = (storeId) => {
-    // Mağazayı ID'sine göre bul
-    const store = mockStores.find(store => store.id === storeId);
-    
+    const store = stores.find(s => s.id === storeId);
     if (store) {
-      // Kategori ID'si üzerinden kategori adını bul
-      const category = mockCategories.find(cat => cat.id === store.categoryId);
+      const category = categories.find(cat => cat.id === store.category_id);
       if (category) {
-        // Kategori adına göre yönlendir
-        router.push(`/${category.name.toLowerCase()}/${storeId}`);
+        router.push(`/${category.name.toLowerCase()}/store/${store.id}`);
       } else {
-        // Kategori bulunamazsa genel mağaza sayfasına yönlendir
-        router.push(`/magaza/${storeId}`);
+        router.push(`/magaza/${store.id}`);
       }
     } else {
-      // Mağaza bulunamazsa ana sayfaya yönlendir
       router.push(`/magaza/${storeId}`);
     }
   };
 
   // Filtrelenmiş kampanyalar
   const filteredCampaigns = campaigns.filter(campaign => {
-    // Durum filtresi
     if (statusFilter !== 'all' && campaign.status !== statusFilter) {
       return false;
     }
-    
-    // Arama filtresi
     if (searchTerm.trim() !== '') {
       const search = searchTerm.toLowerCase();
-      const storeName = getStoreName(campaign.storeId).toLowerCase();
+      const storeName = getStoreName(campaign.store_id).toLowerCase(); // store_id olarak düzeltildi
       return (
         campaign.title.toLowerCase().includes(search) ||
         campaign.description.toLowerCase().includes(search) ||
@@ -153,7 +158,6 @@ function CampaignsManagement() {
         campaign.code.toLowerCase().includes(search)
       );
     }
-    
     return true;
   });
 
@@ -247,16 +251,16 @@ function CampaignsManagement() {
                 {filteredCampaigns.map(campaign => (
                   <tr key={campaign.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {campaign.id}
+                      {campaign.id.substring(0, 8)}...
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => navigateToStore(campaign.storeId)}>
+                      <div className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => navigateToStore(campaign.store_id)}>
                         {campaign.title}
                       </div>
                       <div className="text-sm text-gray-500 truncate max-w-xs">{campaign.description}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer" onClick={() => navigateToStore(campaign.storeId)}>
-                      {getStoreName(campaign.storeId)}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer" onClick={() => navigateToStore(campaign.store_id)}>
+                      {getStoreName(campaign.store_id)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
@@ -264,12 +268,12 @@ function CampaignsManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {campaign.discountType === 'percent' ? `%${campaign.discount}` : 
-                       campaign.discountType === 'amount' ? `${campaign.discount} TL` : 
-                       'Ücretsiz Teslimat'}
+                      {campaign.discount_type === 'percent' ? `%${campaign.discount}` : 
+                       campaign.discount_type === 'amount' ? `${campaign.discount} TL` : 
+                       'Ücretsiz Teslimat'} {/* discount_type olarak düzeltildi */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
+                      {formatDate(campaign.start_date)} - {formatDate(campaign.end_date)} {/* start_date ve end_date olarak düzeltildi */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -281,7 +285,7 @@ function CampaignsManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <button 
-                          onClick={() => toggleCampaignStatus(campaign.id)}
+                          onClick={() => toggleCampaignStatus(campaign.id, campaign.status)}
                           className={`px-2 py-1 rounded-md text-white ${
                             campaign.status === 'active' 
                               ? 'bg-red-600 hover:bg-red-700' 
@@ -316,7 +320,6 @@ function CampaignsManagement() {
 // Yetkilendirme Yönetimi Bileşeni
 function PermissionsManagement() {
   const [users, setUsers] = useState([]);
-  const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -325,104 +328,104 @@ function PermissionsManagement() {
 
   // Kullanıcı verilerini yükle
   useEffect(() => {
-    // API çağrısı simülasyonu
-    setTimeout(() => {
-      // Admin hariç tüm kullanıcıları al
-      const filteredUsers = mockUsers.filter(user => user.role !== 'admin');
-      setUsers(filteredUsers);
-      
-      // Tüm mağazaları al
-      setStores(mockStores);
-      setLoading(false);
-    }, 500);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const allUsers = await api.getAllUsers();
+        const filteredUsers = allUsers.filter(user => user.role !== 'admin');
+        setUsers(filteredUsers);
+      } catch (error) {
+        console.error("Kullanıcı yetki verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
   // Kullanıcının kampanya görüntüleme yetkisini güncelle
-  const toggleViewPermission = (userId) => {
-    setUsers(prevUsers =>
-      prevUsers.map(user => {
-        if (user.id === userId) {
-          // Kullanıcının kampanya izinlerini değiştir
-          const currentViewPerm = user.modulePermissions.kampanya?.view || false;
-          
-          return {
-            ...user,
-            modulePermissions: {
-              ...user.modulePermissions,
-              kampanya: {
-                ...user.modulePermissions.kampanya,
-                view: !currentViewPerm
-              }
-            }
-          };
+  const toggleViewPermission = async (userId, currentPermissions) => {
+    try {
+      const newViewPerm = !(currentPermissions?.kampanya?.view || false);
+      // updateUserPermissions API'de olmalı
+      await api.updateUser(userId, { 
+        module_permissions: { 
+          ...currentPermissions, 
+          kampanya: { ...currentPermissions?.kampanya, view: newViewPerm } 
         }
-        return user;
-      })
-    );
+      }); 
+      setUsers(prevUsers =>
+        prevUsers.map(user => 
+          user.id === userId ? { 
+            ...user, 
+            module_permissions: { 
+              ...user.module_permissions, 
+              kampanya: { ...user.module_permissions?.kampanya, view: newViewPerm }
+            }
+          } : user
+        )
+      );
+    } catch (error) {
+      console.error("Görüntüleme yetkisi güncellenirken hata:", error);
+      alert('Görüntüleme yetkisi güncellenemedi.');
+    }
   };
 
   // Kullanıcının kampanya oluşturma yetkisini güncelle
-  const toggleCreatePermission = (userId) => {
-    setUsers(prevUsers =>
-      prevUsers.map(user => {
-        if (user.id === userId) {
-          // Kullanıcı eğer 'user' rolündeyse kampanya oluşturma yetkisi verilmeyecek
-          if (user.role === 'user') {
-            // Kullanıcı rolündeki kişilere kampanya oluşturma yetkisi verilmez - admin dahil
-            alert('Müşteri kullanıcılara kampanya oluşturma yetkisi verilemez!');
-            return user;
-          }
-          
-          // Mağaza kullanıcısı ise yetki değiştirilebilir
-          const currentCreatePerm = user.modulePermissions.kampanya?.create || false;
-          
-          return {
-            ...user,
-            modulePermissions: {
-              ...user.modulePermissions,
-              kampanya: {
-                ...user.modulePermissions.kampanya,
-                view: true, // Oluşturma yetkisi veriliyorsa, görüntüleme yetkisi de otomatik verilir
-                create: !currentCreatePerm
-              }
+  const toggleCreatePermission = async (userId, currentPermissions, userRole) => {
+    if (userRole === 'user') {
+      alert('Müşteri kullanıcılara kampanya oluşturma yetkisi verilemez!');
+      return;
+    }
+    try {
+      const newCreatePerm = !(currentPermissions?.kampanya?.create || false);
+      const newViewPerm = newCreatePerm ? true : (currentPermissions?.kampanya?.view || false); 
+      // updateUserPermissions API'de olmalı
+      await api.updateUser(userId, { 
+        module_permissions: { 
+          ...currentPermissions, 
+          kampanya: { ...currentPermissions?.kampanya, create: newCreatePerm, view: newViewPerm } 
+        } 
+      });
+      setUsers(prevUsers =>
+        prevUsers.map(user => 
+          user.id === userId ? { 
+            ...user, 
+            module_permissions: { 
+              ...user.module_permissions, 
+              kampanya: { ...user.module_permissions?.kampanya, create: newCreatePerm, view: newViewPerm }
             }
-          };
-        }
-        return user;
-      })
-    );
+          } : user
+        )
+      );
+    } catch (error) {
+      console.error("Oluşturma yetkisi güncellenirken hata:", error);
+      alert('Oluşturma yetkisi güncellenemedi.');
+    }
   };
 
   // Filtrelenmiş kullanıcılar
   const filteredUsers = users.filter(user => {
-    // Rol filtresi
     if (roleFilter !== 'all' && user.role !== roleFilter) {
       return false;
     }
-    
-    // Görüntüleme yetkisi filtresi
     if (viewPermFilter !== 'all') {
-      const hasViewPerm = user.modulePermissions.kampanya?.view || false;
+      const hasViewPerm = user.module_permissions?.kampanya?.view || false;
       if (viewPermFilter === 'yes' && !hasViewPerm) return false;
       if (viewPermFilter === 'no' && hasViewPerm) return false;
     }
-    
-    // Oluşturma yetkisi filtresi
     if (createPermFilter !== 'all') {
-      const hasCreatePerm = user.modulePermissions.kampanya?.create || false;
+      const hasCreatePerm = user.module_permissions?.kampanya?.create || false;
       if (createPermFilter === 'yes' && !hasCreatePerm) return false;
       if (createPermFilter === 'no' && hasCreatePerm) return false;
     }
-    
-    // Arama filtresi
     if (searchTerm.trim() !== '') {
       const search = searchTerm.toLowerCase();
       return (
-        user.name.toLowerCase().includes(search) ||
-        user.email.toLowerCase().includes(search)
+        (user.name && user.name.toLowerCase().includes(search)) ||
+        (user.email && user.email.toLowerCase().includes(search))
       );
     }
-    
     return true;
   });
 
@@ -536,7 +539,7 @@ function PermissionsManagement() {
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">ID: {user.id}</div>
+                      <div className="text-sm text-gray-500">ID: {user.id.substring(0,8)}...</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.email}
@@ -554,29 +557,29 @@ function PermissionsManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button 
-                        onClick={() => toggleViewPermission(user.id)}
+                        onClick={() => toggleViewPermission(user.id, user.module_permissions)}
                         className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none ${
-                          user.modulePermissions.kampanya?.view ? 'bg-green-500' : 'bg-gray-200'
+                          user.module_permissions?.kampanya?.view ? 'bg-green-500' : 'bg-gray-200'
                         }`}
                       >
                         <span 
                           className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                            user.modulePermissions.kampanya?.view ? 'translate-x-5' : 'translate-x-0'
+                            user.module_permissions?.kampanya?.view ? 'translate-x-5' : 'translate-x-0'
                           }`}
                         ></span>
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button 
-                        onClick={() => toggleCreatePermission(user.id)}
+                        onClick={() => toggleCreatePermission(user.id, user.module_permissions, user.role)}
                         className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none ${
-                          user.modulePermissions.kampanya?.create ? 'bg-green-500' : 'bg-gray-200'
+                          user.module_permissions?.kampanya?.create ? 'bg-green-500' : 'bg-gray-200'
                         } ${user.role === 'user' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={user.role === 'user'}
                       >
                         <span 
                           className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                            user.modulePermissions.kampanya?.create ? 'translate-x-5' : 'translate-x-0'
+                            user.module_permissions?.kampanya?.create ? 'translate-x-5' : 'translate-x-0'
                           }`}
                         ></span>
                       </button>
@@ -598,6 +601,7 @@ function PermissionsManagement() {
 
 // Tarih formatlama fonksiyonu
 function formatDate(dateString) {
+  if (!dateString) return ''; // Eğer tarih yoksa boş string döndür
   const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
   return new Date(dateString).toLocaleDateString('tr-TR', options);
 } 

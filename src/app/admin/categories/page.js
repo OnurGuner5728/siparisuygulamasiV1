@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
-import { mockCategories, mainCategories } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 
 export default function AdminCategories() {
   return (
@@ -23,7 +23,7 @@ function AdminCategoriesContent() {
   const [newCategory, setNewCategory] = useState({
     name: '',
     description: '',
-    mainCategory: 'Yemek',
+    main_category: 'Yemek',
     image: '',
     status: 'active'
   });
@@ -34,14 +34,33 @@ function AdminCategoriesContent() {
     su: true,
     aktuel: false
   });
+  const [mainCategories, setMainCategories] = useState([]);
 
   useEffect(() => {
-    // Mock API çağrısı
-    setTimeout(() => {
-      // Gerçek projede burası bir API isteği olacaktır
-      setCategories(mockCategories);
-      setLoading(false);
-    }, 1000);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // Ana kategorileri getir
+        const mainCategoriesData = await api.getMainCategories();
+        setMainCategories(mainCategoriesData);
+        
+        // Kategorileri getir
+        const categoriesData = await api.getCategories();
+        setCategories(categoriesData);
+
+        // Modül izinlerini getir
+        // Bu örnek için varsayılan değerler kullanıyoruz, gerçek projede API'den gelecek
+        // const modulePermissionsData = await api.getModulePermissions();
+        // setModulePermissions(modulePermissionsData);
+      } catch (error) {
+        console.error('Kategori verileri yüklenirken hata oluştu:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
   }, []);
 
   // Ana kategoriler
@@ -54,32 +73,50 @@ function AdminCategoriesContent() {
     const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           category.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesMainCategory = mainCategoryFilter === 'all' || category.mainCategory === mainCategoryFilter;
+    const matchesMainCategory = mainCategoryFilter === 'all' || category.main_category === mainCategoryFilter;
     
     return matchesSearch && matchesMainCategory;
   });
 
   // Kategori silme
-  const handleDeleteCategory = (categoryId) => {
+  const handleDeleteCategory = async (categoryId) => {
     if (window.confirm('Bu kategoriyi silmek istediğinize emin misiniz?')) {
-      // Gerçek projede API isteği yapılır
-      setCategories(categories.filter(category => category.id !== categoryId));
+      try {
+        await api.deleteCategory(categoryId);
+        setCategories(categories.filter(category => category.id !== categoryId));
+      } catch (error) {
+        console.error('Kategori silinirken hata oluştu:', error);
+        alert('Kategori silinirken bir hata oluştu.');
+      }
     }
   };
 
   // Kategori durumunu değiştirme
-  const handleToggleStatus = (categoryId) => {
-    const updatedCategories = categories.map(category => {
-      if (category.id === categoryId) {
-        return {
-          ...category,
-          status: category.status === 'active' ? 'inactive' : 'active'
-        };
-      }
-      return category;
-    });
-    
-    setCategories(updatedCategories);
+  const handleToggleStatus = async (categoryId) => {
+    try {
+      // Önce güncellenecek kategoriyi bul
+      const categoryToUpdate = categories.find(category => category.id === categoryId);
+      const newStatus = categoryToUpdate.status === 'active' ? 'inactive' : 'active';
+      
+      // API'yi çağır ve güncellemeyi gerçekleştir
+      await api.updateCategory(categoryId, { status: newStatus });
+      
+      // Başarılı olursa UI'ı güncelle
+      const updatedCategories = categories.map(category => {
+        if (category.id === categoryId) {
+          return {
+            ...category,
+            status: newStatus
+          };
+        }
+        return category;
+      });
+      
+      setCategories(updatedCategories);
+    } catch (error) {
+      console.error('Kategori durumu güncellenirken hata oluştu:', error);
+      alert('Kategori durumu değiştirilirken bir hata oluştu.');
+    }
   };
 
   // Kategori durumunu formatla
@@ -95,49 +132,56 @@ function AdminCategoriesContent() {
   };
 
   // Yeni kategori ekleme
-  const handleAddCategory = (e) => {
+  const handleAddCategory = async (e) => {
     e.preventDefault();
     
-    // ID oluştur (gerçek uygulamada backend tarafında yapılır)
-    const id = Math.max(...categories.map(c => c.id)) + 1;
-    
-    // Yeni kategoriyi ekle
-    const newCategoryWithId = {
-      ...newCategory,
-      id,
-      productsCount: 0,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    
-    setCategories([...categories, newCategoryWithId]);
-    
-    // Formu sıfırla
-    setNewCategory({
-      name: '',
-      description: '',
-      mainCategory: 'Yemek',
-      image: '',
-      status: 'active'
-    });
-    
-    // Kategoriler sekmesine geri dön
-    setActiveTab('categories');
+    try {
+      // API'yi çağır ve yeni kategori ekle
+      const newCategoryData = await api.createCategory(newCategory);
+      
+      // Başarılı olursa kategorileri güncelle
+      setCategories([...categories, newCategoryData]);
+      
+      // Formu sıfırla
+      setNewCategory({
+        name: '',
+        description: '',
+        main_category: 'Yemek',
+        image: '',
+        status: 'active'
+      });
+      
+      // Kategoriler sekmesine geri dön
+      setActiveTab('categories');
+    } catch (error) {
+      console.error('Kategori eklenirken hata oluştu:', error);
+      alert('Kategori eklenirken bir hata oluştu.');
+    }
   };
 
   // Kategori düzenleme
-  const handleEditCategory = (e) => {
+  const handleEditCategory = async (e) => {
     e.preventDefault();
     
-    const updatedCategories = categories.map(category => {
-      if (category.id === editingCategory.id) {
-        return editingCategory;
-      }
-      return category;
-    });
-    
-    setCategories(updatedCategories);
-    setEditingCategory(null);
-    setActiveTab('categories');
+    try {
+      // API'yi çağır ve kategoriyi güncelle
+      await api.updateCategory(editingCategory.id, editingCategory);
+      
+      // Başarılı olursa UI'ı güncelle
+      const updatedCategories = categories.map(category => {
+        if (category.id === editingCategory.id) {
+          return editingCategory;
+        }
+        return category;
+      });
+      
+      setCategories(updatedCategories);
+      setEditingCategory(null);
+      setActiveTab('categories');
+    } catch (error) {
+      console.error('Kategori güncellenirken hata oluştu:', error);
+      alert('Kategori güncellenirken bir hata oluştu.');
+    }
   };
 
   // Modül izinlerini değiştirme
@@ -149,9 +193,15 @@ function AdminCategoriesContent() {
   };
 
   // Modül izinlerini kaydet
-  const saveModulePermissions = () => {
-    // Gerçek uygulamada API'ye kaydedilecek
-    alert('Modül yetkileri kaydedildi!');
+  const saveModulePermissions = async () => {
+    try {
+      // API'yi çağır ve modül izinlerini güncelle
+      await api.updateModulePermissions(modulePermissions);
+      alert('Modül yetkileri başarıyla kaydedildi!');
+    } catch (error) {
+      console.error('Modül yetkileri kaydedilirken hata oluştu:', error);
+      alert('Modül yetkileri kaydedilirken bir hata oluştu.');
+    }
   };
 
   if (loading) {
@@ -288,7 +338,7 @@ function AdminCategoriesContent() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                          {category.mainCategory}
+                          {category.main_category}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -356,8 +406,8 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="mainCategory"
-                    value={newCategory.mainCategory}
-                    onChange={(e) => setNewCategory({ ...newCategory, mainCategory: e.target.value })}
+                    value={newCategory.main_category}
+                    onChange={(e) => setNewCategory({ ...newCategory, main_category: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
@@ -452,8 +502,8 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="edit-mainCategory"
-                    value={editingCategory.mainCategory}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, mainCategory: e.target.value })}
+                    value={editingCategory.main_category}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, main_category: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     required
                   >

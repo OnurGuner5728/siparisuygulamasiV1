@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="300" viewBox="0 0 1200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="300" fill="#f97316"/>
+  <rect x="50" y="50" width="1100" height="200" fill="#fb923c" stroke="#f59e0b" stroke-width="2"/>
+  <text x="600" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="white">Yemek Banner</text>
+  <text x="600" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#fef3c7">1200 x 300 piksel</text>
+</svg> 

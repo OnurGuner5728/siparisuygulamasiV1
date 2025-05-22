@@ -1,95 +1,94 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { FiSend, FiArrowLeft, FiPhone, FiMapPin } from 'react-icons/fi';
-import { mockOrders } from '@/app/data/mockdatas';
-import React from 'react';
+import api from '@/lib/api';
 
-export default function CourierMessage({ params }) {
+export default function OrderMessagePage() {
+  return <OrderMessageContent />;
+}
+
+function OrderMessageContent() {
   const router = useRouter();
-  const id = React.use(params).id;
-  const [courier, setCourier] = useState(null);
+  const params = useParams();
+  const orderId = params.id;
+  
+  const [recipient, setRecipient] = useState(null);
+  const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
   
-  // Mesajları aşağı doğru kaydır
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  // Kurye bilgilerini yükle
   useEffect(() => {
-    const loadData = () => {
-      try {
-        // Gerçek uygulamada API'dan getirme işlemi yapılır
-        setTimeout(() => {
-          // Sipariş bilgisini almak için
-          const order = mockOrders.find(order => order.id === id);
-          
-          if (!order) {
-            setLoading(false);
-            router.replace('/profil/siparisler');
-            return;
-          }
-          
-          // Demo kurye bilgileri
-          const courierData = {
-            id: 'CRR123',
-            name: 'Mehmet K.',
-            phone: '+90 555 987 65 43',
-            photo: '/images/couriers/courier-placeholder.jpg',
-            rating: 4.8,
-            lastSeen: 'şimdi çevrimiçi'
-          };
-          
-          setCourier(courierData);
-          
-          // Demo mesajlar
-          const demoMessages = [
-            {
-              id: 1,
-              sender: 'courier',
-              text: 'Merhaba, siparişinizi aldım. 10-15 dakika içinde teslimat adresinde olacağım.',
-              time: new Date(Date.now() - 900000).toISOString() // 15 dakika önce
-            },
-            {
-              id: 2,
-              sender: 'user',
-              text: 'Tamam, teşekkürler. Bina girişinde sizi bekliyor olacağım.',
-              time: new Date(Date.now() - 600000).toISOString() // 10 dakika önce
-            },
-            {
-              id: 3,
-              sender: 'courier',
-              text: 'Merhaba, binanızın önündeyim.',
-              time: new Date(Date.now() - 60000).toISOString() // 1 dakika önce
-            }
-          ];
-          
-          setMessages(demoMessages);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Veri yüklenirken hata:', error);
+    const loadOrderAndRecipientData = async () => {
+      if (!orderId) {
+        setError('Sipariş ID\'si bulunamadı.');
         setLoading(false);
         router.replace('/profil/siparisler');
+        return;
+      }
+      setLoading(true);
+      try {
+        const orderData = await api.getOrderById(orderId);
+        
+        if (!orderData) {
+          setError('Sipariş bulunamadı.');
+          setLoading(false);
+          router.replace('/profil/siparisler');
+          return;
+        }
+        setOrder(orderData);
+        
+        if (orderData.customer) {
+          setRecipient({
+            id: orderData.customer.id,
+            name: orderData.customer.name || 'Müşteri',
+            avatar_url: orderData.customer.avatar_url || '/images/avatar-placeholder.png'
+          });
+        } else {
+          setError('Mesajlaşılacak kişi bilgisi (müşteri) bulunamadı.');
+        }
+
+        const demoMessages = [
+          {
+            id: 1,
+            sender: recipient?.name || 'Karşı Taraf',
+            text: `Merhaba, ${orderData.id.substring(0,8)}... numaralı siparişiniz hakkında. Teslimata çıkmak üzereyim.`,
+            time: new Date(Date.now() - 900000).toISOString()
+          },
+          {
+            id: 2,
+            sender: 'user',
+            text: 'Harika, teşekkürler! Adresteyim.',
+            time: new Date(Date.now() - 600000).toISOString()
+          }
+        ];
+        setMessages(demoMessages);
+
+      } catch (err) {
+        console.error('Sipariş ve alıcı verileri yüklenirken hata:', err);
+        setError('Veriler yüklenirken bir sorun oluştu.');
+      } finally {
+        setLoading(false);
       }
     };
     
-    if (id) {
-      loadData();
+    if (orderId) {
+      loadOrderAndRecipientData();
     }
-  }, [id, router]);
+  }, [orderId, router]);
   
-  // Mesajlar yüklendiğinde ve yeni mesaj eklendiğinde aşağı kaydır
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
   
-  // Mesaj gönder
   const sendMessage = () => {
     if (newMessage.trim() === '') return;
     
@@ -103,22 +102,19 @@ export default function CourierMessage({ params }) {
     setMessages([...messages, newMsg]);
     setNewMessage('');
     
-    // Kurye cevabı simülasyonu
-    if (messages.length > 0 && messages[messages.length - 1].sender === 'courier') {
+    if (recipient && messages.length > 0 && messages[messages.length - 1].sender !== recipient.name) {
       setTimeout(() => {
-        const courierReply = {
+        const reply = {
           id: messages.length + 2,
-          sender: 'courier',
-          text: 'Tamam, teşekkürler 👍',
+          sender: recipient.name,
+          text: 'Anlaşıldı, teşekkürler! 🚗',
           time: new Date().toISOString()
         };
-        
-        setMessages(prev => [...prev, courierReply]);
-      }, 2000);
+        setMessages(prev => [...prev, reply]);
+      }, 1500);
     }
   };
   
-  // Mesaj gönder (Enter tuşu ile)
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -126,7 +122,6 @@ export default function CourierMessage({ params }) {
     }
   };
   
-  // Tarih formatlama
   const formatMessageTime = (dateString) => {
     const messageDate = new Date(dateString);
     return messageDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -134,132 +129,161 @@ export default function CourierMessage({ params }) {
   
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-gray-100 flex flex-col items-center justify-center">
-        <div className="text-center">
+      <div className="fixed inset-0 bg-gray-100 flex flex-col items-center justify-center z-50">
+        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
           <div className="animate-pulse flex flex-col items-center justify-center">
             <div className="w-16 h-16 bg-gray-300 rounded-full mb-4"></div>
-            <div className="h-4 w-24 bg-gray-300 rounded mb-3"></div>
-            <div className="h-3 w-32 bg-gray-300 rounded"></div>
+            <div className="h-4 w-28 bg-gray-300 rounded mb-3"></div>
+            <div className="h-3 w-36 bg-gray-300 rounded"></div>
+            <p className="mt-4 text-gray-500">Mesajlar yükleniyor...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !recipient) {
+     return (
+      <div className="fixed inset-0 bg-gray-100 flex flex-col items-center justify-center z-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-xl max-w-sm mx-auto">
+            <FiSend size={48} className="text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Mesaj Hatası</h2>
+            <p className="text-gray-600 mb-6">
+                {error || 'Mesajlaşılacak kişi bilgisi bulunamadı.'}
+            </p>
+            <button 
+                onClick={() => router.back()}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors"
+            >
+                Geri Dön
+            </button>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Başlık */}
-      <div className="bg-white shadow-sm z-10">
-        <div className="container mx-auto px-4 py-3">
+    <div className="flex flex-col h-screen bg-gray-100 antialiased">
+      <div className="bg-white shadow-md z-10 sticky top-0">
+        <div className="container mx-auto px-3 sm:px-4 py-3">
           <div className="flex items-center">
             <button 
               onClick={() => router.back()} 
-              className="mr-4 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              className="mr-2 sm:mr-3 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Geri Dön"
             >
               <FiArrowLeft size={20} />
             </button>
             
-            <div className="flex items-center flex-1">
-              <div className="w-10 h-10 bg-blue-100 rounded-full mr-3 flex items-center justify-center text-blue-600">
-                {courier?.name?.charAt(0) || "K"}
+            <div className="flex items-center flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-full mr-3 flex-shrink-0">
+                {recipient.avatar_url ? (
+                    <img src={recipient.avatar_url} alt={recipient.name} className="w-full h-full rounded-full object-cover"/>
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                        {recipient.name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                )}
               </div>
               
-              <div className="flex-1">
-                <h1 className="text-base font-semibold text-gray-800">{courier?.name || "Kurye"}</h1>
-                <p className="text-xs text-green-600">{courier?.lastSeen}</p>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-semibold text-gray-800 truncate">{recipient.name}</h1>
               </div>
             </div>
             
-            <button 
-              onClick={() => router.push(`/delivery/${id}/call`)}
-              className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-2"
-              aria-label="Kuryeyi Ara"
-            >
-              <FiPhone size={20} />
-            </button>
-            
-            <button 
-              onClick={() => router.push(`/profil/siparisler/${id}/tracking`)}
-              className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-2"
-              aria-label="Siparişi Takip Et"
-            >
-              <FiMapPin size={20} />
-            </button>
+            {orderId && order && (
+              <>
+                <button 
+                  onClick={() => router.push(`/delivery/${orderId}/call`)}
+                  className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-1 sm:ml-2 transition-colors"
+                  aria-label={`${recipient.name} kişisini ara`}
+                  title={`${recipient.name} kişisini ara`}
+                >
+                  <FiPhone size={20} />
+                </button>
+                
+                <button 
+                  onClick={() => router.push(`/profil/siparisler/${orderId}/tracking`)}
+                  className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-1 sm:ml-2 transition-colors"
+                  aria-label="Siparişi Takip Et"
+                  title="Siparişi Takip Et"
+                >
+                  <FiMapPin size={20} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
       
-      {/* Mesajlar */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-        <div className="max-w-lg mx-auto space-y-4">
-          {/* Bilgi mesajı */}
-          <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm text-center">
-            <p>Bu görüşmede sipariş bilgilerinizi veya kredi kartı bilgilerinizi paylaşmayın.</p>
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-100">
+        <div className="max-w-2xl mx-auto space-y-4">
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-lg text-sm text-center shadow-sm">
+            <p>Bu bir sipariş görüşmesidir. Lütfen kişisel bilgilerinizi (kredi kartı vb.) paylaşmayınız.</p>
           </div>
           
-          {/* Mesaj baloncukları */}
-          {messages.map((msg) => (
+          {messages.map((msg, index) => (
             <div 
-              key={msg.id} 
+              key={msg.id || index} 
               className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div 
-                className={`max-w-xs rounded-lg p-3 ${
-                  msg.sender === 'user' 
-                    ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white' 
-                    : 'bg-white text-gray-800 shadow'
-                }`}
-              >
-                <p className="text-sm">{msg.text}</p>
-                <p 
-                  className={`text-xs mt-1 text-right ${
-                    msg.sender === 'user' ? 'text-orange-100' : 'text-gray-400'
+              <div className="flex items-end max-w-xs sm:max-w-md md:max-w-lg">
+                {msg.sender !== 'user' && recipient.avatar_url && (
+                   <img src={recipient.avatar_url} alt={recipient.name} className="w-6 h-6 rounded-full object-cover mr-2 mb-1 flex-shrink-0"/>
+                )}
+                 {msg.sender !== 'user' && !recipient.avatar_url && (
+                   <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs text-gray-600 mr-2 mb-1 flex-shrink-0">
+                    {recipient.name?.charAt(0)?.toUpperCase() || '?'}
+                   </div>
+                )}
+                <div 
+                  className={`rounded-xl p-3 shadow-md break-words ${
+                    msg.sender === 'user' 
+                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-br-none' 
+                      : 'bg-white text-gray-800 rounded-bl-none'
                   }`}
                 >
-                  {formatMessageTime(msg.time)}
-                </p>
+                  <p className="text-sm">{msg.text}</p>
+                  <p 
+                    className={`text-xs mt-1.5 text-right ${
+                      msg.sender === 'user' ? 'text-orange-100 opacity-80' : 'text-gray-400'
+                    }`}
+                  >
+                    {formatMessageTime(msg.time)}
+                  </p>
+                </div>
               </div>
             </div>
           ))}
-          
-          {/* Görüldü göstergesi */}
-          {messages.length > 0 && messages[messages.length - 1].sender === 'user' && (
-            <div className="flex justify-end">
-              <div className="text-xs text-gray-500">
-                Görüldü
-              </div>
-            </div>
-          )}
           
           <div ref={messagesEndRef} />
         </div>
       </div>
       
-      {/* Mesaj giriş alanı */}
-      <div className="bg-white border-t border-gray-200 p-3">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-end">
-            <div className="flex-1 relative">
-              <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-full border border-gray-300 rounded-full px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none max-h-24"
-                placeholder="Mesajınızı yazın..."
-                rows={1}
-                style={{ minHeight: '44px' }}
-              />
-            </div>
-            
+      <div className="bg-white border-t border-gray-200 p-3 sm:p-4 sticky bottom-0">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center bg-gray-100 rounded-full px-2 py-1">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="flex-1 border-none bg-transparent rounded-full px-3 py-2.5 focus:outline-none focus:ring-0 resize-none max-h-28 text-sm placeholder-gray-500"
+              placeholder="Bir mesaj yazın..."
+              rows={1}
+              onInput={(e) => {
+                e.target.rows = 1;
+                const scrollHeight = e.target.scrollHeight;
+                const maxHeight = 112;
+                if (scrollHeight > e.target.clientHeight && scrollHeight <= maxHeight) {
+                   e.target.rows = Math.min(Math.ceil(scrollHeight / 24), 4);
+                }
+              }}
+            />
             <button 
               onClick={sendMessage}
-              disabled={newMessage.trim() === ''}
-              className={`ml-2 w-10 h-10 flex items-center justify-center rounded-full ${
-                newMessage.trim() === '' 
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
-              }`}
+              disabled={!newMessage.trim()}
+              className="ml-2 p-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Mesajı Gönder"
             >
               <FiSend size={18} />
             </button>

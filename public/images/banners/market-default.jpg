@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="300" viewBox="0 0 1200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="300" fill="#f3f4f6"/>
+  <rect x="50" y="50" width="1100" height="200" fill="#e5e7eb" stroke="#d1d5db" stroke-width="2"/>
+  <text x="600" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#6b7280">Varsayılan Market Banner</text>
+  <text x="600" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af">1200 x 300 piksel</text>
+</svg> 

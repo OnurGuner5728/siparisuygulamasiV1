@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import StoreGuard from '@/components/StoreGuard';
+import api from '@/lib/api';
 
 export default function StoreProfile() {
   return (
@@ -16,6 +17,7 @@ export default function StoreProfile() {
 
 function StoreProfileContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const [store, setStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -45,55 +47,51 @@ function StoreProfileContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Mock API isteği
-    const fetchStoreData = () => {
+    // API'den mağaza verilerini yükle
+    const fetchStoreData = async () => {
+      if (!user) return;
+      
       setLoading(true);
-      setTimeout(() => {
-        // Gerçek projede bir API isteği yapılacak
-        const mockStore = {
-          id: 1,
-          name: 'Kebapçı Ahmet',
-          email: 'kebapci@example.com',
-          phone: '0505 333 4455',
-          category: 'Yemek',
-          description: 'En lezzetli kebaplar',
-          rating: 4.7,
-          status: 'active',
-          approved: true,
-          registrationDate: '2023-03-10',
-          lastLogin: '2023-05-20T14:30:00',
-          address: {
-            city: 'İstanbul',
-            district: 'Kadıköy',
-            neighborhood: 'Göztepe',
-            fullAddress: 'Örnek Sokak No:1 D:5',
-          },
-          workingHours: {
-            monday: '09:00 - 22:00',
-            tuesday: '09:00 - 22:00',
-            wednesday: '09:00 - 22:00',
-            thursday: '09:00 - 22:00',
-            friday: '09:00 - 23:00',
-            saturday: '10:00 - 23:00',
-            sunday: '10:00 - 22:00',
-          }
-        };
+      try {
+        // Kullanıcının mağaza ID'sini kullanarak mağaza bilgilerini getir
+        const storeData = await api.getStoreByUserId(user.id);
         
-        setStore(mockStore);
-        setFormData({
-          name: mockStore.name,
-          email: mockStore.email,
-          phone: mockStore.phone,
-          description: mockStore.description,
-          address: { ...mockStore.address },
-          workingHours: { ...mockStore.workingHours }
-        });
+        if (storeData) {
+          setStore(storeData);
+          setFormData({
+            name: storeData.name || '',
+            email: storeData.email || '',
+            phone: storeData.phone || '',
+            description: storeData.description || '',
+            address: { 
+              city: storeData.address?.city || '',
+              district: storeData.address?.district || '',
+              neighborhood: storeData.address?.neighborhood || '',
+              fullAddress: storeData.address?.fullAddress || '' 
+            },
+            workingHours: { 
+              monday: storeData.workingHours?.monday || '',
+              tuesday: storeData.workingHours?.tuesday || '',
+              wednesday: storeData.workingHours?.wednesday || '',
+              thursday: storeData.workingHours?.thursday || '',
+              friday: storeData.workingHours?.friday || '',
+              saturday: storeData.workingHours?.saturday || '',
+              sunday: storeData.workingHours?.sunday || '' 
+            }
+          });
+        } else {
+          setError('Mağaza bilgileri bulunamadı');
+        }
+      } catch (err) {
+        console.error('Mağaza bilgileri yüklenirken hata:', err);
+        setError('Mağaza bilgileri yüklenirken bir hata oluştu');
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     fetchStoreData();
-  }, []);
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,31 +112,46 @@ function StoreProfileContent() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setSuccess('');
     setError('');
 
-    // Gerçek projede bir API isteği yapılır
-    setTimeout(() => {
+    try {
       // Mağaza verilerini güncelle
-      setStore(prevStore => ({
-        ...prevStore,
-        ...formData
-      }));
+      const updatedStore = await api.updateStore(store.id, {
+        ...formData,
+        address: JSON.stringify(formData.address),
+        workingHours: JSON.stringify(formData.workingHours)
+      });
+      
+      setStore(updatedStore);
       setSuccess('Bilgileriniz başarıyla güncellendi.');
+    } catch (err) {
+      console.error('Mağaza güncelleme hatası:', err);
+      setError('Bilgileriniz güncellenirken bir hata oluştu.');
+    } finally {
       setSubmitting(false);
-    }, 1000);
+    }
   };
 
-  const handleToggleStatus = () => {
+  const handleToggleStatus = async () => {
     if (!store) return;
     
-    setStore(prev => ({
-      ...prev,
-      status: prev.status === 'active' ? 'inactive' : 'active'
-    }));
+    setSubmitting(true);
+    try {
+      const newStatus = store.status === 'active' ? 'inactive' : 'active';
+      const updatedStore = await api.updateStoreStatus(store.id, newStatus);
+      
+      setStore(updatedStore);
+      setSuccess(`Mağaza durumu ${newStatus === 'active' ? 'aktif' : 'pasif'} olarak güncellendi.`);
+    } catch (err) {
+      console.error('Mağaza durumu güncellenirken hata:', err);
+      setError('Mağaza durumu değiştirilirken bir hata oluştu');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
