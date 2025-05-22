@@ -22,6 +22,7 @@ function OrderDetailsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -51,6 +52,20 @@ function OrderDetailsContent() {
     fetchOrderDetails();
   }, [orderId]);
 
+  // Dropdown dışına tıklandığında kapatma
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showStatusDropdown && !event.target.closest('.status-dropdown')) {
+        setShowStatusDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStatusDropdown]);
+
   // Sipariş durumunu değiştirme
   const handleChangeStatus = async (newStatus) => {
     if (!order) return;
@@ -62,7 +77,8 @@ function OrderDetailsContent() {
       
       const statusNote = {
         pending: 'Sipariş beklemede',
-        in_progress: 'Sipariş hazırlanıyor',
+        processing: 'Sipariş hazırlanıyor',
+        shipped: 'Sipariş yolda',
         delivered: 'Sipariş teslim edildi',
         cancelled: 'Sipariş iptal edildi'
       };
@@ -90,7 +106,7 @@ function OrderDetailsContent() {
 
     } catch (err) {
       console.error("Sipariş durumu güncellenirken hata:", err);
-      alert('Sipariş durumu güncellenemedi.');
+      alert('Sipariş durumu güncellenemedi: ' + (err.message || 'Bilinmeyen hata'));
     }
   };
 
@@ -99,8 +115,10 @@ function OrderDetailsContent() {
     switch (status) {
       case 'pending':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Beklemede</span>;
-      case 'in_progress':
+      case 'processing':
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Hazırlanıyor</span>;
+      case 'shipped':
+        return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
       case 'cancelled':
@@ -183,41 +201,101 @@ function OrderDetailsContent() {
           <p className="text-gray-600 mt-1">Sipariş No: {order.id.substring(0,8)}...</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative group">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center">
+          <div className="relative status-dropdown">
+            <button 
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
               Durumu Güncelle
-              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className={`w-4 h-4 ml-2 transition-transform duration-200 ${showStatusDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 invisible group-hover:visible z-10">
-              <div className="py-1" role="menu" aria-orientation="vertical">
-                <button
-                  onClick={() => handleChangeStatus('pending')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Beklemede
-                </button>
-                <button
-                  onClick={() => handleChangeStatus('in_progress')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Hazırlanıyor
-                </button>
-                <button
-                  onClick={() => handleChangeStatus('delivered')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Teslim Edildi
-                </button>
-                <button
-                  onClick={() => handleChangeStatus('cancelled')}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  İptal Edildi
-                </button>
+            
+            {showStatusDropdown && (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-20 border border-gray-100">
+                <div className="py-2" role="menu" aria-orientation="vertical">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                    Sipariş Durumu Seçin
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('pending');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Beklemede</div>
+                      <div className="text-xs text-gray-500">Sipariş onay bekliyor</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('processing');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-blue-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Hazırlanıyor</div>
+                      <div className="text-xs text-gray-500">Sipariş hazırlanmaya başlandı</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('shipped');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-orange-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Yolda</div>
+                      <div className="text-xs text-gray-500">Sipariş müşteriye gönderildi</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleChangeStatus('delivered');
+                      setShowStatusDropdown(false);
+                    }}
+                    className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-800 transition-all duration-150"
+                  >
+                    <div className="w-3 h-3 bg-green-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                    <div>
+                      <div className="font-medium">Teslim Edildi</div>
+                      <div className="text-xs text-gray-500">Sipariş başarıyla teslim edildi</div>
+                    </div>
+                  </button>
+                  
+                  <div className="border-t border-gray-100 mt-1">
+                    <button
+                      onClick={() => {
+                        handleChangeStatus('cancelled');
+                        setShowStatusDropdown(false);
+                      }}
+                      className="group flex w-full items-center px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-800 transition-all duration-150"
+                    >
+                      <div className="w-3 h-3 bg-red-400 rounded-full mr-3 group-hover:scale-110 transition-transform"></div>
+                      <div>
+                        <div className="font-medium">İptal Edildi</div>
+                        <div className="text-xs text-gray-500">Sipariş iptal edildi</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <Link 
             href="/admin/orders"
@@ -429,9 +507,15 @@ function OrderDetailsContent() {
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                       </svg>
                     )}
-                    {history.status === 'in_progress' && (
+                    {history.status === 'processing' && (
                       <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                         <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {history.status === 'shipped' && (
+                      <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h1a1 1 0 010 2H4.414l1.707 1.707a1 1 0 01-.707.707L4 6.586V9a1 1 0 11-2 0V4z" clipRule="evenodd" />
                       </svg>
                     )}
                     {history.status === 'delivered' && (

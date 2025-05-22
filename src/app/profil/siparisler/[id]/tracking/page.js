@@ -93,7 +93,7 @@ function OrderTrackingContent({ params }) {
           'ready': 'Hazır',
           'on_the_way': 'Kurye Yolda',
           'delivered': 'Teslim Edildi',
-          'canceled': 'İptal Edildi'
+          'cancelled': 'İptal Edildi'
         };
         
         // Sipariş durum geçmişini oluştur
@@ -125,9 +125,7 @@ function OrderTrackingContent({ params }) {
                 { status: 'pending', time: new Date(baseTime.getTime() - 20 * 60000).toISOString(), text: 'Sipariş Alındı' }
               );
               break;
-            case 'canceled':
-              statusHistory.push(
-                { status: 'canceled', time: new Date().toISOString(), text: 'İptal Edildi' },
+                        case 'cancelled':              statusHistory.push(                { status: 'cancelled', time: new Date().toISOString(), text: 'İptal Edildi' },
                 { status: 'pending', time: new Date(baseTime.getTime() - 20 * 60000).toISOString(), text: 'Sipariş Alındı' }
               );
               break;
@@ -292,13 +290,13 @@ function OrderTrackingContent({ params }) {
                 </p>
               </div>
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                order.status === 'canceled' 
+                order.status === 'cancelled' 
                   ? 'bg-red-100 text-red-700' 
                   : order.status === 'delivered' 
                   ? 'bg-green-100 text-green-700' 
                   : 'bg-blue-100 text-blue-700'
               }`}>
-                {order.status === 'canceled' ? 'İptal Edildi' : 
+                {order.status === 'cancelled' ? 'İptal Edildi' : 
                  order.status === 'delivered' ? 'Tamamlandı' : 'Aktif'}
               </div>
             </div>
@@ -487,7 +485,7 @@ function OrderTrackingContent({ params }) {
                 onClick={async () => {
                   if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
                     try {
-                      await api.updateOrder(order.id, { status: 'canceled' });
+                      await api.updateOrder(order.id, { status: 'cancelled' });
                       router.refresh();
                     } catch (error) {
                       console.error('Sipariş iptal edilirken hata:', error);

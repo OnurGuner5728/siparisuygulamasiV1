@@ -1,13 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated } = useAuth();
   
+  // URL parametrelerini al
+  const redirectTo = searchParams.get('redirect') || '/';
+  const action = searchParams.get('action');
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,6 +21,13 @@ export default function Login() {
   
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Zaten login olmuş kullanıcıları redirect et
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push(redirectTo);
+    }
+  }, [isAuthenticated, router, redirectTo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,8 +71,8 @@ export default function Login() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        // Başarılı giriş
-        router.push('/');
+        // Başarılı giriş - redirect parametresine göre yönlendir
+        router.push(redirectTo);
       } else {
         // Başarısız giriş
         setErrors({ form: result.message || 'Giriş yapılırken bir hata oluştu' });
@@ -78,7 +91,12 @@ export default function Login() {
         <div className="px-8 pt-10 pb-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Giriş Yap</h2>
-            <p className="text-gray-500 text-sm">Lütfen bilgilerinizi girin</p>
+            <p className="text-gray-500 text-sm">
+              {action === 'checkout' 
+                ? 'Siparişi tamamlamak için giriş yapın' 
+                : 'Lütfen bilgilerinizi girin'
+              }
+            </p>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">

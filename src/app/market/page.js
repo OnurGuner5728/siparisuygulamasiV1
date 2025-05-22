@@ -228,11 +228,7 @@ function MarketPageContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-8">
         {filteredMarkets.length > 0 ? (
           filteredMarkets.map(market => (
-            <Link 
-              key={market.id} 
-              href={`/market/store/${market.id}`} // URL yapısı /market/store/[storeId] olarak düzeltildi
-              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col"
-            >
+                        <Link               key={market.id}               href={`/market/store/${market.id}`}              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col"            >
               <div className="h-48 bg-gray-200 relative">
                 {market.is_open !== undefined && (
                     <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${market.is_open ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

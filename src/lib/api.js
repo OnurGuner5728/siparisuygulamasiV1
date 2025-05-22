@@ -1,4 +1,5 @@
 import * as supabaseApi from './supabaseApi';
+import { getUserProfile as supabaseGetUserProfile } from './supabaseApi';
 import supabase from './supabase';
 import { supabaseAdmin } from './supabase';
 
@@ -271,6 +272,15 @@ export const getOrderById = async (orderId) => {
 };
 
 export const createOrder = async (orderData, orderItems) => {
+  // Giriş verilerini doğrula
+  if (!orderData.customer_id) {
+    return { error: { message: 'Customer ID gerekli' } };
+  }
+  
+  if (!orderData.store_id) {
+    return { error: { message: 'Store ID gerekli' } };
+  }
+  
   // Sipariş oluştur
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -286,7 +296,7 @@ export const createOrder = async (orderData, orderItems) => {
       payment_status: orderData.payment_method === 'cash' ? 'pending' : 'paid',
       delivery_address_id: orderData.delivery_address_id,
       estimated_delivery: orderData.estimated_delivery,
-      delivery_note: orderData.delivery_note
+      delivery_note: orderData.delivery_note || null
     })
     .select()
     .single();
@@ -450,22 +460,7 @@ export const getUserProfile = async (userId) => {
   return data;
 };
 
-export const getUserAddresses = async (userId) => {
-  const { data, error } = await supabase
-    .from('addresses')
-    .select('*')
-    .eq('user_id', userId)
-    .order('is_default', { ascending: false })
-    .order('created_at', { ascending: false });
-    
-  if (error) {
-    console.error(`Kullanıcı adreslerini getirirken hata (ID: ${userId}):`, error);
-    return [];
-  }
-  return data || [];
-};
-
-// Reviews (Değerlendirmeler)
+export const getUserAddresses = async (userId) => {  const { data, error } = await supabase    .from('addresses')    .select('*')    .eq('user_id', userId)    .order('is_default', { ascending: false })    .order('created_at', { ascending: false });      if (error) {    console.error(`Kullanıcı adreslerini getirirken hata (ID: ${userId}):`, error);    return [];  }  return data || [];};export const createAddress = async (addressData) => {  const { data, error } = await supabase    .from('addresses')    .insert(addressData)    .select()    .single();      if (error) {    console.error('Adres oluştururken hata:', error);    throw error;  }  return data;};export const updateAddress = async (addressId, addressData) => {  const { data, error } = await supabase    .from('addresses')    .update(addressData)    .eq('id', addressId)    .select()    .single();      if (error) {    console.error('Adres güncellenirken hata:', error);    throw error;  }  return data;};export const deleteAddress = async (addressId) => {  const { error } = await supabase    .from('addresses')    .delete()    .eq('id', addressId);      if (error) {    console.error('Adres silinirken hata:', error);    throw error;  }  return { success: true };};// Reviews (Değerlendirmeler)
 export const getStoreReviews = async (storeId) => {
   const { data, error } = await supabaseApi.getStoreReviews(storeId);
   if (error) {
@@ -835,9 +830,7 @@ export default {
   getCampaigns,
   getCampaignById,
   getCampaignByCode,
-  getUserProfile,
-  getUserAddresses,
-  getStoreReviews,
+    getUserProfile,  getUserAddresses,  createAddress,  updateAddress,  deleteAddress,  getStoreReviews,
   getUserCartItems,
   addToCart,
   updateCartItem,

@@ -19,17 +19,7 @@ export default function Home() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Debug için kullanıcı bilgilerini göster
-  useEffect(() => {
-    if (user) {
-      console.log("Giriş yapmış kullanıcı:", user);
-      console.log("Kullanıcı rolü:", user.role);
-      console.log("Kullanıcı adı:", user.name);
-      console.log("Auth verified:", isAuthenticated);
-    } else {
-      console.log("Kullanıcı giriş yapmamış");
-    }
-  }, [user, isAuthenticated]);
+  // Debug için kullanıcı bilgilerini göster - sadece development'ta  useEffect(() => {    if (process.env.NODE_ENV === 'development') {      if (user) {        console.log("Giriş yapmış kullanıcı:", user.email);        console.log("Kullanıcı rolü:", user.role);      }    }  }, [user]);
 
   // Kategori arka plan rengini belirle
   const getCategoryColor = (categoryId) => {

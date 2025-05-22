@@ -8,6 +8,8 @@ const nextConfig = {
     // Typescript hatalarını da görmezden gelmek için
     ignoreBuildErrors: true,
   },
+  // Development'ta double rendering'i önlemek için (production'da zaten kapalı)
+  reactStrictMode: false,
 };
 
 export default nextConfig;

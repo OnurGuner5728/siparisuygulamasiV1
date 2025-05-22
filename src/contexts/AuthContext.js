@@ -19,78 +19,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Supabase Auth kullanıcı durumunu dinle
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change:", event);
-        setLoading(true);
-        
-        if (session && session.user) {
-          console.log("Auth User:", session.user);
-          console.log("Auth User Metadata:", session.user.user_metadata);
-          console.log("Auth User Role:", session.user.user_metadata?.role);
-          
-          try {
-            // Kullanıcı oturum açmış, profil bilgilerini al
-            const { data: profile, error: profileError } = await getUserProfile(session.user.id);
-            
-            if (profileError) {
-              console.error("Profil bilgileri alınamadı:", profileError);
-              
-              // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et
-              setUser({
-                ...session.user,
-                role: session.user.user_metadata?.role || 'user',
-                name: session.user.user_metadata?.name || 'Kullanıcı'
-              });
-            } else {
-              console.log("Database User Profile:", profile);
-              
-              // Rolü auth'dan veya veritabanından al, auth öncelikli
-              const userRole = session.user.user_metadata?.role || profile?.role || 'user';
-              console.log("Determined User Role:", userRole);
-              
-              // Kullanıcı bilgilerini ve profilini birleştir
-              const userWithProfile = {
-                ...session.user,
-                ...profile,
-                role: userRole
-              };
-              
-              setUser(userWithProfile);
-            }
-          } catch (error) {
-            console.error("Auth state change error:", error);
-            // Hata durumunda en azından temel auth bilgilerini ayarla
-            setUser({
-              ...session.user,
-              role: session.user.user_metadata?.role || 'user',
-              name: session.user.user_metadata?.name || 'Kullanıcı'
-            });
-          }
-        } else {
-          // Kullanıcı oturum açmamış
-          console.log("No active session");
-          setUser(null);
-        }
-        
-        setLoading(false);
-      }
-    );
+        // Supabase Auth kullanıcı durumunu dinle    const { data: { subscription } } = supabase.auth.onAuthStateChange(      async (event, session) => {        setLoading(true);                if (session && session.user) {          try {            // Kullanıcı oturum açmış, profil bilgilerini al            const { data: profile, error: profileError } = await getUserProfile(session.user.id);                        if (profileError) {              // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et              setUser({                ...session.user,                role: session.user.user_metadata?.role || 'user',                name: session.user.user_metadata?.name || 'Kullanıcı'              });            } else {              // Rolü auth'dan veya veritabanından al, auth öncelikli              const userRole = session.user.user_metadata?.role || profile?.role || 'user';                            // Kullanıcı bilgilerini ve profilini birleştir              const userWithProfile = {                ...session.user,                ...profile,                role: userRole              };                            setUser(userWithProfile);            }          } catch (error) {            // Hata durumunda en azından temel auth bilgilerini ayarla            setUser({              ...session.user,              role: session.user.user_metadata?.role || 'user',              name: session.user.user_metadata?.name || 'Kullanıcı'            });          }        } else {          // Kullanıcı oturum açmamış          setUser(null);        }                setLoading(false);      }    );
 
-    // Sayfa yüklendiğinde mevcut kullanıcıyı kontrol et
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        console.log("Fetching initial user...");
-        
-        const { user: authUser, error: authError } = await getUser();
-        
-        if (authError) {
-          console.error("Auth user error:", authError);
+      // Sayfa yüklendiğinde mevcut kullanıcıyı kontrol et
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching initial user...");
+      
+      const { user: authUser, error: authError } = await getUser();
+      
+      if (authError) {
+        // AuthSessionMissingError gibi hatalar normal durumlardır - session yoksa
+        if (authError.message.includes('Auth session missing')) {
+          console.log("Auth session missing - kullanıcı giriş yapmamış");
           setUser(null);
           return;
         }
+        console.error("Auth user error:", authError);
+        setUser(null);
+        return;
+      }
         
         if (authUser) {
           console.log("Initial Auth User:", authUser);
@@ -421,10 +370,11 @@ export function AuthProvider({ children }) {
     register,
     updateUserData,
     hasPermission,
+    getUserProfile,
     isAdmin: user?.role === 'admin',
     isStore: user?.role === 'store',
     isUser: user?.role === 'user',
-  }), [user, loading, login, logout, register, updateUserData, hasPermission]);
+  }), [user, loading, login, logout, register, updateUserData, hasPermission, getUserProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

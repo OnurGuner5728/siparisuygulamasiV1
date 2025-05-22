@@ -179,8 +179,31 @@ function CheckoutContent() {
   };
 
   const handleCompleteOrder = async () => {
+    console.log('🚀 Sipariş tamamlama başlatıldı');
+    console.log('📦 CartItems:', cartItems);
+    console.log('👤 User:', user);
+    console.log('📍 SelectedAddress:', selectedAddress);
+    console.log('💳 PaymentMethod:', paymentMethod);
+    
     if (!selectedAddress) {
       alert('Lütfen bir adres seçin');
+      return;
+    }
+    
+    if (!user || !user.id) {
+      alert('Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+      return;
+    }
+    
+    if (!cartItems || cartItems.length === 0) {
+      alert('Sepetiniz boş. Lütfen ürün ekleyin.');
+      return;
+    }
+    
+    const storeId = cartItems[0]?.store_id;
+    if (!storeId) {
+      alert('Mağaza bilgisi bulunamadı. Lütfen sepeti yenileyin.');
+      console.error('Store ID bulunamadı:', cartItems[0]);
       return;
     }
     
@@ -189,39 +212,53 @@ function CheckoutContent() {
     try {
       // Sepet öğelerinden sipariş öğeleri oluştur
       const orderItems = cartItems.map(item => ({
-        product_id: item.id,
+        product_id: item.product_id || item.id,
+        name: item.name,
         quantity: item.quantity,
         price: item.price,
+        total: item.price * item.quantity,
         notes: item.notes || ''
       }));
       
+      console.log('🛍️ OrderItems:', orderItems);
+      
       // Seçilen adresi bul
       const address = addresses.find(addr => addr.id === selectedAddress);
+      console.log('🏠 Selected address:', address);
       
       // Sipariş verisi oluştur
       const orderData = {
-        user_id: user.id,
-        store_id: cartItems[0]?.store_id, // Tüm ürünler aynı mağazadan olmalı
-        status: 'pending',
-        payment_method: paymentMethod,
-        payment_status: paymentMethod === 'cash' ? 'pending' : 'completed',
+        customer_id: user.id,
+        store_id: storeId,
         subtotal: calculateSubtotal(),
         delivery_fee: calculateDeliveryFee(),
         total: calculateTotal(),
-        address_id: selectedAddress,
-        address_details: JSON.stringify(address),
-        items: orderItems
+        discount: 0,
+        payment_method: paymentMethod === 'online' ? 'credit_card' : 'cash',
+        delivery_address_id: selectedAddress,
+        estimated_delivery: '30-45 dakika',
+        delivery_note: ''
       };
       
-      // Siparişi oluştur
-      const newOrder = await api.createOrder(orderData);
+      console.log('📋 OrderData:', orderData);
       
-      setOrderNumber(newOrder.id);
+      // Siparişi oluştur
+      console.log('🔄 API çağrısı başlatılıyor...');
+      const result = await api.createOrder(orderData, orderItems);
+      console.log('✅ API sonucu:', result);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Sipariş oluşturulamadı');
+      }
+      
+      setOrderNumber(result.data.id);
       setOrderCompleted(true);
       clearCart(); // Sepeti temizle
+      console.log('🎉 Sipariş başarıyla tamamlandı!');
+      
     } catch (err) {
-      console.error('Sipariş oluşturulurken hata:', err);
-      alert('Sipariş oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
+      console.error('❌ Sipariş oluşturulurken hata:', err);
+      alert('Sipariş oluşturulurken bir hata oluştu: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -529,8 +566,8 @@ function CheckoutContent() {
             <h2 className="text-lg font-semibold text-gray-700 mb-4">Sipariş Özeti</h2>
             
             <div className="max-h-[300px] overflow-y-auto mb-4">
-              {cartItems.map(item => (
-                <div key={item.id} className="py-3 border-b last:border-b-0 flex justify-between items-center">
+              {cartItems.map((item, index) => (
+                <div key={`${item.product_id}-${item.store_id}-${index}`} className="py-3 border-b last:border-b-0 flex justify-between items-center">
                   <div>
                     <div className="flex items-center">
                       <span className="font-medium">{item.name}</span>

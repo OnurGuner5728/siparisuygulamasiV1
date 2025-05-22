@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import supabase from '@/lib/supabase';
 
@@ -29,32 +29,132 @@ export function CartProvider({ children }) {
   const [error, setError] = useState(null);
   const { user, isAuthenticated } = useAuth();
   
+  // Ref'ler ile state takibi - gereksiz yeniden yüklemeleri engellemek için
+  const lastUserIdRef = useRef(null);
+  const lastAuthStateRef = useRef(null);
+  const isLoadingRef = useRef(false);
+  const loadTimeoutRef = useRef(null);
+  
   // Sepeti kullanıcı ID veya konuk ID'ye göre yükleme
-  const loadCart = useCallback(async () => {
+  const loadCart = useCallback(async (forceReload = false) => {
+    // Gereksiz yeniden yüklemeyi engelle
+    const currentUserId = user?.id || null;
+    const currentAuthState = isAuthenticated;
+    
+    if (!forceReload && 
+        lastUserIdRef.current === currentUserId && 
+        lastAuthStateRef.current === currentAuthState &&
+        !isLoadingRef.current) {
+      return; // Aynı kullanıcı ve auth durumu, yeniden yükleme
+    }
+    
+    if (isLoadingRef.current) {
+      return; // Zaten yükleniyor
+    }
+    
     try {
+      isLoadingRef.current = true;
       setLoading(true);
+      
+      // Timeout ile debounce
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+      
+      await new Promise(resolve => {
+        loadTimeoutRef.current = setTimeout(resolve, 100);
+      });
+      
+      lastUserIdRef.current = currentUserId;
+      lastAuthStateRef.current = currentAuthState;
       
       if (isAuthenticated && user) {
         try {
+          // Önce localStorage'dan konuk sepetini kontrol et
+          const guestCart = localStorage.getItem('cart_guest');
+          let guestCartItems = [];
+          
+          if (guestCart) {
+            try {
+              guestCartItems = JSON.parse(guestCart);
+            } catch (parseError) {
+              console.error('Guest cart parse hatası:', parseError);
+              guestCartItems = [];
+            }
+          }
+          
           // Kullanıcı oturum açmışsa, veritabanından sepetini al
           const { data, error: supabaseError } = await supabase
             .from('cart_items')
-            .select('*')
+            .select('product_id, name, price, quantity, image, store_id, store_name, store_type, notes, category, user_id')
             .eq('user_id', user.id);
             
           if (supabaseError) throw supabaseError;
           
-          if (data && data.length > 0) {
-            setCartItems(data);
-          } else {
-            setCartItems([]);
+          let userCartItems = data || [];
+          
+          // Eğer konuk sepeti varsa, kullanıcı sepeti ile birleştir
+          if (guestCartItems.length > 0) {
+            // Konuk sepetindeki ürünleri kullanıcı sepetine ekle
+            for (const guestItem of guestCartItems) {
+              const existingItem = userCartItems.find(item => 
+                item.product_id === guestItem.product_id && 
+                item.store_id === guestItem.store_id
+              );
+              
+              if (existingItem) {
+                // Ürün zaten varsa miktarı artır
+                existingItem.quantity += guestItem.quantity;
+              } else {
+                // Yeni ürün ekle
+                userCartItems.push({
+                  product_id: guestItem.product_id,
+                  name: guestItem.name,
+                  price: guestItem.price,
+                  quantity: guestItem.quantity,
+                  image: guestItem.image,
+                  store_id: guestItem.store_id,
+                  store_name: guestItem.store_name || '',
+                  store_type: guestItem.store_type || 'market',
+                  notes: guestItem.notes || '',
+                  category: guestItem.category || '',
+                  user_id: user.id
+                });
+              }
+            }
+            
+            // Birleştirilmiş sepeti veritabanına kaydet
+            if (userCartItems.length > 0) {
+              // Önce mevcut sepeti temizle
+              await supabase
+                .from('cart_items')
+                .delete()
+                .eq('user_id', user.id);
+                
+              // Yeni sepeti kaydet
+              const { error: insertError } = await supabase
+                .from('cart_items')
+                .insert(userCartItems);
+                
+                if (insertError) throw insertError;
+            }
+            
+            // Konuk sepetini temizle
+            localStorage.removeItem('cart_guest');
           }
+          
+          setCartItems(userCartItems);
         } catch (authError) {
           console.error('Oturum hatası:', authError);
           // Oturum hatası durumunda localStorage'dan sepeti al
           const storedCart = localStorage.getItem('cart_guest');
           if (storedCart) {
-            setCartItems(JSON.parse(storedCart));
+            try {
+              setCartItems(JSON.parse(storedCart));
+            } catch (parseError) {
+              console.error('Stored cart parse hatası:', parseError);
+              setCartItems([]);
+            }
           } else {
             setCartItems([]);
           }
@@ -63,7 +163,12 @@ export function CartProvider({ children }) {
         // Kullanıcı oturum açmamışsa, localStorage'dan sepeti al
         const storedCart = localStorage.getItem('cart_guest');
         if (storedCart) {
-          setCartItems(JSON.parse(storedCart));
+          try {
+            setCartItems(JSON.parse(storedCart));
+          } catch (parseError) {
+            console.error('Guest cart parse hatası:', parseError);
+            setCartItems([]);
+          }
         } else {
           setCartItems([]);
         }
@@ -73,13 +178,27 @@ export function CartProvider({ children }) {
       setError(err);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
   }, [isAuthenticated, user]);
   
-  // Kullanıcı değiştiğinde sepeti yükle
+  // Kullanıcı değiştiğinde sepeti yükle - debounced
   useEffect(() => {
-    loadCart();
-  }, [loadCart, user, isAuthenticated]);
+    const timeoutId = setTimeout(() => {
+      loadCart();
+    }, 200);
+    
+    return () => clearTimeout(timeoutId);
+  }, [loadCart]);
+  
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Sepet verilerini kaydetme
   const saveCart = useCallback(async (cartData) => {
@@ -94,9 +213,18 @@ export function CartProvider({ children }) {
             
           // Sepet boş değilse yeni öğeleri ekle
           if (cartData.length > 0) {
-            // Her öğeye kullanıcı ID'si ekle
+            // Her öğeye kullanıcı ID'si ekle ve gerekli alanları kontrol et
             const cartItemsWithUserId = cartData.map(item => ({
-              ...item,
+              product_id: item.product_id,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              image: item.image || '',
+              store_id: item.store_id,
+              store_name: item.store_name || '',
+              store_type: item.store_type || 'market',
+              notes: item.notes || '',
+              category: item.category || '',
               user_id: user.id
             }));
             
@@ -158,7 +286,7 @@ export function CartProvider({ children }) {
           name: product.name,
           price: product.price,
           quantity: 1,
-          image: product.image,
+          image: product.image || '',
           store_id: product.store_id,
           store_name: product.storeName || product.store_name || '',
           store_type: storeType,

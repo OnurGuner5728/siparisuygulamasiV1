@@ -9,7 +9,7 @@ import { FiArrowLeft, FiStar, FiClock, FiMapPin, FiInfo, FiShoppingBag, FiChevro
 import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 
-export default function StoreDetailPage({ params }) {
+export default function MarketStoreDetailPage({ params }) {
   const router = useRouter();
   // Next.js params artık Promise olduğu için React.use ile çözümlüyoruz
   const resolvedParams = use(params);
@@ -34,15 +34,15 @@ export default function StoreDetailPage({ params }) {
   
   // Sadece bu mağazaya ait ürünleri filtreleme
   const storeCartItems = cartItems.filter(item => 
-    item.store_id === id && item.store_type === 'yemek'
+    item.store_id === id && item.store_type === 'market'
   );
   
-  // Restoran ve ürün verilerini yükle
+  // Market ve ürün verilerini yükle
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        // Restoran bilgilerini al
+        // Market bilgilerini al
         const storeData = await api.getStoreById(id);
         
         if (storeData) {
@@ -68,7 +68,7 @@ export default function StoreDetailPage({ params }) {
           setExpandedCategories(initialExpandedState);
         }
       } catch (error) {
-        console.error('Restoran ve ürün verilerini yüklerken hata:', error);
+        console.error('Market ve ürün verilerini yüklerken hata:', error);
       } finally {
         setLoading(false);
       }
@@ -107,7 +107,7 @@ export default function StoreDetailPage({ params }) {
         image: product.image || null,
         store_id: store?.id || null,
         store_name: store?.name || '',
-        store_type: 'yemek',
+        store_type: 'market',
         category: product.category || '',
         notes: ''
       });
@@ -133,7 +133,7 @@ export default function StoreDetailPage({ params }) {
   // Sepeti temizle
   const clearCart = () => {
     if (confirm('Sepeti temizlemek istediğinize emin misiniz?')) {
-      // Sadece bu restorana ait ürünleri temizle
+      // Sadece bu markete ait ürünleri temizle
       storeCartItems.forEach(item => {
         removeItemCompletely(item.product_id, item.store_id);
       });
@@ -154,7 +154,7 @@ export default function StoreDetailPage({ params }) {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
       </div>
     );
   }
@@ -164,13 +164,13 @@ export default function StoreDetailPage({ params }) {
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center p-6 max-w-sm mx-auto">
           <div className="text-red-500 text-5xl mb-4">😢</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Restoran Bulunamadı</h2>
-          <p className="text-gray-600 mb-6">Aradığınız restoran bulunamadı veya artık aktif değil.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Market Bulunamadı</h2>
+          <p className="text-gray-600 mb-6">Aradığınız market bulunamadı veya artık aktif değil.</p>
           <Link
-            href="/yemek"
-            className="inline-flex items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-6 rounded-lg hover:from-orange-600 hover:to-red-700"
+            href="/market"
+            className="inline-flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium py-3 px-6 rounded-lg hover:from-green-600 hover:to-emerald-700"
           >
-            Restoranlara Geri Dön
+            Marketlere Geri Dön
           </Link>
         </div>
       </div>
@@ -195,9 +195,9 @@ export default function StoreDetailPage({ params }) {
         </div>
       </div>
       
-      {/* Restoran Bilgileri */}
+      {/* Market Bilgileri */}
       <div className="bg-white shadow-sm">
-        <div className="h-40 bg-gradient-to-r from-orange-500 to-red-600 relative">
+        <div className="h-40 bg-gradient-to-r from-green-500 to-emerald-600 relative">
           {store.cover_image_url ? (
             <Image
               src={store.cover_image_url}
@@ -217,7 +217,7 @@ export default function StoreDetailPage({ params }) {
           <div className="flex flex-col md:flex-row md:items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">{store.name}</h2>
-              <p className="text-gray-600 mt-1">{store.description || 'Bu restoran hakkında bilgi bulunmamaktadır.'}</p>
+              <p className="text-gray-600 mt-1">{store.description || 'Bu market hakkında bilgi bulunmamaktadır.'}</p>
               
               <div className="flex items-center flex-wrap mt-2">
                 <div className="flex items-center text-sm text-yellow-500 mr-4">
@@ -228,7 +228,7 @@ export default function StoreDetailPage({ params }) {
                 
                 <div className="flex items-center text-sm text-gray-500 mr-4">
                   <FiClock className="mr-1" />
-                  <span>{store.delivery_time_estimation || 'Belirtilmemiş'}</span>
+                  <span>{store.delivery_time_estimation || store.delivery_time || 'Belirtilmemiş'}</span>
                 </div>
                 
                 <div className="flex items-center text-sm text-gray-500">
@@ -236,10 +236,35 @@ export default function StoreDetailPage({ params }) {
                   <span>{store.address ? `${store.address.substring(0, 20)}...` : 'Adres belirtilmemiş'}</span>
                 </div>
               </div>
+              
+              {/* Market Türü */}
+              {store.type && (
+                <div className="mt-2">
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium capitalize">
+                    {store.type}
+                  </span>
+                </div>
+              )}
+              
+              {/* Market Etiketleri */}
+              {store.tags && store.tags.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex flex-wrap gap-2">
+                    {store.tags.map((tag) => (
+                      <span 
+                        key={tag}
+                        className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="mt-4 md:mt-0">
-              <div className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-sm font-medium inline-flex items-center">
+              <div className="bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-medium inline-flex items-center">
                 <FiInfo className="mr-1" size={14} />
                 Min. sipariş: {store.min_order_amount || 0} TL
               </div>
@@ -254,7 +279,7 @@ export default function StoreDetailPage({ params }) {
           {/* Kategori Menüsü */}
           <div className="w-full lg:w-1/4 lg:pr-6 mb-6 lg:mb-0">
             <div className="bg-white rounded-lg shadow-sm p-4 sticky top-20">
-              <h3 className="font-bold text-gray-800 mb-4">Menü</h3>
+              <h3 className="font-bold text-gray-800 mb-4">Ürün Kategorileri</h3>
               
               <ul className="space-y-2">
                 {categories.map((category) => (
@@ -262,7 +287,7 @@ export default function StoreDetailPage({ params }) {
                     <button
                       className={`w-full text-left py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                         activeCategory === category 
-                          ? 'bg-orange-100 text-orange-700' 
+                          ? 'bg-green-100 text-green-700' 
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                       onClick={() => handleCategoryClick(category)}
@@ -306,7 +331,10 @@ export default function StoreDetailPage({ params }) {
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-900">{product.name}</h4>
                               <p className="text-sm text-gray-600 mt-1">{product.description || 'Ürün açıklaması bulunmuyor.'}</p>
-                              <p className="text-orange-600 font-medium mt-2">{product.price.toFixed(2)} TL</p>
+                              <p className="text-green-600 font-medium mt-2">{product.price.toFixed(2)} TL</p>
+                              {product.unit && (
+                                <p className="text-xs text-gray-500">Birim: {product.unit}</p>
+                              )}
                             </div>
                             
                             <div className="ml-4">
@@ -329,7 +357,7 @@ export default function StoreDetailPage({ params }) {
                               <div className="flex items-center">
                                 <button 
                                   onClick={() => decreaseQuantity(product.id)}
-                                  className="p-1 text-gray-500 hover:text-orange-600"
+                                  className="p-1 text-gray-500 hover:text-green-600"
                                 >
                                   <FiMinus size={14} />
                                 </button>
@@ -338,7 +366,7 @@ export default function StoreDetailPage({ params }) {
                                   {storeCartItems.find(item => item.product_id === product.id).quantity}
                                 </span>
                                 
-                                                                <button                                   onClick={() => increaseQuantity(product)}                                  className="p-1 text-gray-500 hover:text-orange-600"                                >                                  <FiPlus size={14} />                                </button>                              </div>                            ) : (                              <button                                 onClick={() => addToCart(product)}                                className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 py-1 px-3 rounded-full transition-colors"                              >                                Sepete Ekle                              </button>                            )}
+                                                                <button                                   onClick={() => increaseQuantity(product)}                                  className="p-1 text-gray-500 hover:text-green-600"                                >                                  <FiPlus size={14} />                                </button>                              </div>                            ) : (                              <button                                 onClick={() => addToCart(product)}                                className="text-sm bg-green-100 hover:bg-green-200 text-green-700 py-1 px-3 rounded-full transition-colors"                              >                                Sepete Ekle                              </button>                            )}
                           </div>
                         </div>
                       ))}
@@ -366,7 +394,7 @@ export default function StoreDetailPage({ params }) {
                 <div className="text-center py-8">
                   <FiShoppingBag className="mx-auto text-gray-300" size={32} />
                   <p className="text-gray-500 mt-2">Sepetiniz boş</p>
-                  <p className="text-gray-400 text-sm mt-1">Menüden ürün ekleyin</p>
+                  <p className="text-gray-400 text-sm mt-1">Market ürünlerini sepete ekleyin</p>
                 </div>
               ) : (
                 <>
@@ -381,7 +409,7 @@ export default function StoreDetailPage({ params }) {
                         <div className="flex items-center">
                           <button 
                             onClick={() => decreaseQuantity(item.product_id)}
-                            className="p-1 text-gray-500 hover:text-orange-600"
+                            className="p-1 text-gray-500 hover:text-green-600"
                           >
                             <FiMinus size={14} />
                           </button>
@@ -393,7 +421,7 @@ export default function StoreDetailPage({ params }) {
                               const foundProduct = products.find(p => p.id === item.product_id);
                               if (foundProduct) increaseQuantity(foundProduct);
                             }}
-                            className="p-1 text-gray-500 hover:text-orange-600"
+                            className="p-1 text-gray-500 hover:text-green-600"
                           >
                             <FiPlus size={14} />
                           </button>
@@ -410,18 +438,18 @@ export default function StoreDetailPage({ params }) {
                     
                     <div className="flex justify-between text-sm mb-4">
                       <span className="text-gray-600">Teslimat Ücreti</span>
-                      <span className="font-medium">9.90 TL</span>
+                      <span className="font-medium">7.90 TL</span>
                     </div>
                     
                     <div className="flex justify-between font-bold">
                       <span>Toplam</span>
-                      <span>{(cartTotal + 9.9).toFixed(2)} TL</span>
+                      <span>{(cartTotal + 7.9).toFixed(2)} TL</span>
                     </div>
                   </div>
                   
                   <Link 
                     href="/sepet"
-                    className="block w-full text-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-700 mt-4"
+                    className="block w-full text-center bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium py-3 px-4 rounded-lg hover:from-green-600 hover:to-emerald-700 mt-4"
                   >
                     Siparişi Tamamla
                   </Link>

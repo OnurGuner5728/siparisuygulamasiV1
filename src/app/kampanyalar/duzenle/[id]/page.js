@@ -153,10 +153,12 @@ function EditCampaignContent() {
       // API isteği için verileri hazırla
       const campaignData = {
         ...formData,
-        discount: formData.discount ? parseFloat(formData.discount) : null,
-        min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : null,
-        max_discount_amount: formData.max_discount_amount ? parseFloat(formData.max_discount_amount) : null,
-        max_usage: formData.max_usage ? parseInt(formData.max_usage) : null,
+        discount: formData.discount && formData.discount !== '' ? parseFloat(formData.discount) : null,
+        min_order_amount: formData.min_order_amount && formData.min_order_amount !== '' ? parseFloat(formData.min_order_amount) : null,
+        max_discount_amount: formData.max_discount_amount && formData.max_discount_amount !== '' ? parseFloat(formData.max_discount_amount) : null,
+        max_usage: formData.max_usage && formData.max_usage !== '' ? parseInt(formData.max_usage) : null,
+        store_id: formData.store_id && formData.store_id !== '' ? formData.store_id : null,
+        main_category_id: formData.main_category_id && formData.main_category_id !== '' ? formData.main_category_id : null,
         updated_by: user.id
       };
       

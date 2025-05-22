@@ -24,6 +24,7 @@ function AdminOrdersContent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all'); // Bu filtre için ana kategori ID'si kullanılacak
   const [currentPage, setCurrentPage] = useState(1);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const ordersPerPage = 10;
 
   useEffect(() => {
@@ -62,6 +63,20 @@ function AdminOrdersContent() {
     fetchData();
   }, []);
 
+  // Dropdown dışına tıklandığında kapatma
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdownId && !event.target.closest('.relative')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
+
   // Arama ve filtreleme
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -88,14 +103,38 @@ function AdminOrdersContent() {
   // Sipariş durumunu değiştirme
   const handleChangeStatus = async (orderId, newStatus) => {
     try {
-      await api.updateOrder(orderId, { status: newStatus }); // updateOrder API'de olmalı
+      const now = new Date().toISOString();
+      
+      const statusNote = {
+        pending: 'Sipariş beklemede',
+        processing: 'Sipariş hazırlanıyor',
+        shipped: 'Sipariş yolda',
+        delivered: 'Sipariş teslim edildi',
+        cancelled: 'Sipariş iptal edildi'
+      };
+
+      const updates = {
+        status: newStatus,
+        status_history: [{
+          status: newStatus,
+          timestamp: now,
+          note: statusNote[newStatus] || 'Durum güncellendi'
+        }]
+      };
+
+      if (newStatus === 'delivered') {
+        updates.delivery_date = now;
+      }
+
+      await api.updateOrder(orderId, updates);
       const updatedOrders = orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order
       );
       setOrders(updatedOrders);
+      setOpenDropdownId(null);
     } catch (error) {
       console.error("Sipariş durumu güncellenirken hata:", error);
-      alert("Sipariş durumu güncellenemedi.")
+      alert("Sipariş durumu güncellenemedi: " + (error.message || 'Bilinmeyen hata'));
     }
   };
 
@@ -104,8 +143,10 @@ function AdminOrdersContent() {
     switch (status) {
       case 'pending':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Beklemede</span>;
-      case 'in_progress':
+      case 'processing':
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Hazırlanıyor</span>;
+      case 'shipped':
+        return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
       case 'cancelled':
@@ -167,7 +208,8 @@ function AdminOrdersContent() {
             >
               <option value="all">Tüm Durumlar</option>
               <option value="pending">Beklemede</option>
-              <option value="in_progress">Hazırlanıyor</option>
+              <option value="processing">Hazırlanıyor</option>
+              <option value="shipped">Yolda</option>
               <option value="delivered">Teslim Edildi</option>
               <option value="cancelled">İptal Edildi</option>
             </select>
@@ -246,48 +288,78 @@ function AdminOrdersContent() {
                     {formatStatus(order.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                       <Link 
                         href={`/admin/orders/${order.id}`}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-150"
                       >
                         Detay
                       </Link>
-                      <div className="relative group">
-                        <button className="text-gray-600 hover:text-gray-900">
+                      <div className="relative">
+                        <button 
+                          onClick={() => setOpenDropdownId(openDropdownId === order.id ? null : order.id)}
+                          className="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 inline-flex items-center text-xs"
+                        >
+                          <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
                           Durum
-                          <svg className="w-4 h-4 ml-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <svg className={`w-3 h-3 ml-1.5 transition-transform duration-200 ${openDropdownId === order.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </button>
-                        <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 invisible group-hover:visible z-10">
-                          <div className="py-1" role="menu" aria-orientation="vertical">
-                            <button
-                              onClick={() => handleChangeStatus(order.id, 'pending')}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Beklemede
-                            </button>
-                            <button
-                              onClick={() => handleChangeStatus(order.id, 'in_progress')}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Hazırlanıyor
-                            </button>
-                            <button
-                              onClick={() => handleChangeStatus(order.id, 'delivered')}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Teslim Edildi
-                            </button>
-                            <button
-                              onClick={() => handleChangeStatus(order.id, 'cancelled')}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              İptal Edildi
-                            </button>
+                        
+                        {openDropdownId === order.id && (
+                          <div className="absolute right-0 mt-1 w-48 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-20 border border-gray-100">
+                            <div className="py-1" role="menu" aria-orientation="vertical">
+                              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                                Durumu Değiştir
+                              </div>
+                              
+                              <button
+                                onClick={() => handleChangeStatus(order.id, 'pending')}
+                                className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-yellow-50 hover:text-yellow-800 transition-all duration-150"
+                              >
+                                <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                Beklemede
+                              </button>
+                              
+                              <button
+                                onClick={() => handleChangeStatus(order.id, 'processing')}
+                                className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition-all duration-150"
+                              >
+                                <div className="w-2 h-2 bg-blue-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                Hazırlanıyor
+                              </button>
+                              
+                              <button
+                                onClick={() => handleChangeStatus(order.id, 'shipped')}
+                                className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-orange-50 hover:text-orange-800 transition-all duration-150"
+                              >
+                                <div className="w-2 h-2 bg-orange-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                Yolda
+                              </button>
+                              
+                              <button
+                                onClick={() => handleChangeStatus(order.id, 'delivered')}
+                                className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-green-50 hover:text-green-800 transition-all duration-150"
+                              >
+                                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                Teslim Edildi
+                              </button>
+                              
+                              <div className="border-t border-gray-100 mt-1">
+                                <button
+                                  onClick={() => handleChangeStatus(order.id, 'cancelled')}
+                                  className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-red-50 hover:text-red-800 transition-all duration-150"
+                                >
+                                  <div className="w-2 h-2 bg-red-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                  İptal Edildi
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </td>

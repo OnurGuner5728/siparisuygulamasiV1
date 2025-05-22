@@ -63,11 +63,7 @@ const OrderCard = ({
           color: 'bg-green-50 text-green-600',
           text: 'Teslim Edildi'
         };
-      case 'canceled':
-        return {
-          color: 'bg-red-50 text-red-600',
-          text: 'İptal Edildi'
-        };
+            case 'cancelled':        return {          color: 'bg-red-50 text-red-600',          text: 'İptal Edildi'        };
       default:
         return {
           color: 'bg-gray-50 text-gray-600',
@@ -165,7 +161,7 @@ const OrderCard = ({
               )}
               
               {/* Tekrar sipariş ver butonu - iptal edilmemiş veya teslim edilmiş siparişler için */}
-              {status !== 'canceled' && onReorder && (
+              {status !== 'cancelled' && onReorder && (
                 <Button
                   variant="outline"
                   size="sm"

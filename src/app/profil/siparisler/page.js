@@ -41,27 +41,25 @@ function OrdersList() {
     fetchOrders();
   }, [user]);
   
-  // Filtrelenmiş siparişler
   const filteredOrders = orders.filter(order => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'active') return ['pending', 'preparing', 'on_the_way'].includes(order.status);
+    if (activeTab === 'active') return ['pending', 'processing', 'shipped'].includes(order.status);
     if (activeTab === 'completed') return order.status === 'delivered';
-    if (activeTab === 'canceled') return order.status === 'canceled';
+    if (activeTab === 'canceled') return order.status === 'cancelled';
     return true;
   });
   
-  // Duruma göre badge oluştur
   const getStatusBadge = (status) => {
     switch (status) {
       case 'pending':
-        return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">Onay Bekliyor</span>;
-      case 'preparing':
+        return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">Beklemede</span>;
+      case 'processing':
         return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Hazırlanıyor</span>;
-      case 'on_the_way':
-        return <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">Yolda</span>;
+      case 'shipped':
+        return <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Teslim Edildi</span>;
-      case 'canceled':
+      case 'cancelled':
         return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">İptal Edildi</span>;
       default:
         return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">Bilinmiyor</span>;
@@ -231,10 +229,10 @@ function OrdersList() {
                               onClick={async () => {
                                 if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
                                   try {
-                                    await api.updateOrder(order.id, { status: 'canceled' });
+                                    await api.updateOrder(order.id, { status: 'cancelled' });
                                     // Sipariş listesini güncelle
                                     setOrders(orders.map(o => 
-                                      o.id === order.id ? { ...o, status: 'canceled' } : o
+                                      o.id === order.id ? { ...o, status: 'cancelled' } : o
                                     ));
                                   } catch (error) {
                                     console.error('Sipariş iptal edilirken hata:', error);

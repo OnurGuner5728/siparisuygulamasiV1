@@ -33,45 +33,34 @@ export const getUser = async () => {
 
 // Profil işlemleri
 export const getUserProfile = async (userId) => {
-  console.log("Getting user profile for ID:", userId);
-  
   if (!userId) {
-    console.error("getUserProfile çağrıldı ancak userId yok!");
     return { data: null, error: new Error("User ID belirtilmedi") };
   }
   
   try {
     // Önce service_role ile deneyelim (RLS bypass)
-    console.log("Admin client ile profil deniyor...");
     let { data, error } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('id', userId)
       .single();
-    
-    if (error) {
-      console.error(`Admin client ile kullanıcı profili alınamadı (ID: ${userId}):`, error);
       
+    if (error) {
       // Admin başarısız olursa normal client ile deneyelim
-      console.log("Normal client ile profil deniyor...");
       const result = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
-      
+        
       data = result.data;
       error = result.error;
       
       if (error) {
-        console.error(`Normal client ile de kullanıcı profili alınamadı (ID: ${userId}):`, error);
         // Eğer hata status: 406 (Not Acceptable) ise, muhtemelen kayıt bulunamadı demektir
         if (error.code === 'PGRST116') {
-          console.log("Kullanıcı profili bulunamadı, yeni bir profil oluşturmayı deneyebilirsiniz.");
-          
           // Otomatik profil oluşturmayı deneyebiliriz
           try {
-            console.log("Otomatik profil oluşturma deneniyor...");
             const { data: authUser, error: authError } = await supabase.auth.getUser();
             
             if (authUser && authUser.user) {
@@ -89,28 +78,19 @@ export const getUserProfile = async (userId) => {
                 .select('*')
                 .single();
                 
-              if (insertError) {
-                console.error("Profil oluşturma hatası:", insertError);
-              } else {
-                console.log("Yeni profil oluşturuldu:", insertData);
+              if (!insertError) {
                 data = insertData;
                 error = null;
               }
             }
           } catch (createError) {
-            console.error("Otomatik profil oluşturma hatası:", createError);
+            // Sessizce devam et
           }
         }
-      } else {
-        console.log("Normal client ile kullanıcı profili alındı:", data);
       }
-    } else {
-      console.log("Admin client ile kullanıcı profili alındı:", data);
     }
-
     return { data, error };
   } catch (error) {
-    console.error("getUserProfile beklenmeyen hata:", error);
     return { data: null, error };
   }
 }

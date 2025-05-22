@@ -2,7 +2,8 @@
 
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import HeaderWrapper from '../components/HeaderWrapper';
 import Footer from '../components/Footer';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -15,9 +16,16 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const handleCartOpen = () => setIsCartOpen(true);
   const handleCartClose = () => setIsCartOpen(false);
+
+  // Pathname değiştiğinde sepeti kapat
+  useEffect(() => {
+    setIsCartOpen(false);
+  }, [pathname]);
 
   return (
     <html lang="tr">

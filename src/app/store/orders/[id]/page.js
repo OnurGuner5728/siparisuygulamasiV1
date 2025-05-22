@@ -115,7 +115,7 @@ function StoreOrderDetailContent() {
         'preparing': 'Hazırlanıyor',
         'on_the_way': 'Yola Çıktı',
         'delivered': 'Teslim Edildi',
-        'canceled': 'İptal Edildi'
+        'cancelled': 'İptal Edildi'
       };
       
       const newStatusHistory = [
@@ -151,8 +151,7 @@ function StoreOrderDetailContent() {
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
-      case 'canceled':
-        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">İptal Edildi</span>;
+            case 'cancelled':        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">İptal Edildi</span>;
       default:
         return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Bilinmiyor</span>;
     }
@@ -297,7 +296,7 @@ function StoreOrderDetailContent() {
                 <button 
                   onClick={() => {
                     if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
-                      handleChangeStatus('canceled');
+                      handleChangeStatus('cancelled');
                     }
                   }}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
