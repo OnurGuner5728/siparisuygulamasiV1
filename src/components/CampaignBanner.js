@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { mockCampaigns, mockStores, mockCategories } from '@/app/data/mockdatas';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 /**
  * Kampanya Banner Bileşeni
@@ -13,64 +13,117 @@ export default function CampaignBanner() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const [error, setError] = useState(null);
   const router = useRouter();
   const intervalRef = useRef(null);
 
-  // Kategori adını ID'ye göre bul
-  const getCategoryName = useCallback((categoryId) => {
-    const category = mockCategories.find(c => c.id === categoryId);
-    return category ? category.name.toLowerCase() : 'genel';
-  }, []);
-
-  // Mağaza adını ID'ye göre bul
-  const getStoreName = useCallback((storeId) => {
-    const store = mockStores.find(s => s.id === storeId);
-    return store ? store.name : 'Bilinmeyen Mağaza';
-  }, []);
-
   // Kategoriye göre varsayılan resim
   const getDefaultImage = useCallback((categoryId) => {
-    const categoryName = getCategoryName(categoryId);
-    
-    switch (categoryName) {
-      case 'yemek':
+    switch (categoryId) {
+      case 1: // Yemek
         return '/images/banners/yemek-default.jpg';
-      case 'market':
+      case 2: // Market
         return '/images/banners/market-default.jpg';
-      case 'su':
+      case 3: // Su
         return '/images/banners/su-default.jpg';
+      case 4: // Çiçek
+        return '/images/banners/cicek-default.jpg';
       default:
         return '/images/banners/default.jpg';
     }
-  }, [getCategoryName]);
+  }, []);
 
   // Kampanya verisini yükle
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
-        // API çağrısı simülasyonu
-        setTimeout(() => {
-          // Aktif kampanyaları filtrele
-          const activeCampaigns = mockCampaigns
-            .filter(c => c.status === 'active')
-            .map(campaign => ({
-              ...campaign,
-              image: campaign.image || getDefaultImage(campaign.categoryId),
-              storeName: getStoreName(campaign.storeId),
-              categoryName: getCategoryName(campaign.categoryId)
-            }));
-          
-          setCampaigns(activeCampaigns);
+        setIsLoading(true);
+        setError(null);
+        
+        // Aktif kampanyaları getir
+        const campaignsData = await api.getCampaigns();
+        
+        if (!campaignsData || campaignsData.length === 0) {
+          setCampaigns([]);
           setIsLoading(false);
-        }, 500);
+          return;
+        }
+        
+        // Her kampanya için ilgili mağaza bilgilerini al
+        const campaignsWithDetails = await Promise.all(
+          campaignsData.map(async (campaign) => {
+            try {
+              // Mağaza spesifik kampanya ise mağaza bilgilerini getir
+              if (campaign.store_id) {
+                const storeData = await api.getStoreById(campaign.store_id);
+                
+                return {
+                  ...campaign,
+                  image: campaign.image_url || getDefaultImage(storeData?.category_id),
+                  storeName: storeData?.name || 'Bilinmeyen Mağaza',
+                  categoryName: getCategoryTypeFromId(storeData?.category_id),
+                  categoryId: storeData?.category_id
+                };
+              }
+              
+              // Kategori genelinde bir kampanya ise
+              return {
+                ...campaign,
+                image: campaign.image_url || getDefaultImage(campaign.main_category_id),
+                storeName: 'Tüm Mağazalar',
+                categoryName: getCategoryTypeFromId(campaign.main_category_id),
+                categoryId: campaign.main_category_id
+              };
+            } catch (error) {
+              console.error(`Kampanya ${campaign.id} için detay bilgileri alınamadı:`, error);
+              
+              return {
+                ...campaign,
+                image: campaign.image_url || getDefaultImage(null),
+                storeName: 'Bilinmeyen Mağaza',
+                categoryName: 'genel',
+                categoryId: null
+              };
+            }
+          })
+        );
+        
+        // Aktif kampanyaları filtrele
+        const activeAndValidCampaigns = campaignsWithDetails.filter(c => {
+          // Kampanyanın geçerli olup olmadığını kontrol et
+          const now = new Date();
+          const startDate = c.start_date ? new Date(c.start_date) : null;
+          const endDate = c.end_date ? new Date(c.end_date) : null;
+          
+          return (!startDate || startDate <= now) && (!endDate || endDate >= now);
+        });
+        
+        setCampaigns(activeAndValidCampaigns);
       } catch (error) {
         console.error('Kampanya yükleme hatası:', error);
+        setError('Kampanyalar yüklenirken bir sorun oluştu.');
+      } finally {
         setIsLoading(false);
       }
     };
 
     loadCampaigns();
-  }, [getDefaultImage, getCategoryName, getStoreName]);
+  }, [getDefaultImage]);
+
+  // Kategori türünü ID'den belirle
+  const getCategoryTypeFromId = (categoryId) => {
+    if (!categoryId) return 'genel';
+    
+    const categoryMap = {
+      1: 'yemek',
+      2: 'market',
+      3: 'su',
+      4: 'cicek',
+      5: 'tatli'
+    };
+    
+    return categoryMap[categoryId] || 'genel';
+  };
 
   // Otomatik geçiş için zamanlayıcı
   useEffect(() => {
@@ -88,12 +141,22 @@ export default function CampaignBanner() {
   }, [campaigns.length, isHovered]);
 
   // Mağaza sayfasına yönlendirme
-  const navigateToStore = (storeId, categoryName) => {
-    router.push(`/${categoryName}/${storeId}`);
+  const navigateToStore = (campaign) => {
+    if (campaign.store_id) {
+      // Mağaza kampanyası ise ilgili mağazaya yönlendir
+      router.push(`/${campaign.categoryName}/${campaign.store_id}`);
+    } else if (campaign.main_category_id) {
+      // Kategori kampanyası ise kategoriye yönlendir
+      router.push(`/${campaign.categoryName}`);
+    } else {
+      // Fallback olarak ana sayfaya yönlendir
+      router.push('/');
+    }
   };
 
   // Tarih formatı
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
   };
@@ -102,6 +165,10 @@ export default function CampaignBanner() {
     return (
       <div className="w-full h-[300px] bg-gray-100 animate-pulse rounded-lg shadow-md"></div>
     );
+  }
+
+  if (error) {
+    return null; // Hata durumunda banner gösterme
   }
 
   if (campaigns.length === 0) {
@@ -140,16 +207,20 @@ export default function CampaignBanner() {
                     <span className="text-sm bg-white/20 px-2 py-1 rounded mr-3">
                       {campaign.storeName}
                     </span>
-                    <span className="text-xs">
-                      {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
-                    </span>
+                    {(campaign.start_date || campaign.end_date) && (
+                      <span className="text-xs">
+                        {campaign.start_date && formatDate(campaign.start_date)} 
+                        {campaign.start_date && campaign.end_date && ' - '} 
+                        {campaign.end_date && formatDate(campaign.end_date)}
+                      </span>
+                    )}
                   </div>
                   
                   <button 
-                    onClick={() => navigateToStore(campaign.storeId, campaign.categoryName)}
+                    onClick={() => navigateToStore(campaign)}
                     className="px-4 py-2 bg-white text-gray-800 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors"
                   >
-                    Mağazaya Git
+                    {campaign.store_id ? 'Mağazaya Git' : 'Detaylar'}
                   </button>
                 </div>
               </div>

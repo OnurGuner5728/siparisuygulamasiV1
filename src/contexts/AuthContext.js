@@ -1,6 +1,14 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { mockUsers, mockStores } from '@/app/data/mockdatas';
+import supabase from '@/lib/supabase';
+import { 
+  signUp, 
+  signIn, 
+  signOut, 
+  getUser, 
+  getUserProfile, 
+  updateUserProfile 
+} from '@/lib/supabaseApi';
 
 // Auth Context oluşturma
 const AuthContext = createContext(null);
@@ -11,147 +19,353 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Sayfa yüklendiğinde localStorage'dan kullanıcı bilgisini al
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Supabase Auth kullanıcı durumunu dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state change:", event);
+        setLoading(true);
+        
+        if (session && session.user) {
+          console.log("Auth User:", session.user);
+          console.log("Auth User Metadata:", session.user.user_metadata);
+          console.log("Auth User Role:", session.user.user_metadata?.role);
+          
+          try {
+            // Kullanıcı oturum açmış, profil bilgilerini al
+            const { data: profile, error: profileError } = await getUserProfile(session.user.id);
+            
+            if (profileError) {
+              console.error("Profil bilgileri alınamadı:", profileError);
+              
+              // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et
+              setUser({
+                ...session.user,
+                role: session.user.user_metadata?.role || 'user',
+                name: session.user.user_metadata?.name || 'Kullanıcı'
+              });
+            } else {
+              console.log("Database User Profile:", profile);
+              
+              // Rolü auth'dan veya veritabanından al, auth öncelikli
+              const userRole = session.user.user_metadata?.role || profile?.role || 'user';
+              console.log("Determined User Role:", userRole);
+              
+              // Kullanıcı bilgilerini ve profilini birleştir
+              const userWithProfile = {
+                ...session.user,
+                ...profile,
+                role: userRole
+              };
+              
+              setUser(userWithProfile);
+            }
+          } catch (error) {
+            console.error("Auth state change error:", error);
+            // Hata durumunda en azından temel auth bilgilerini ayarla
+            setUser({
+              ...session.user,
+              role: session.user.user_metadata?.role || 'user',
+              name: session.user.user_metadata?.name || 'Kullanıcı'
+            });
+          }
+        } else {
+          // Kullanıcı oturum açmamış
+          console.log("No active session");
+          setUser(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // Sayfa yüklendiğinde mevcut kullanıcıyı kontrol et
+    const fetchUser = async () => {
+      try {
+        setLoading(true);
+        console.log("Fetching initial user...");
+        
+        const { user: authUser, error: authError } = await getUser();
+        
+        if (authError) {
+          console.error("Auth user error:", authError);
+          setUser(null);
+          return;
+        }
+        
+        if (authUser) {
+          console.log("Initial Auth User:", authUser);
+          console.log("Initial Auth Metadata:", authUser.user_metadata);
+          
+          try {
+            // Kullanıcı profil bilgilerini al
+            const { data: profile, error: profileError } = await getUserProfile(authUser.id);
+            
+            if (profileError) {
+              console.error("Profil bilgileri alınamadı:", profileError);
+              
+              // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et
+              setUser({
+                ...authUser,
+                role: authUser.user_metadata?.role || 'user',
+                name: authUser.user_metadata?.name || 'Kullanıcı'
+              });
+            } else {
+              console.log("Initial DB Profile:", profile);
+              
+              // Rolü auth'dan veya veritabanından al, auth öncelikli
+              const userRole = authUser.user_metadata?.role || profile?.role || 'user';
+              console.log("Initial Determined Role:", userRole);
+              
+              // Kullanıcı bilgilerini ve profilini birleştir
+              const userWithProfile = {
+                ...authUser,
+                ...profile,
+                role: userRole
+              };
+              
+              setUser(userWithProfile);
+            }
+          } catch (error) {
+            console.error("Fetch user profile error:", error);
+            // Hata durumunda en azından temel auth bilgilerini ayarla
+            setUser({
+              ...authUser,
+              role: authUser.user_metadata?.role || 'user',
+              name: authUser.user_metadata?.name || 'Kullanıcı'
+            });
+          }
+        } else {
+          console.log("No initial user found");
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Kullanıcı bilgileri alınamadı:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+
+    // Cleanup
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   // Kullanıcı girişi işlemi - useCallback ile memoization
   const login = useCallback(async (email, password) => {
     try {
-      // API çağrısı simülasyonu
-      const foundUser = mockUsers.find(u => u.email === email && u.password === password);
+      console.log("Login attempt for:", email);
+      const { data, error } = await signIn(email, password);
       
-      if (!foundUser) {
-        throw new Error('Geçersiz e-posta veya şifre');
+      if (error) {
+        console.error("Login auth error:", error);
+        throw error;
       }
       
-      // Şifreyi kullanıcı nesnesinden çıkar
-      const { password: _, ...userWithoutPassword } = foundUser;
+      if (!data || !data.user) {
+        console.error("Login succeeded but no user data returned");
+        throw new Error("Kullanıcı bilgileri alınamadı");
+      }
       
-      // Kullanıcıyı set et
-      setUser(userWithoutPassword);
+      console.log("Login Auth User:", data.user);
+      console.log("Login Metadata:", data.user.user_metadata);
       
-      // LocalStorage'a kaydet
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      
-      return { success: true, user: userWithoutPassword };
+      try {
+        // Kullanıcı profil bilgilerini al
+        const { data: profile, error: profileError } = await getUserProfile(data.user.id);
+        
+        if (profileError) {
+          console.error("Login - profil bilgileri alınamadı:", profileError);
+          
+          // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et
+          const basicUser = {
+            ...data.user,
+            role: data.user.user_metadata?.role || 'user',
+            name: data.user.user_metadata?.name || 'Kullanıcı'
+          };
+          
+          setUser(basicUser);
+          return { success: true, user: basicUser };
+        }
+        
+        console.log("Login DB Profile:", profile);
+        
+        // Rolü auth'dan veya veritabanından al, auth öncelikli
+        const userRole = data.user.user_metadata?.role || profile?.role || 'user';
+        console.log("Login Determined Role:", userRole);
+        
+        // Kullanıcı bilgilerini ve profilini birleştir
+        const userWithProfile = {
+          ...data.user,
+          ...profile,
+          role: userRole
+        };
+        
+        setUser(userWithProfile);
+        
+        return { success: true, user: userWithProfile };
+      } catch (error) {
+        console.error("Login - profil alma hatası:", error);
+        
+        // Hata durumunda en azından temel auth bilgilerini ayarla
+        const basicUser = {
+          ...data.user,
+          role: data.user.user_metadata?.role || 'user',
+          name: data.user.user_metadata?.name || 'Kullanıcı'
+        };
+        
+        setUser(basicUser);
+        return { success: true, user: basicUser };
+      }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Giriş sırasında bir hata oluştu' };
     }
   }, []);
 
   // Kullanıcı çıkışı işlemi
-  const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const logout = useCallback(async () => {
+    try {
+      const { error } = await signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUser(null);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Logout error:', error);
+      return { success: false, error: error.message };
+    }
   }, []);
 
   // Yeni kullanıcı kaydı işlemi - store sahipleri ve normal kullanıcılar için
   const register = useCallback(async (name, email, password, role = 'user', businessData = null) => {
     try {
-      // E-posta kullanılıyor mu kontrolü
-      const emailExists = mockUsers.some(u => u.email === email);
-      
-      if (emailExists) {
-        throw new Error('Bu e-posta adresi zaten kullanılıyor');
-      }
-      
-      // Yeni kullanıcı için ID oluştur
-      const newUserId = Math.max(...mockUsers.map(u => u.id)) + 1;
-      
       // İsimi parçalara ayırma
       const nameParts = name.split(' ');
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      let newUserData = {
-        id: newUserId,
+      // User metadata
+      const userData = {
         name,
         firstName,
         lastName,
-        email,
-        password, // Gerçek uygulamada hashlenmelidir
+        role,
         phone: businessData?.phone || '',
-        address: '',
-        role: role,
-        createdAt: new Date().toISOString(),
-        addresses: [],
-        favorites: [],
-        modulePermissions: {}
       };
+
+      // Supabase Auth'a kullanıcı kaydet
+      const { user: authUser, error: signUpError } = await signUp(email, password, userData);
       
-      // Mock users dizisine ekle
-      mockUsers.push(newUserData);
+      if (signUpError) {
+        throw signUpError;
+      }
+      
+      if (!authUser) {
+        throw new Error('Kullanıcı oluşturulamadı');
+      }
+
+      // Profil tablosuna ek bilgileri kaydet
+      const profileData = {
+        id: authUser.id,
+        name,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        phone: businessData?.phone || '',
+        role,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Profil tablosuna kaydet
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert(profileData);
+      
+      if (profileError) {
+        throw profileError;
+      }
       
       // Store sahibi kaydı ise mağaza bilgilerini de ekle
       if (role === 'store' && businessData) {
-        // Yeni mağaza için ID oluştur
-        const newStoreId = Math.max(...mockStores.map(s => s.id)) + 1;
-        
-        const newStore = {
-          id: newStoreId,
-          ownerId: newUserId,
+        const storeData = {
+          owner_id: authUser.id,
           name: businessData.businessName,
           email: businessData.businessEmail,
           phone: businessData.businessPhone,
           address: businessData.businessAddress,
-          categoryId: parseInt(businessData.categoryId),
+          category_id: parseInt(businessData.categoryId),
           subcategories: businessData.subcategories || [],
           logo: "https://placehold.co/400x400/png",
-          coverImage: "https://placehold.co/1200x300/png",
+          cover_image: "https://placehold.co/1200x300/png",
           rating: 0,
-          reviewCount: 0,
+          review_count: 0,
           status: 'pending', // Yeni mağaza onay bekliyor durumunda
-          createdAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           description: `${businessData.businessName} mağazası`
         };
         
-        // Mock stores dizisine ekle
-        mockStores.push(newStore);
+        // Stores tablosuna kaydet
+        const { error: storeError } = await supabase
+          .from('stores')
+          .insert(storeData);
+        
+        if (storeError) {
+          throw storeError;
+        }
       }
       
-      // Şifreyi kullanıcı nesnesinden çıkar
-      const { password: _, ...userWithoutPassword } = newUserData;
-      
-      return { success: true, user: userWithoutPassword };
+      return { success: true, user: { ...authUser, ...profileData } };
     } catch (error) {
       console.error('Register error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Kayıt sırasında bir hata oluştu' };
     }
   }, []);
 
   // Kullanıcı verisini güncelle (adres, profil bilgileri, vb.)
   const updateUserData = useCallback(async (updatedUserData) => {
     try {
-      // Kullanıcıyı mockUsers dizisinde bul ve güncelle
-      const userIndex = mockUsers.findIndex(u => u.id === updatedUserData.id);
-      
-      if (userIndex === -1) {
-        throw new Error('Kullanıcı bulunamadı');
+      if (!user) {
+        throw new Error('Kullanıcı oturum açmamış');
       }
       
-      // mockUsers içindeki kullanıcıyı güncelle (şifre korunmalı)
-      const passwordFromMock = mockUsers[userIndex].password;
-      mockUsers[userIndex] = { ...updatedUserData, password: passwordFromMock };
+      // Sadece profil bilgilerini güncelle
+      const { 
+        email, password, id, created_at, updated_at, 
+        role, ...profileData 
+      } = updatedUserData;
       
-      // Şifreyi kullanıcı nesnesinden çıkar
-      const { password, ...userWithoutPassword } = updatedUserData;
+      // updated_at ekle
+      profileData.updated_at = new Date().toISOString();
       
-      // State ve localStorage güncelleme
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+      // Profil bilgilerini güncelle
+      const { data, error } = await supabase
+        .from('users')
+        .update(profileData)
+        .eq('id', user.id)
+        .select();
       
-      return { success: true, user: userWithoutPassword };
+      if (error) {
+        throw error;
+      }
+      
+      // Kullanıcı bilgilerini güncelle
+      const updatedUser = { ...user, ...profileData };
+      setUser(updatedUser);
+      
+      return { success: true, user: updatedUser };
     } catch (error) {
       console.error('Update user data error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Profil güncellenirken bir hata oluştu' };
     }
-  }, []);
+  }, [user]);
 
   // Kullanıcı yetkisini kontrol et
   const hasPermission = useCallback((module, action) => {

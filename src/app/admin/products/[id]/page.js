@@ -5,9 +5,8 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
-import { mockProducts, mockStores, mockCategories } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 import FileUploader from '@/components/FileUploader';
-import { useFileUpload } from '@/contexts/FileContext';
 
 export default function EditProduct() {
   return (
@@ -20,120 +19,84 @@ export default function EditProduct() {
 function EditProductContent() {
   const router = useRouter();
   const params = useParams();
-  const productId = params?.id ? parseInt(params.id) : null;
-  const { uploadFile } = useFileUpload();
+  const productId = params?.id;
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
-  const [stores, setStores] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [mainCategories, setMainCategories] = useState([]);
-  const [selectedMainCategory, setSelectedMainCategory] = useState(null);
+  const [allStores, setAllStores] = useState([]);
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    storeId: '',
+    store_id: '',
     category: '',
-    mainCategory: '',
     image: '',
-    status: 'active'
+    is_available: true,
+    options: [],
+    removable_items: []
   });
 
-  // Mağaza listesini yükle
+  const [currentOptionName, setCurrentOptionName] = useState('');
+  const [currentOptionPrice, setCurrentOptionPrice] = useState('');
+  const [currentRemovableItem, setCurrentRemovableItem] = useState('');
+
   useEffect(() => {
-    // Mock API çağrısı - Mağaza listesi
-    setTimeout(() => {
-      const activeStores = mockStores.filter(store => store.status === 'active');
-      setStores(activeStores);
-      
-      // Ana kategorileri yükle
-      const mainCats = mockCategories.map(cat => ({
-        id: cat.id,
-        name: cat.name
-      }));
-      setMainCategories(mainCats);
-    }, 500);
-  }, []);
-  
-  // Ürün verilerini yükle
-  useEffect(() => {
-    // Ürün verilerini yükle
-    if (productId !== null && stores.length > 0) {
+    const fetchProductAndStoresData = async () => {
+      if (!productId) {
+        setLoading(false);
+        setNotFound(true);
+        return;
+      }
       setLoading(true);
-      
-      // Mock API çağrısı - Ürün detayları
-      setTimeout(() => {
-        // Merkezi mock veri deposundan ürünü bul
-        const product = mockProducts.find(p => p.id === productId);
-        
-        if (product) {
+      try {
+        const productData = await api.getProductById(productId);
+        const storesData = await api.getStores({ status: 'active', approved: true });
+        setAllStores(storesData || []);
+
+        if (productData) {
           setFormData({
-            name: product.name,
-            description: product.description,
-            price: parseFloat(product.price),
-            storeId: product.storeId.toString(),
-            category: product.category,
-            mainCategory: product.mainCategory,
-            image: product.image,
-            status: product.status
+            name: productData.name || '',
+            description: productData.description || '',
+            price: productData.price !== null ? productData.price.toString() : '',
+            store_id: productData.store_id || '',
+            category: productData.category || '',
+            image: productData.image || '',
+            is_available: productData.is_available !== undefined ? productData.is_available : true,
+            options: productData.options || [],
+            removable_items: productData.removable_items || []
           });
-          
-          // Mağaza seçildiğinde uygun kategorileri yükle
-          const store = stores.find(s => s.id === product.storeId);
-          if (store) {
-            // Ana kategoriyi bul
-            const mainCategory = mockCategories.find(cat => cat.id === parseInt(store.categoryId));
-            setSelectedMainCategory(mainCategory);
-            
-            if (mainCategory && mainCategory.subcategories) {
-              const subCategories = mainCategory.subcategories.map(subcat => subcat.name);
-              setCategories(subCategories);
-            } else {
-              setCategories([]);
-            }
-          }
-          
           setNotFound(false);
         } else {
-          // Ürün bulunamadı
           setNotFound(true);
         }
-        
+      } catch (err) {
+        console.error('Ürün ve mağaza verileri yüklenirken hata:', err);
+        setError('Veriler yüklenirken bir sorun oluştu.');
+        setNotFound(true);
+      } finally {
         setLoading(false);
-      }, 1000);
-    }
-  }, [productId, stores]);
+      }
+    };
+
+    fetchProductAndStoresData();
+  }, [productId]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     
-    if (name === 'storeId' && value) {
-      // Mağaza seçildiğinde uygun kategorileri yükle
-      const store = stores.find(s => s.id === parseInt(value));
-      if (store) {
-        // Ana kategoriyi bul
-        const mainCategory = mockCategories.find(cat => cat.id === parseInt(store.categoryId));
-        setSelectedMainCategory(mainCategory);
-        
-        if (mainCategory && mainCategory.subcategories) {
-          const subCategories = mainCategory.subcategories.map(subcat => subcat.name);
-          setCategories(subCategories);
-          
-          // Kategori seçimini sıfırla
-          setFormData(prev => ({ ...prev, [name]: value, category: '' }));
-          return;
-        }
+    if (name === 'price') {
+      const regex = /^\\d*\\.?\\d{0,2}$/;
+      if (value === '' || regex.test(value)) {
+        setFormData((prev) => ({ ...prev, [name]: value }));
       }
-      
-      // Kategori bulunamadıysa kategorileri temizle
-      setCategories([]);
+    } else if (name === 'is_available') {
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    
-    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleImageUpload = async (file) => {
@@ -141,42 +104,85 @@ function EditProductContent() {
       setFormData(prev => ({ ...prev, image: '' }));
       return;
     }
-
+    setSubmitting(true);
     try {
-      // FileContext üzerinden dosya yükleme işlemi
-      const fileInfo = await uploadFile(file, {
-        path: 'products',
-        fileName: `product_${productId}_${Date.now()}`
-      });
-      
-      if (fileInfo && fileInfo.url) {
-        setFormData(prev => ({ ...prev, image: fileInfo.url }));
-      }
+      console.log('Dosya seçildi, FileUploader componentinin işlemesi bekleniyor:', file.name);
     } catch (error) {
-      console.error("Dosya yükleme hatası:", error);
-      setError('Dosya yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+      console.error('Dosya yükleme hatası:', error);
+      setError('Dosya yüklenirken bir hata oluştu.');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const handleImageChange = (newImageUrl) => {
+    setFormData(prev => ({ ...prev, image: newImageUrl }));
+  };
+
+  const handleAddOption = () => {
+    if (currentOptionName && currentOptionPrice) {
+      setFormData(prev => ({
+        ...prev,
+        options: [...prev.options, { name: currentOptionName, price: parseFloat(currentOptionPrice) }]
+      }));
+      setCurrentOptionName('');
+      setCurrentOptionPrice('');
+    }
+  };
+
+  const handleRemoveOption = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      options: prev.options.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddRemovableItem = () => {
+    if (currentRemovableItem) {
+      setFormData(prev => ({
+        ...prev,
+        removable_items: [...prev.removable_items, currentRemovableItem]
+      }));
+      setCurrentRemovableItem('');
+    }
+  };
+
+  const handleRemoveRemovableItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      removable_items: prev.removable_items.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!productId) return;
     setSubmitting(true);
     setError('');
 
     try {
-      // Formda eksik bilgi kontrolü
-      if (!formData.name || !formData.price || !formData.storeId || !formData.category) {
-        throw new Error('Lütfen gerekli tüm alanları doldurun.');
+      if (!formData.name || !formData.price || !formData.store_id || !formData.category) {
+        throw new Error('Lütfen Ürün Adı, Fiyat, Mağaza ve Kategori alanlarını doldurun.');
       }
 
-      // Gerçek projede burada bir API isteği yapılarak ürün güncellenir
-      // Simülasyon amaçlı timeout kullanıyoruz
-      setTimeout(() => {
-        // Başarılı güncelleme durumunda ürün listesine yönlendir
-        router.push('/admin/products');
-      }, 1000);
+      const updateData = {
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        store_id: formData.store_id,
+        category: formData.category,
+        image: formData.image,
+        is_available: formData.is_available,
+        options: formData.options && formData.options.length > 0 ? formData.options : null,
+        removable_items: formData.removable_items && formData.removable_items.length > 0 ? formData.removable_items : null,
+      };
+      
+      await api.updateProduct(productId, updateData);
+      router.push('/admin/products');
+
     } catch (err) {
-      setError(err.message || 'Bir hata oluştu, lütfen tekrar deneyin.');
+      console.error('Ürün güncellenirken hata:', err);
+      setError(err.response?.data?.message || err.message || 'Bir hata oluştu, lütfen tekrar deneyin.');
     } finally {
       setSubmitting(false);
     }
@@ -270,19 +276,19 @@ function EditProductContent() {
             </div>
 
             <div>
-              <label htmlFor="storeId" className="block text-sm font-medium text-gray-700 mb-1">
-                Mağaza
+              <label htmlFor="store_id" className="block text-sm font-medium text-gray-700 mb-1">
+                Mağaza <span className="text-red-500">*</span>
               </label>
               <select
-                id="storeId"
-                name="storeId"
-                value={formData.storeId}
+                id="store_id"
+                name="store_id"
+                value={formData.store_id}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Mağaza Seçin</option>
-                {stores.map((store) => (
+                {allStores.map((store) => (
                   <option key={store.id} value={store.id}>{store.name}</option>
                 ))}
               </select>
@@ -290,94 +296,163 @@ function EditProductContent() {
 
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                Kategori
+                Kategori (Alt Kategori/Ürün Tipi) <span className="text-red-500">*</span>
               </label>
-              <div className="flex flex-col space-y-2">
-                {selectedMainCategory && (
-                  <div className="text-sm text-gray-500">
-                    Ana Kategori: {selectedMainCategory.name}
-                  </div>
-                )}
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                  disabled={categories.length === 0}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Alt Kategori Seçin</option>
-                  {categories.map((category, index) => (
-                    <option key={index} value={category}>{category}</option>
-                  ))}
-                </select>
-                {categories.length === 0 && formData.storeId && (
-                  <p className="text-xs text-amber-600">Seçilen mağazanın kategorisi için alt kategori bulunamadı.</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <FileUploader
-                defaultImage={formData.image}
-                onImageUpload={handleImageUpload}
-                label="Ürün Görseli"
-                id="productImage"
-                name="productImage"
-                accept="image/*"
-                maxSizeInMB={2}
-                showCropper={true}
-                placeholderImage="/placeholder-product.jpg"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Durum
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
+              <input
+                type="text"
+                id="category"
+                name="category"
+                value={formData.category}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="active">Aktif</option>
-                <option value="inactive">Pasif</option>
-              </select>
+                placeholder="Örn: İçecekler, Tatlılar"
+              />
             </div>
 
             <div className="md:col-span-2">
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Ürün Açıklaması
+                Açıklama
               </label>
               <textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                rows={4}
+                rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ürün hakkında açıklama girin"
+                placeholder="Ürün hakkında kısa bir açıklama"
               ></textarea>
+            </div>
+            
+            <div className="md:col-span-2">
+              <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+                Ürün Görseli URL (veya Yükle)
+              </label>
+              <FileUploader 
+                onUploadSuccess={handleImageChange} 
+                initialUrl={formData.image}
+                filePathPrefix="products/"
+              />
+            </div>
+
+            <div className="flex items-center md:col-span-2 mt-2">
+              <input
+                type="checkbox"
+                id="is_available"
+                name="is_available"
+                checked={formData.is_available}
+                onChange={handleChange}
+                className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
+              />
+              <label htmlFor="is_available" className="text-sm font-medium text-gray-700">
+                Satışa Açık (Mevcut)
+              </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Link
+          <div className="mb-6 border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Ürün Seçenekleri (Opsiyonel)</h3>
+            <div className="space-y-3 mb-3">
+              {(formData.options || []).map((option, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
+                  <span>{option.name} (+{(option.price || 0).toFixed(2)} TL)</span>
+                  <button 
+                    type="button" 
+                    onClick={() => handleRemoveOption(index)}
+                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  >
+                    Kaldır
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-end p-3 border rounded-md">
+              <div className="flex-grow">
+                <label htmlFor="optionName" className="block text-xs text-gray-600 mb-1">Seçenek Adı</label>
+                <input 
+                  type="text" 
+                  id="optionName"
+                  value={currentOptionName} 
+                  onChange={(e) => setCurrentOptionName(e.target.value)} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Örn: Ekstra Peynir"
+                />
+              </div>
+              <div className="w-full sm:w-40">
+                <label htmlFor="optionPrice" className="block text-xs text-gray-600 mb-1">Ek Fiyat (TL)</label>
+                <input 
+                  type="number" 
+                  id="optionPrice"
+                  value={currentOptionPrice} 
+                  onChange={(e) => setCurrentOptionPrice(e.target.value)} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="2.50"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={handleAddOption}
+                disabled={!currentOptionName || !currentOptionPrice}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm h-10 disabled:opacity-50 whitespace-nowrap"
+              >
+                + Seçenek Ekle
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-6 border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Çıkarılabilir Malzemeler (Opsiyonel)</h3>
+            <div className="space-y-3 mb-3">
+              {(formData.removable_items || []).map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
+                  <span>{item}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => handleRemoveRemovableItem(index)}
+                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  >
+                    Kaldır
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-end p-3 border rounded-md">
+              <div className="flex-grow">
+                <label htmlFor="removableItem" className="block text-xs text-gray-600 mb-1">Malzeme Adı</label>
+                <input 
+                  type="text" 
+                  id="removableItem"
+                  value={currentRemovableItem} 
+                  onChange={(e) => setCurrentRemovableItem(e.target.value)} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Örn: Soğan, Turşu"
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={handleAddRemovableItem}
+                disabled={!currentRemovableItem}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm h-10 disabled:opacity-50 whitespace-nowrap"
+              >
+                + Malzeme Ekle
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-8">
+            <Link 
               href="/admin/products"
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-md mr-3"
             >
               İptal
             </Link>
-            <button
+            <button 
               type="submit"
-              disabled={submitting}
-              className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                submitting ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
+              disabled={submitting || loading}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-md disabled:opacity-50"
             >
               {submitting ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
             </button>

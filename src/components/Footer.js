@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useModule } from '@/contexts/ModuleContext';
 
 export default function Footer() {
+  const { isModuleEnabled } = useModule();
+
   return (
     <footer className="bg-white border-t border-gray-200 py-8">
       <div className="container mx-auto px-4">
@@ -35,10 +38,21 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Kategoriler</h3>
             <ul className="space-y-3">
-              <li><Link href="/yemek" className="text-gray-600 hover:text-orange-500 text-sm">Yemek</Link></li>
-              <li><Link href="/market" className="text-gray-600 hover:text-orange-500 text-sm">Market</Link></li>
-              <li><Link href="/su" className="text-gray-600 hover:text-orange-500 text-sm">Su</Link></li>
-              <li><Link href="/aktuel" className="text-gray-600 hover:text-orange-500 text-sm">Aktüel</Link></li>
+              {isModuleEnabled('yemek') && (
+                <li><Link href="/yemek" className="text-gray-600 hover:text-orange-500 text-sm">Yemek</Link></li>
+              )}
+              
+              {isModuleEnabled('market') && (
+                <li><Link href="/market" className="text-gray-600 hover:text-orange-500 text-sm">Market</Link></li>
+              )}
+              
+              {isModuleEnabled('su') && (
+                <li><Link href="/su" className="text-gray-600 hover:text-orange-500 text-sm">Su</Link></li>
+              )}
+              
+              {isModuleEnabled('aktuel') && (
+                <li><Link href="/aktuel" className="text-gray-600 hover:text-orange-500 text-sm">Aktüel</Link></li>
+              )}
             </ul>
           </div>
           <div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
-import { mockUsers } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 
 export default function AdminUsers() {
   return (
@@ -15,6 +15,7 @@ export default function AdminUsers() {
 }
 
 function AdminUsersContent() {
+  const { user: currentUser } = useAuth(); // Giriş yapmış kullanıcıyı al
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,23 +24,33 @@ function AdminUsersContent() {
   const usersPerPage = 10;
 
   useEffect(() => {
-    // Mock API çağrısı
-    setTimeout(() => {
-      // Yöneticinin kendisini listelemiyoruz (gerçek uygulamada bu tür bir filtre API'da yapılabilir)
-      const adminEmail = localStorage.getItem('user') 
-        ? JSON.parse(localStorage.getItem('user')).email 
-        : '';
-      
-      const filteredUsers = mockUsers.filter(user => user.email !== adminEmail);
-      setUsers(filteredUsers);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // Kullanıcıları getir
+        const usersData = await api.getAllUsers();
+        
+        // Yöneticinin kendisini listelemiyoruz
+        const filteredUsers = currentUser 
+          ? usersData.filter(user => user.id !== currentUser.id)
+          : usersData;
+          
+        setUsers(filteredUsers);
+      } catch (error) {
+        console.error('Kullanıcı verileri yüklenirken hata oluştu:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [currentUser]);
 
   // Arama ve filtreleme
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          user.email?.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     
@@ -56,26 +67,44 @@ function AdminUsersContent() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Kullanıcı silme
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     if (window.confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) {
-      // Gerçek projede API isteği yapılır
-      setUsers(users.filter(user => user.id !== userId));
+      try {
+        await api.deleteUser(userId);
+        setUsers(users.filter(user => user.id !== userId));
+      } catch (error) {
+        console.error('Kullanıcı silinirken hata oluştu:', error);
+        alert('Kullanıcı silinirken bir hata oluştu.');
+      }
     }
   };
 
   // Kullanıcı durumunu değiştirme
-  const handleToggleStatus = (userId) => {
-    const updatedUsers = users.map(user => {
-      if (user.id === userId) {
-        return {
-          ...user,
-          status: user.status === 'active' ? 'inactive' : 'active'
-        };
-      }
-      return user;
-    });
-    
-    setUsers(updatedUsers);
+  const handleToggleStatus = async (userId) => {
+    try {
+      // Önce güncellenecek kullanıcıyı bul
+      const userToUpdate = users.find(user => user.id === userId);
+      const newStatus = userToUpdate.status === 'active' ? 'inactive' : 'active';
+      
+      // API'yi çağır ve güncellemeyi gerçekleştir
+      await api.updateUser(userId, { status: newStatus });
+      
+      // Başarılı olursa UI'ı güncelle
+      const updatedUsers = users.map(user => {
+        if (user.id === userId) {
+          return {
+            ...user,
+            status: newStatus
+          };
+        }
+        return user;
+      });
+      
+      setUsers(updatedUsers);
+    } catch (error) {
+      console.error('Kullanıcı durumu güncellenirken hata oluştu:', error);
+      alert('Kullanıcı durumu değiştirilirken bir hata oluştu.');
+    }
   };
 
   // Kullanıcı rolünü formatla
@@ -104,6 +133,12 @@ function AdminUsersContent() {
       default:
         return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Bilinmiyor</span>;
     }
+  };
+
+  // Tarih formatla
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Belirtilmemiş';
+    return new Date(dateString).toLocaleDateString('tr-TR');
   };
 
   if (loading) {
@@ -203,28 +238,36 @@ function AdminUsersContent() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-                          {user.name.charAt(0)}
-                        </div>
+                        {user.avatar_url ? (
+                          <img 
+                            className="h-10 w-10 rounded-full object-cover" 
+                            src={user.avatar_url} 
+                            alt={user.name} 
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                            {user.name?.charAt(0) || 'U'}
+                          </div>
+                        )}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">ID: {user.id}</div>
+                        <div className="text-sm text-gray-500">ID: {user.id?.substring(0, 8)}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{user.email}</div>
-                    <div className="text-sm text-gray-500">{user.phone}</div>
+                    <div className="text-sm text-gray-500">{user.phone || 'Telefon yok'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {formatRole(user.role)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {formatStatus(user.status)}
+                    {formatStatus(user.status || 'active')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.registrationDate).toLocaleDateString('tr-TR')}
+                    {formatDate(user.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">

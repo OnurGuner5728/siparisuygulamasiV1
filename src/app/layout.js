@@ -6,6 +6,7 @@ import { useState } from 'react';
 import HeaderWrapper from '../components/HeaderWrapper';
 import Footer from '../components/Footer';
 import { AuthProvider } from '../contexts/AuthContext';
+import { ModuleProvider } from '../contexts/ModuleContext';
 import CartSidebar from '../components/CartSidebar';
 import { FileProvider } from '../contexts/FileContext';
 import { CartProvider } from '../contexts/CartContext';
@@ -26,16 +27,18 @@ export default function RootLayout({ children }) {
       </head>
       <body className={inter.className + ' min-h-screen flex flex-col'}>
         <AuthProvider>
-          <CartProvider>
-            <FileProvider>
-              <div className="flex flex-col flex-grow">
-                <HeaderWrapper onCartClick={handleCartOpen} />
-                <CartSidebar isOpen={isCartOpen} onClose={handleCartClose} />
-                <main className="flex-grow">{children}</main>
-                <Footer />
-              </div>
-            </FileProvider>
-          </CartProvider>
+          <ModuleProvider>
+            <CartProvider>
+              <FileProvider>
+                <div className="flex flex-col flex-grow">
+                  <HeaderWrapper onCartClick={handleCartOpen} />
+                  <CartSidebar isOpen={isCartOpen} onClose={handleCartClose} />
+                  <main className="flex-grow">{children}</main>
+                  <Footer />
+                </div>
+              </FileProvider>
+            </CartProvider>
+          </ModuleProvider>
         </AuthProvider>
       </body>
     </html>

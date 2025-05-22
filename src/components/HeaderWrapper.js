@@ -4,10 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import { useModule } from '../contexts/ModuleContext';
 
 function Header({ onCartClick }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { totalItems } = useCart();
+  const { isModuleEnabled } = useModule();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   return (
@@ -34,10 +36,20 @@ function Header({ onCartClick }) {
         {/* Masaüstü Menü */}
         <nav className="hidden md:flex space-x-6">
           <Link href="/" className="text-gray-600 hover:text-orange-500 font-medium">Ana Sayfa</Link>
-          <Link href="/yemek" className="text-gray-600 hover:text-orange-500 font-medium">Yemek</Link>
-          <Link href="/market" className="text-gray-600 hover:text-orange-500 font-medium">Market</Link>
-          <Link href="/su" className="text-gray-600 hover:text-orange-500 font-medium">Su</Link>
-          {(user?.role === 'admin' || user?.modulePermissions?.aktuel) && (
+          
+          {isModuleEnabled('yemek') && (
+            <Link href="/yemek" className="text-gray-600 hover:text-orange-500 font-medium">Yemek</Link>
+          )}
+          
+          {isModuleEnabled('market') && (
+            <Link href="/market" className="text-gray-600 hover:text-orange-500 font-medium">Market</Link>
+          )}
+          
+          {isModuleEnabled('su') && (
+            <Link href="/su" className="text-gray-600 hover:text-orange-500 font-medium">Su</Link>
+          )}
+          
+          {isModuleEnabled('aktuel') && (
             <Link href="/aktuel" className="text-gray-600 hover:text-orange-500 font-medium">Aktüel</Link>
           )}
         </nav>
@@ -119,10 +131,20 @@ function Header({ onCartClick }) {
         <div className="md:hidden bg-white border-t border-gray-200 py-2 px-4 mt-4 shadow-md">
           <nav className="flex flex-col space-y-3 mb-4">
             <Link href="/" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Ana Sayfa</Link>
-            <Link href="/yemek" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Yemek</Link>
-            <Link href="/market" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Market</Link>
-            <Link href="/su" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Su</Link>
-            {(user?.role === 'admin' || user?.modulePermissions?.aktuel) && (
+            
+            {isModuleEnabled('yemek') && (
+              <Link href="/yemek" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Yemek</Link>
+            )}
+            
+            {isModuleEnabled('market') && (
+              <Link href="/market" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Market</Link>
+            )}
+            
+            {isModuleEnabled('su') && (
+              <Link href="/su" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Su</Link>
+            )}
+            
+            {isModuleEnabled('aktuel') && (
               <Link href="/aktuel" className="text-gray-600 hover:text-orange-500 py-2 font-medium">Aktüel</Link>
             )}
           </nav>

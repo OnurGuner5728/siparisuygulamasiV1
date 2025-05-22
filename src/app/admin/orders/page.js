@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
-import { mockOrders } from '@/app/data/mockdatas';
+import api from '@/lib/api'; // API servisini import et
 
 export default function AdminOrders() {
   return (
@@ -16,19 +16,50 @@ export default function AdminOrders() {
 
 function AdminOrdersContent() {
   const [orders, setOrders] = useState([]);
+  const [stores, setStores] = useState([]); // Mağazaları tutmak için
+  const [users, setUsers] = useState([]); // Kullanıcıları tutmak için
+  const [categories, setCategories] = useState([]); // Kategorileri tutmak için
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all'); // Bu filtre için ana kategori ID'si kullanılacak
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
 
   useEffect(() => {
-    // Mock veri yükleniyor - ortak dosyadan
-    setTimeout(() => {
-      setOrders(mockOrders);
-      setLoading(false);
-    }, 1000);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const ordersData = await api.getAllOrders(); // Tüm siparişleri getirecek bir API fonksiyonu varsayılıyor
+        const storesData = await api.getStores();
+        const usersData = await api.getAllUsers(); 
+        const mainCategoriesData = await api.getMainCategories(); // Ana kategorileri al
+        
+        // Sipariş verilerine mağaza adı, müşteri adı ve kategori adı ekle
+        const populatedOrders = ordersData.map(order => {
+          const store = storesData.find(s => s.id === order.store_id);
+          const customer = usersData.find(u => u.id === order.customer_id);
+          const mainCategory = store ? mainCategoriesData.find(mc => mc.id === store.category_id) : null;
+          return {
+            ...order,
+            storeName: store ? store.name : 'Bilinmiyor',
+            customerName: customer ? customer.name : 'Bilinmiyor',
+            mainCategoryId: store ? store.category_id : null, // Ana kategori ID'si
+            categoryName: mainCategory ? mainCategory.name : 'Diğer' // Kategori adı
+          };
+        });
+
+        setOrders(populatedOrders);
+        setStores(storesData);
+        setUsers(usersData);
+        setCategories(mainCategoriesData); // Ana kategorileri state'e ata
+      } catch (error) {
+        console.error("Sipariş verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
   // Arama ve filtreleme
@@ -40,7 +71,7 @@ function AdminOrdersContent() {
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
-    const matchesCategory = categoryFilter === 'all' || order.category.toLowerCase() === categoryFilter.toLowerCase();
+    const matchesCategory = categoryFilter === 'all' || order.mainCategoryId === categoryFilter;
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
@@ -55,18 +86,17 @@ function AdminOrdersContent() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Sipariş durumunu değiştirme
-  const handleChangeStatus = (orderId, newStatus) => {
-    const updatedOrders = orders.map(order => {
-      if (order.id === orderId) {
-        return {
-          ...order,
-          status: newStatus
-        };
-      }
-      return order;
-    });
-    
-    setOrders(updatedOrders);
+  const handleChangeStatus = async (orderId, newStatus) => {
+    try {
+      await api.updateOrder(orderId, { status: newStatus }); // updateOrder API'de olmalı
+      const updatedOrders = orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      );
+      setOrders(updatedOrders);
+    } catch (error) {
+      console.error("Sipariş durumu güncellenirken hata:", error);
+      alert("Sipariş durumu güncellenemedi.")
+    }
   };
 
   // Sipariş durumunu formatla
@@ -143,14 +173,13 @@ function AdminOrdersContent() {
             </select>
             <select
               className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={categoryFilter}
+              value={categoryFilter} // Değer olarak ana kategori ID'si kullanılacak
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="all">Tüm Kategoriler</option>
-              <option value="yemek">Yemek</option>
-              <option value="market">Market</option>
-              <option value="su">Su</option>
-              <option value="aktüel">Aktüel</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -189,28 +218,29 @@ function AdminOrdersContent() {
               {currentOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.id}</div>
+                    <div className="text-sm font-medium text-gray-900">{order.id.substring(0,8)}...</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                    <div className="text-sm text-gray-500">ID: {order.customerId}</div>
+                    <div className="text-sm text-gray-500">ID: {order.customer_id.substring(0,8)}...</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{order.storeName}</div>
-                    <div className="text-sm text-gray-500">ID: {order.storeId}</div>
+                    <div className="text-sm text-gray-500">ID: {order.store_id.substring(0,8)}...</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                      {order.category}
+                      {order.categoryName} 
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{new Date(order.orderDate).toLocaleDateString('tr-TR')}</div>
-                    <div className="text-sm text-gray-500">{new Date(order.orderDate).toLocaleTimeString('tr-TR')}</div>
+                    <div className="text-sm text-gray-900">{new Date(order.order_date).toLocaleDateString('tr-TR')}</div>
+                    <div className="text-sm text-gray-500">{new Date(order.order_date).toLocaleTimeString('tr-TR')}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{order.total.toFixed(2)} TL</div>
-                    <div className="text-sm text-gray-500">{order.itemCount} ürün</div>
+                    {/* itemCount mock veride vardı, Supabase şemasında order_items üzerinden hesaplanmalı */}
+                    {/* <div className="text-sm text-gray-500">{order.itemCount} ürün</div> */}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {formatStatus(order.status)}

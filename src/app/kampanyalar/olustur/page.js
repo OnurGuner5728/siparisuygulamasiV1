@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { campaignTypes, campaignCategories, mockStores } from '@/app/data/mockdatas';
 import AuthGuard from '@/components/AuthGuard';
+import api from '@/lib/api';
 
 export default function CreateCampaignPage() {
   return (
@@ -21,36 +21,61 @@ function CreateCampaignContent() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [stores, setStores] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   
-  // Kullanıcının yönettiği mağaza(ları) bul
+  // Mağazaları ve kategorileri yükle
   useEffect(() => {
-    // Admin için tüm mağazaları gösterelim
-    if (user?.role === 'admin') {
-      setStores(mockStores);
-    } 
-    // Mağaza kullanıcıları için kendi mağazasını gösterelim
-    else if (user?.role === 'store') {
-      // Artık e-postaya göre değil, kullanıcı ID'sine göre filtreleme yapıyoruz
-      const userStores = mockStores.filter(store => store.ownerId === user.id);
-      setStores(userStores);
-    }
+    const fetchData = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setIsLoadingData(true);
+        
+        // Kullanıcının rolüne göre mağazaları yükle
+        let storesData = [];
+        if (user.role === 'admin') {
+          // Admin için tüm mağazaları getir
+          storesData = await api.getStores();
+        } else if (user.role === 'store') {
+          // Mağaza kullanıcısı için kendi mağazasını getir
+          storesData = await api.getStores({ owner_id: user.id });
+        }
+        
+        setStores(storesData || []);
+        
+        // Kampanya kategorilerini getir
+        const campaignCategoriesData = await api.getMainCategories();
+        setCategories(campaignCategoriesData || []);
+      } catch (error) {
+        console.error('Veri yüklenirken hata:', error);
+        setError('Veri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    
+    fetchData();
   }, [user]);
   
   // Form verileri
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    storeId: '',
+    store_id: '',
     categories: [],
-    discountType: 'percent',
+    discount_type: 'percentage',
     discount: '',
-    minOrderAmount: '',
-    maxDiscountAmount: '',
+    min_order_amount: '',
+    max_discount_amount: '',
     code: '',
-    startDate: getTodayDateString(),
-    endDate: getNextMonthDateString(),
-    maxUsage: '',
-    conditions: ''
+    start_date: getTodayDateString(),
+    end_date: getNextMonthDateString(),
+    max_usage: '',
+    conditions: '',
+    image_url: '',
+    is_active: true,
+    main_category_id: ''
   });
   
   // Form gönderimi
@@ -61,36 +86,58 @@ function CreateCampaignContent() {
     
     try {
       // Form validasyonu
-      if (!formData.title || !formData.description || !formData.storeId || !formData.code) {
+      if (!formData.title || !formData.description || !formData.code) {
         throw new Error('Lütfen tüm gerekli alanları doldurun.');
+      }
+      
+      // Mağaza veya ana kategori seçilmiş olmalı
+      if (!formData.store_id && !formData.main_category_id) {
+        throw new Error('Lütfen bir mağaza veya ana kategori seçin.');
       }
       
       if (formData.categories.length === 0) {
         throw new Error('En az bir kategori seçmelisiniz.');
       }
       
-      if (formData.discountType !== 'free_delivery' && (!formData.discount || isNaN(formData.discount) || Number(formData.discount) <= 0)) {
+      // İndirim türü kontrolü
+      const validDiscountTypes = ['percentage', 'amount', 'free_delivery'];
+      if (!formData.discount_type || !validDiscountTypes.includes(formData.discount_type)) {
+        throw new Error('Geçerli bir indirim türü seçmelisiniz.');
+      }
+      
+      if (formData.discount_type !== 'free_delivery' && (!formData.discount || isNaN(formData.discount) || Number(formData.discount) <= 0)) {
         throw new Error('Geçerli bir indirim değeri giriniz.');
       }
       
-      // Gerçek uygulamada burada bir API isteği yapılacak
-      // Şimdilik sadece bir simülasyon yapıyoruz
-      console.log('Yeni kampanya kaydediliyor:', formData);
+      // API isteği için verileri hazırla
+      const campaignData = {
+        ...formData,
+        discount: formData.discount ? parseFloat(formData.discount) : null,
+        min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : null,
+        max_discount_amount: formData.max_discount_amount ? parseFloat(formData.max_discount_amount) : null,
+        max_usage: formData.max_usage ? parseInt(formData.max_usage) : null,
+        created_by: user.id,
+        updated_by: user.id,
+        store_id: formData.store_id || null,
+        main_category_id: formData.main_category_id || null,
+        discount_type: formData.discount_type || 'percentage' // Varsayılan değer olarak 'percent' kullan
+      };
       
-      // Başarılı kayıt simülasyonu
+      // API üzerinden kampanya oluştur
+      await api.createCampaign(campaignData);
+      
+      setSuccess(true);
+      
+      // Başarılı olduktan sonra kampanyalar sayfasına yönlendir
       setTimeout(() => {
-        setLoading(false);
-        setSuccess(true);
-        
-        // Başarılı olduktan sonra kampanyalar sayfasına yönlendir
-        setTimeout(() => {
-          router.push('/kampanyalar');
-        }, 1500);
-      }, 1000);
+        router.push('/kampanyalar');
+      }, 1500);
       
     } catch (error) {
+      console.error('Kampanya oluşturulurken hata:', error);
+      setError(error.message || 'Kampanya oluşturulurken bir hata oluştu.');
+    } finally {
       setLoading(false);
-      setError(error.message);
     }
   };
   
@@ -120,12 +167,70 @@ function CreateCampaignContent() {
     }
   };
   
+  // Ana kategori değiştiğinde
+  const handleMainCategoryChange = (e) => {
+    const value = e.target.value;
+    
+    setFormData({
+      ...formData,
+      main_category_id: value,
+      // Eğer ana kategori seçiliyse store_id'yi temizle
+      ...(value ? { store_id: '' } : {})
+    });
+  };
+  
+  // Mağaza değiştiğinde
+  const handleStoreChange = (e) => {
+    const value = e.target.value;
+    
+    setFormData({
+      ...formData,
+      store_id: value,
+      // Eğer mağaza seçiliyse main_category_id'yi temizle
+      ...(value ? { main_category_id: '' } : {})
+    });
+  };
+  
+  // Dosya yükleme işlemi
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      setLoading(true);
+      
+      // API ile dosya yükleme işlemi
+      const imageUrl = await api.uploadImage(file, 'campaigns');
+      
+      setFormData(prev => ({
+        ...prev,
+        image_url: imageUrl
+      }));
+      
+    } catch (error) {
+      console.error('Resim yüklenirken hata:', error);
+      setError('Resim yüklenirken bir hata oluştu.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Seçilen mağazanın adını al
   const getStoreName = (storeId) => {
     if (!storeId) return '';
-    const store = stores.find(s => s.id === parseInt(storeId));
+    const store = stores.find(s => s.id === storeId);
     return store ? store.name : '';
   };
+  
+  if (isLoadingData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -204,24 +309,55 @@ function CreateCampaignContent() {
                 </div>
                 
                 <div>
-                  <label htmlFor="storeId" className="block text-sm font-medium text-gray-700 mb-1">
-                    Mağaza *
+                  <label htmlFor="store_id" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mağaza
                   </label>
                   <select
-                    id="storeId"
-                    name="storeId"
+                    id="store_id"
+                    name="store_id"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.storeId}
-                    onChange={handleChange}
-                    required
+                    value={formData.store_id}
+                    onChange={handleStoreChange}
+                    disabled={formData.main_category_id}
                   >
                     <option value="">Mağaza Seçin</option>
                     {stores.map(store => (
                       <option key={store.id} value={store.id}>
-                        {store.name} ({store.category})
+                        {store.name} ({store.type})
                       </option>
                     ))}
                   </select>
+                  {formData.main_category_id && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Ana kategori seçiliyken mağaza seçilemez.
+                    </p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="main_category_id" className="block text-sm font-medium text-gray-700 mb-1">
+                    Ana Kategori
+                  </label>
+                  <select
+                    id="main_category_id"
+                    name="main_category_id"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData.main_category_id}
+                    onChange={handleMainCategoryChange}
+                    disabled={formData.store_id}
+                  >
+                    <option value="">Ana Kategori Seçin</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  {formData.store_id && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Mağaza seçiliyken ana kategori seçilemez.
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -229,18 +365,66 @@ function CreateCampaignContent() {
                     Kategoriler *
                   </label>
                   <div className="flex flex-wrap gap-3">
-                    {campaignCategories.map(category => (
+                    {categories.map(category => (
                       <label key={category.id} className="inline-flex items-center">
                         <input
                           type="checkbox"
                           className="form-checkbox h-4 w-4 text-blue-600"
-                          value={category.id}
-                          checked={formData.categories.includes(category.id)}
+                          value={category.id.toString()}
+                          checked={formData.categories.includes(category.id.toString())}
                           onChange={handleCategoryChange}
                         />
                         <span className="ml-2 text-sm text-gray-700">{category.name}</span>
                       </label>
                     ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+                    Kampanya Görseli
+                  </label>
+                  <div className="flex items-center">
+                    {formData.image_url ? (
+                      <div className="relative w-32 h-32 mr-4 border rounded-md overflow-hidden">
+                        <img
+                          src={formData.image_url}
+                          alt="Kampanya görseli"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image_url: '' })}
+                          className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-md"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-32 h-32 mr-4 border rounded-md flex items-center justify-center bg-gray-100">
+                        <svg className="h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        id="image"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="image"
+                        className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Resim Yükle
+                      </label>
+                      <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF formatında 2MB'a kadar</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -252,237 +436,205 @@ function CreateCampaignContent() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="discountType" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="discount_type" className="block text-sm font-medium text-gray-700 mb-1">
                     İndirim Türü *
                   </label>
                   <select
-                    id="discountType"
-                    name="discountType"
+                    id="discount_type"
+                    name="discount_type"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.discountType}
+                    value={formData.discount_type}
                     onChange={handleChange}
                     required
                   >
-                    {campaignTypes.map(type => (
-                      <option key={type.id} value={type.id}>
-                        {type.name} - {type.description}
-                      </option>
-                    ))}
+                    <option value="percentage">Yüzde İndirim (%)</option>
+                    <option value="amount">Tutar İndirim (TL)</option>
+                    <option value="free_delivery">Ücretsiz Teslimat</option>
                   </select>
                 </div>
                 
-                {formData.discountType !== 'free_delivery' && (
+                {formData.discount_type !== 'free_delivery' && (
                   <div>
                     <label htmlFor="discount" className="block text-sm font-medium text-gray-700 mb-1">
-                      İndirim Miktarı *
+                      İndirim Değeri *
                     </label>
-                    <div className="flex">
+                    <div className="relative">
                       <input
                         type="number"
                         id="discount"
                         name="discount"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min="0"
+                        step={formData.discount_type === 'percentage' ? '1' : '0.01'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={formData.discount}
                         onChange={handleChange}
-                        min="0"
-                        step={formData.discountType === 'percent' ? '1' : '0.01'}
-                        required={formData.discountType !== 'free_delivery'}
+                        required={formData.discount_type !== 'free_delivery'}
                       />
-                      <span className="inline-flex items-center px-3 border border-l-0 border-gray-300 bg-gray-100 text-gray-500 rounded-r-md">
-                        {formData.discountType === 'percent' ? '%' : 'TL'}
-                      </span>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500">
+                          {formData.discount_type === 'percentage' ? '%' : 'TL'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
                 
                 <div>
-                  <label htmlFor="minOrderAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="min_order_amount" className="block text-sm font-medium text-gray-700 mb-1">
                     Minimum Sipariş Tutarı
                   </label>
-                  <div className="flex">
+                  <div className="relative">
                     <input
                       type="number"
-                      id="minOrderAmount"
-                      name="minOrderAmount"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={formData.minOrderAmount}
-                      onChange={handleChange}
+                      id="min_order_amount"
+                      name="min_order_amount"
                       min="0"
                       step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={formData.min_order_amount}
+                      onChange={handleChange}
                     />
-                    <span className="inline-flex items-center px-3 border border-l-0 border-gray-300 bg-gray-100 text-gray-500 rounded-r-md">
-                      TL
-                    </span>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500">TL</span>
+                    </div>
                   </div>
                 </div>
                 
-                {(formData.discountType === 'percent' || formData.discountType === 'amount') && (
+                {formData.discount_type === 'percentage' && (
                   <div>
-                    <label htmlFor="maxDiscountAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="max_discount_amount" className="block text-sm font-medium text-gray-700 mb-1">
                       Maksimum İndirim Tutarı
                     </label>
-                    <div className="flex">
+                    <div className="relative">
                       <input
                         type="number"
-                        id="maxDiscountAmount"
-                        name="maxDiscountAmount"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={formData.maxDiscountAmount}
-                        onChange={handleChange}
+                        id="max_discount_amount"
+                        name="max_discount_amount"
                         min="0"
                         step="0.01"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.max_discount_amount}
+                        onChange={handleChange}
                       />
-                      <span className="inline-flex items-center px-3 border border-l-0 border-gray-300 bg-gray-100 text-gray-500 rounded-r-md">
-                        TL
-                      </span>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500">TL</span>
+                      </div>
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-            
-            {/* Geçerlilik Detayları */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Geçerlilik Detayları</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Başlangıç Tarihi *
-                  </label>
-                  <input
-                    type="date"
-                    id="startDate"
-                    name="startDate"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.startDate}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
                 
                 <div>
-                  <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Bitiş Tarihi *
-                  </label>
-                  <input
-                    type="date"
-                    id="endDate"
-                    name="endDate"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.endDate}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="maxUsage" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="max_usage" className="block text-sm font-medium text-gray-700 mb-1">
                     Maksimum Kullanım Sayısı
                   </label>
                   <input
                     type="number"
-                    id="maxUsage"
-                    name="maxUsage"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.maxUsage}
-                    onChange={handleChange}
+                    id="max_usage"
+                    name="max_usage"
                     min="0"
+                    step="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData.max_usage}
+                    onChange={handleChange}
+                    placeholder="Sınırsız için boş bırakın"
                   />
                 </div>
                 
-                <div className="md:col-span-2">
+                <div>
                   <label htmlFor="conditions" className="block text-sm font-medium text-gray-700 mb-1">
                     Kullanım Koşulları
                   </label>
                   <textarea
                     id="conditions"
                     name="conditions"
-                    rows="3"
+                    rows="2"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.conditions}
                     onChange={handleChange}
-                    placeholder="Örn: Diğer kampanyalarla birleştirilemez, belirli ürünlerde geçerli değildir, vb."
+                    placeholder="Opsiyonel"
                   ></textarea>
                 </div>
               </div>
             </div>
             
-            {/* Önizleme */}
-            <div className="mb-6 bg-gray-50 p-4 rounded-md">
-              <h2 className="text-lg font-semibold mb-3">Kampanya Önizleme</h2>
+            {/* Zaman Ayarları */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Zaman Ayarları</h2>
               
-              {formData.title && (
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="text-xl font-bold mb-2">{formData.title}</h3>
-                  <p className="text-gray-600 mb-3">{formData.description}</p>
-                  
-                  {formData.storeId && (
-                    <div className="mb-2">
-                      <span className="font-medium">Mağaza:</span> {getStoreName(formData.storeId)}
-                    </div>
-                  )}
-                  
-                  <div className="mb-2">
-                    <span className="font-medium">Kod:</span> {formData.code || 'XXXX'}
-                  </div>
-                  
-                  <div className="mb-2">
-                    <span className="font-medium">İndirim:</span> {' '}
-                    {formData.discountType === 'percent' ? `%${formData.discount || '0'}` : 
-                     formData.discountType === 'amount' ? `${formData.discount || '0'} TL` : 
-                     'Ücretsiz Teslimat'}
-                  </div>
-                  
-                  {formData.minOrderAmount && (
-                    <div className="mb-2">
-                      <span className="font-medium">Min. Sipariş:</span> {formData.minOrderAmount} TL
-                    </div>
-                  )}
-                  
-                  <div className="mb-2">
-                    <span className="font-medium">Geçerlilik:</span> {formatDate(formData.startDate)} - {formatDate(formData.endDate)}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {formData.categories.map(catId => {
-                      const category = campaignCategories.find(cat => cat.id === catId);
-                      return category ? (
-                        <span 
-                          key={catId} 
-                          className={`text-xs px-2 py-1 rounded-full ${category.color}`}
-                        >
-                          {category.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
+                    Başlangıç Tarihi *
+                  </label>
+                  <input
+                    type="date"
+                    id="start_date"
+                    name="start_date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData.start_date}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
-              )}
+                
+                <div>
+                  <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
+                    Bitiş Tarihi *
+                  </label>
+                  <input
+                    type="date"
+                    id="end_date"
+                    name="end_date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData.end_date}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="is_active" className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      name="is_active"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      checked={formData.is_active}
+                      onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Kampanya Aktif</span>
+                  </label>
+                </div>
+              </div>
             </div>
             
-            {/* Form Butonları */}
-            <div className="flex justify-end gap-2 mt-6">
+            {/* Gönder Butonu */}
+            <div className="flex justify-end">
               <Link 
-                href="/kampanyalar" 
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-gray-800"
+                href="/kampanyalar"
+                className="mr-4 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 İptal
               </Link>
-              <button 
-                type="submit" 
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium"
+              
+              <button
+                type="submit"
                 disabled={loading}
+                className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                  loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                }`}
               >
                 {loading ? (
                   <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Kaydediliyor...
                   </span>
-                ) : 'Kampanyayı Oluştur'}
+                ) : (
+                  'Kampanya Oluştur'
+                )}
               </button>
             </div>
           </form>
@@ -492,22 +644,19 @@ function CreateCampaignContent() {
   );
 }
 
-// Bugünün tarihini YYYY-MM-DD formatında döndürür
 function getTodayDateString() {
   const today = new Date();
-  return today.toISOString().slice(0, 10);
+  return today.toISOString().split('T')[0]; // YYYY-MM-DD formatı
 }
 
-// Bir ay sonrasının tarihini YYYY-MM-DD formatında döndürür
 function getNextMonthDateString() {
   const today = new Date();
   const nextMonth = new Date(today);
-  nextMonth.setMonth(today.getMonth() + 1);
-  return nextMonth.toISOString().slice(0, 10);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  return nextMonth.toISOString().split('T')[0]; // YYYY-MM-DD formatı
 }
 
-// Tarih formatlama fonksiyonu
 function formatDate(dateString) {
-  const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+  const options = { day: 'numeric', month: 'long', year: 'numeric' };
   return new Date(dateString).toLocaleDateString('tr-TR', options);
 } 

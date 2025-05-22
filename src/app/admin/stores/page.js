@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
-import { mockStores } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 
 export default function AdminStores() {
   return (
@@ -15,32 +16,70 @@ export default function AdminStores() {
 }
 
 function AdminStoresContent() {
-  const [stores, setStores] = useState([]);
+  const router = useRouter();
+  const [allStores, setAllStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [mainCategories, setMainCategories] = useState([]);
   const storesPerPage = 10;
 
   useEffect(() => {
-    // Mock verileri merkezi bir yerden al
-    setTimeout(() => {
-      setStores(mockStores);
-      setLoading(false);
-    }, 1000);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Mağazaları getir
+        const storesData = await api.getStores();
+        // Kategorileri getir
+        const categoriesData = await api.getMainCategories();
+        
+        // Mağazalara kategori isimlerini ekle
+        const storesWithCategoryNames = storesData.map(store => {
+          const category = categoriesData.find(cat => cat.id === store.category_id);
+          return {
+            ...store,
+            category: category ? category.name : 'Tanımlanmamış'
+          };
+        });
+        
+        setAllStores(storesWithCategoryNames || []);
+        setMainCategories(categoriesData || []);
+      } catch (error) {
+        console.error("Mağaza ve kategori verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // Arama ve filtreleme
-  const filteredStores = stores.filter(store => {
-    const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           store.email.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredStores = allStores.filter(store => {
+    const ownerName = store.owner?.name?.toLowerCase() || '';
+    const mainCategoryOfStore = mainCategories.find(cat => cat.id === store.category_id);
+    const categoryName = mainCategoryOfStore?.name?.toLowerCase() || '';
+
+    const matchesSearch = 
+      (store.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+      (store.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      ownerName.includes(searchTerm.toLowerCase()) ||
+      categoryName.includes(searchTerm.toLowerCase());
     
-    const matchesCategory = categoryFilter === 'all' || store.category.toLowerCase() === categoryFilter.toLowerCase();
+    const matchesCategory = categoryFilter === 'all' || store.category_id === categoryFilter;
     
-    const matchesStatus = statusFilter === 'all' || 
-                          (statusFilter === 'approved' && store.approved) ||
-                          (statusFilter === 'pending' && !store.approved);
+    let matchesStatus = true;
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'pending') {
+        matchesStatus = !store.approved;
+      } else if (statusFilter === 'approved') {
+        matchesStatus = store.approved;
+      } else if (statusFilter === 'active') {
+        matchesStatus = store.approved && store.status === 'active';
+      } else if (statusFilter === 'inactive') {
+        matchesStatus = store.approved && store.status === 'inactive';
+      }
+    }
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -55,42 +94,95 @@ function AdminStoresContent() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Mağaza silme
-  const handleDeleteStore = (storeId) => {
+  const handleDeleteStore = async (storeId) => {
     if (window.confirm('Bu mağazayı silmek istediğinize emin misiniz?')) {
-      // Gerçek projede API isteği yapılır
-      setStores(stores.filter(store => store.id !== storeId));
+      try {
+        // Veritabanından mağazayı sil
+        await api.deleteStore(storeId);
+        
+        // UI'ı güncelle
+        setAllStores(allStores.filter(store => store.id !== storeId));
+        
+        // Başarı mesajı göster
+        alert('Mağaza başarıyla silindi!');
+      } catch (error) {
+        console.error("Mağaza silinirken hata:", error);
+        alert("Mağaza silinirken bir hata oluştu!");
+      }
     }
   };
 
   // Mağaza durumunu değiştirme
-  const handleToggleStatus = (storeId) => {
-    const updatedStores = stores.map(store => {
-      if (store.id === storeId) {
-        return {
-          ...store,
-          status: store.status === 'active' ? 'inactive' : 'active'
-        };
-      }
-      return store;
-    });
-    
-    setStores(updatedStores);
+  const handleToggleStatus = async (storeId) => {
+    try {
+      // Mağazayı önce veritabanından al
+      const store = allStores.find(store => store.id === storeId);
+      if (!store) return;
+      
+      // Yeni durum değeri
+      const newStatus = store.status === 'active' ? 'inactive' : 'active';
+      
+      // Veritabanını güncelle
+      await api.updateStore(storeId, { status: newStatus });
+      
+      // UI'ı güncelle
+      const updatedStores = allStores.map(s => {
+        if (s.id === storeId) {
+          return {
+            ...s,
+            status: newStatus
+          };
+        }
+        return s;
+      });
+      
+      setAllStores(updatedStores);
+      
+      // Başarı mesajı göster
+      alert(`Mağaza durumu "${newStatus}" olarak güncellendi!`);
+    } catch (error) {
+      console.error("Mağaza durumu güncellenirken hata:", error);
+      alert("Mağaza durumu güncellenirken bir hata oluştu!");
+    }
   };
 
   // Mağaza onay durumunu değiştirme
-  const handleToggleApproval = (storeId) => {
-    const updatedStores = stores.map(store => {
-      if (store.id === storeId) {
-        return {
-          ...store,
-          approved: !store.approved,
-          status: !store.approved ? 'active' : store.status
-        };
-      }
-      return store;
-    });
-    
-    setStores(updatedStores);
+  const handleToggleApproval = async (storeId) => {
+    try {
+      // Mağazayı önce veritabanından al
+      const store = allStores.find(store => store.id === storeId);
+      if (!store) return;
+      
+      const newApprovalStatus = !store.approved;
+      // Yeni durum değeri - eğer onaylanıyorsa active, değilse mevcut durumu koru
+      const newStatus = newApprovalStatus ? 'active' : store.status;
+      
+      // Veritabanını güncelle
+      await api.updateStore(storeId, { 
+        approved: newApprovalStatus,
+        status: newStatus
+      });
+      
+      // UI'ı güncelle
+      const updatedStores = allStores.map(s => {
+        if (s.id === storeId) {
+          return {
+            ...s,
+            approved: newApprovalStatus,
+            status: newStatus
+          };
+        }
+        return s;
+      });
+      
+      setAllStores(updatedStores);
+      
+      // Başarı mesajı göster
+      alert(newApprovalStatus ? 'Mağaza başarıyla onaylandı!' : 'Mağaza onayı kaldırıldı!');
+    } catch (error) {
+      console.error("Mağaza onay durumu güncellenirken hata:", error);
+      alert("Mağaza onay durumu güncellenirken bir hata oluştu!");
+    }
   };
 
   // Mağaza durumunu formatla
@@ -206,6 +298,9 @@ function AdminStoresContent() {
                   Puan
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Komisyon
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
@@ -250,6 +345,11 @@ function AdminStoresContent() {
                       ) : (
                         <span className="text-sm text-gray-500">Henüz puanlanmadı</span>
                       )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-900">%{store.commission_rate?.toFixed(2) || '0.00'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

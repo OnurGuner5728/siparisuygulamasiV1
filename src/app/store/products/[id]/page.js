@@ -4,21 +4,21 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import StoreGuard from '@/components/StoreGuard';
-import { mockProducts, mockCategories } from '@/app/data/mockdatas';
+import AuthGuard from '@/components/AuthGuard';
+import api from '@/lib/api';
 
 export default function EditProduct() {
   return (
-    <StoreGuard>
+    <AuthGuard requiredRole="store" permissionType="edit">
       <EditProductContent />
-    </StoreGuard>
+    </AuthGuard>
   );
 }
 
 function EditProductContent() {
   const params = useParams();
   const router = useRouter();
-  const productId = parseInt(params.id);
+  const productId = params.id;
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -27,45 +27,62 @@ function EditProductContent() {
     price: '',
     category: '',
     image: '',
-    status: 'active'
+    is_available: true
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [store, setStore] = useState(null);
 
   useEffect(() => {
     // Ürün ve kategori verilerini yükle
     const fetchData = async () => {
       setLoading(true);
       
-      // Mevcut mock verileri kullan
       try {
-        // Kullanıcının mağazasına ait ürünü bul
-        const product = mockProducts.find(p => p.id === productId && p.storeId === user?.id);
+        // Kullanıcının mağazasını bul
+        const userStores = await api.getStores({ owner_id: user?.id });
         
-        if (!product) {
-          setError('Ürün bulunamadı veya bu ürünü düzenleme yetkiniz yok.');
+        if (!userStores || userStores.length === 0) {
+          setError('Mağaza bilgisi bulunamadı.');
           setLoading(false);
           return;
         }
         
-        // Kategorileri filtreleme (ürünün ana kategorisine ait olanlar)
-        const relevantCategories = mockCategories
-          .filter(c => c.mainCategory === product.mainCategory)
-          .map(c => c.name);
+        const storeData = userStores[0]; // İlk mağazayı al
+        setStore(storeData);
         
-        setCategories(relevantCategories);
+        // Ürün bilgisini getir
+        const product = await api.getProductById(productId);
+        
+        if (!product) {
+          setError('Ürün bulunamadı.');
+          setLoading(false);
+          return;
+        }
+        
+        // Ürünün mağazaya ait olup olmadığını kontrol et
+        if (product.store_id !== storeData.id) {
+          setError('Bu ürünü düzenleme yetkiniz yok.');
+          setLoading(false);
+          return;
+        }
+        
+        // Kategorileri getir
+        const mainCategoryId = storeData.category_id;
+        const allCategories = await api.getSubcategories(mainCategoryId);
+        setCategories(allCategories || []);
         
         // Form verilerini doldur
         setFormData({
-          name: product.name,
-          description: product.description,
-          price: product.price.toString(),
-          category: product.category,
-          image: product.image,
-          status: product.status
+          name: product.name || '',
+          description: product.description || '',
+          price: product.price ? product.price.toString() : '',
+          category: product.category || '',
+          image: product.image || '',
+          is_available: product.is_available !== false // varsayılan olarak true
         });
         
       } catch (err) {
@@ -76,32 +93,43 @@ function EditProductContent() {
       setLoading(false);
     };
 
-    fetchData();
+    if (user?.id) {
+      fetchData();
+    }
   }, [productId, user]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        setSubmitting(true);
+        
+        // API ile dosya yükleme işlemi
+        const imageUrl = await api.uploadImage(file, 'products');
+        
         setFormData(prev => ({
           ...prev,
-          image: reader.result
+          image: imageUrl
         }));
-      };
-      reader.readAsDataURL(file);
+        
+      } catch (error) {
+        console.error('Resim yüklenirken hata:', error);
+        setError('Resim yüklenirken bir hata oluştu.');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
@@ -122,11 +150,30 @@ function EditProductContent() {
       return;
     }
 
-    // Gerçek projede bir API isteği yapılır
-    setTimeout(() => {
+    try {
+      // Ürün güncelleme API çağrısı
+      await api.updateProduct(productId, {
+        name: formData.name,
+        description: formData.description,
+        price: price,
+        category: formData.category,
+        image: formData.image,
+        is_available: formData.is_available
+      });
+      
       setSuccess('Ürün başarıyla güncellendi');
+      
+      // Kısa süre sonra ürünler sayfasına yönlendir
+      setTimeout(() => {
+        router.push('/store/products');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Ürün güncellenirken hata:', error);
+      setError('Ürün güncellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+    } finally {
       setSubmitting(false);
-    }, 1000);
+    }
   };
 
   if (loading) {
@@ -249,36 +296,39 @@ function EditProductContent() {
                 required
               >
                 <option value="">Kategori Seçin</option>
-                {categories.map((category, index) => (
-                  <option key={index} value={category}>{category}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name}>{category.name}</option>
                 ))}
               </select>
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Durum
+                Stok Durumu
               </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="active">Aktif</option>
-                <option value="inactive">Pasif</option>
-              </select>
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="is_available"
+                  name="is_available"
+                  checked={formData.is_available}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="is_available" className="ml-2 block text-sm text-gray-900">
+                  Stokta var (Sipariş edilebilir)
+                </label>
+              </div>
             </div>
             <div className="md:col-span-2">
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Açıklama
+                Ürün Açıklaması
               </label>
               <textarea
                 id="description"
                 name="description"
+                rows="4"
                 value={formData.description}
                 onChange={handleChange}
-                rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               ></textarea>
             </div>
@@ -286,53 +336,78 @@ function EditProductContent() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Ürün Görseli
               </label>
-              <div className="flex items-center space-x-6">
-                <div className="flex-shrink-0 h-32 w-32 bg-gray-100 rounded-md overflow-hidden">
-                  <img 
-                    src={formData.image} 
-                    alt="Ürün önizleme" 
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+              <div className="mt-1 flex items-center">
+                {formData.image ? (
+                  <div className="relative w-32 h-32 mr-4 border rounded-md overflow-hidden">
+                    <img
+                      src={formData.image}
+                      alt={formData.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image: '' })}
+                      className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-md"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 mr-4 border rounded-md flex items-center justify-center bg-gray-100">
+                    <svg className="h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
                 <div className="flex-1">
-                  <label htmlFor="image" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
-                    Görsel Değiştir
-                  </label>
-                  <input 
-                    id="image" 
-                    name="image" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleFileChange} 
-                    className="sr-only" 
+                  <input
+                    type="file"
+                    id="image"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
                   />
-                  <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF max 1MB</p>
+                  <label
+                    htmlFor="image"
+                    className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Resim Yükle
+                  </label>
+                  <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF formatında 2MB'a kadar</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
-            <Link 
+          <div className="mt-8 flex justify-end">
+            <Link
               href="/store/products"
-              className="mr-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center"
+              className="mr-4 bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               İptal
             </Link>
             <button
               type="submit"
               disabled={submitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded flex items-center"
+              className={`${
+                submitting
+                  ? 'bg-blue-400'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
             >
               {submitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   Kaydediliyor...
-                </>
-              ) : 'Değişiklikleri Kaydet'}
+                </span>
+              ) : (
+                'Değişiklikleri Kaydet'
+              )}
             </button>
           </div>
         </form>

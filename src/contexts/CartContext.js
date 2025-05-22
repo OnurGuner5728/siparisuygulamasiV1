@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import supabase from '@/lib/supabase';
 
 // Cart Context oluşturma
 const CartContext = createContext(null);
@@ -17,7 +18,8 @@ const defaultCartValue = {
   calculateSubtotal: () => 0,
   calculateDeliveryFee: () => 0,
   calculateTotal: () => 0,
-  totalItems: 0
+  totalItems: 0,
+  getCartItemsByStoreType: () => []
 };
 
 // Cart Provider bileşeni
@@ -27,38 +29,44 @@ export function CartProvider({ children }) {
   const [error, setError] = useState(null);
   const { user, isAuthenticated } = useAuth();
   
-  // Kullanıcıya göre sepet anahtarı oluştur
-  const getCartKey = useCallback(() => {
-    return isAuthenticated && user ? `cart_${user.id}` : 'cart_guest';
-  }, [isAuthenticated, user]);
-  
-  // Kullanıcı değiştiğinde sepeti güncelle
-  useEffect(() => {
-    if (loading) return;
-    
+  // Sepeti kullanıcı ID veya konuk ID'ye göre yükleme
+  const loadCart = useCallback(async () => {
     try {
-      const cartKey = getCartKey();
-      const storedCart = localStorage.getItem(cartKey);
+      setLoading(true);
       
-      if (storedCart) {
-        setCartItems(JSON.parse(storedCart));
+      if (isAuthenticated && user) {
+        try {
+          // Kullanıcı oturum açmışsa, veritabanından sepetini al
+          const { data, error: supabaseError } = await supabase
+            .from('cart_items')
+            .select('*')
+            .eq('user_id', user.id);
+            
+          if (supabaseError) throw supabaseError;
+          
+          if (data && data.length > 0) {
+            setCartItems(data);
+          } else {
+            setCartItems([]);
+          }
+        } catch (authError) {
+          console.error('Oturum hatası:', authError);
+          // Oturum hatası durumunda localStorage'dan sepeti al
+          const storedCart = localStorage.getItem('cart_guest');
+          if (storedCart) {
+            setCartItems(JSON.parse(storedCart));
+          } else {
+            setCartItems([]);
+          }
+        }
       } else {
-        // Kullanıcı değiştiyse ve sepet boşsa sepeti sıfırla
-        setCartItems([]);
-      }
-    } catch (err) {
-      console.error('Sepet güncelleme hatası:', err);
-      setError(err);
-    }
-  }, [user, isAuthenticated, loading, getCartKey]);
-  
-  // Sayfa yüklendiğinde localStorage'dan sepet verilerini al
-  useEffect(() => {
-    try {
-      const cartKey = getCartKey();
-      const storedCart = localStorage.getItem(cartKey);
-      if (storedCart) {
-        setCartItems(JSON.parse(storedCart));
+        // Kullanıcı oturum açmamışsa, localStorage'dan sepeti al
+        const storedCart = localStorage.getItem('cart_guest');
+        if (storedCart) {
+          setCartItems(JSON.parse(storedCart));
+        } else {
+          setCartItems([]);
+        }
       }
     } catch (err) {
       console.error('Sepet yükleme hatası:', err);
@@ -66,105 +74,200 @@ export function CartProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [getCartKey]);
-
-  // Sepet verilerini localStorage'a kaydet
-  const saveCartToStorage = useCallback((cartData) => {
+  }, [isAuthenticated, user]);
+  
+  // Kullanıcı değiştiğinde sepeti yükle
+  useEffect(() => {
+    loadCart();
+  }, [loadCart, user, isAuthenticated]);
+  
+  // Sepet verilerini kaydetme
+  const saveCart = useCallback(async (cartData) => {
     try {
-      localStorage.setItem(getCartKey(), JSON.stringify(cartData));
+      if (isAuthenticated && user) {
+        try {
+          // Önce mevcut sepeti temizle
+          await supabase
+            .from('cart_items')
+            .delete()
+            .eq('user_id', user.id);
+            
+          // Sepet boş değilse yeni öğeleri ekle
+          if (cartData.length > 0) {
+            // Her öğeye kullanıcı ID'si ekle
+            const cartItemsWithUserId = cartData.map(item => ({
+              ...item,
+              user_id: user.id
+            }));
+            
+            const { error: insertError } = await supabase
+              .from('cart_items')
+              .insert(cartItemsWithUserId);
+              
+            if (insertError) throw insertError;
+          }
+        } catch (authError) {
+          console.error('Sepet kaydetme oturum hatası:', authError);
+          // Hata durumunda localStorage'a kaydet
+          localStorage.setItem('cart_guest', JSON.stringify(cartData));
+        }
+      } else {
+        // Kullanıcı oturum açmamışsa, localStorage'a kaydet
+        localStorage.setItem('cart_guest', JSON.stringify(cartData));
+      }
     } catch (err) {
       console.error('Sepet kaydetme hatası:', err);
       setError(err);
+      // Hata durumunda localStorage'a kaydet
+      localStorage.setItem('cart_guest', JSON.stringify(cartData));
     }
-  }, [getCartKey]);
+  }, [isAuthenticated, user]);
 
   // Sepete ürün ekleme
-  const addToCart = useCallback((product) => {
+  const addToCart = useCallback(async (product) => {
     try {
-      setCartItems(prevItems => {
-        const existingItem = prevItems.find(item => item.id === product.id);
+      let updatedCart = [];
+      
+      // product.id yerine product.product_id kullan (ürün detay sayfasından gelen property)
+      const productId = product.product_id || product.id;
+      
+      if (!productId) {
+        console.error('Ürün ID bulunamadı:', product);
+        throw new Error('Ürün ID bulunamadı');
+      }
+      
+      // Store type kontrol et (market, yemek, su, çiçek, vs.)
+      const storeType = product.store_type || 'market';
+      
+      const existingItem = cartItems.find(item => 
+        item.product_id === productId && 
+        item.store_id === product.store_id
+      );
+      
+      if (existingItem) {
+        // Ürün sepette varsa, miktarını artır
+        updatedCart = cartItems.map(item => 
+          item.product_id === productId && item.store_id === product.store_id
+            ? { ...item, quantity: item.quantity + 1 } 
+            : item
+        );
+      } else {
+        // Ürün sepette yoksa, yeni ekle
+        const newItem = {
+          product_id: productId,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+          image: product.image,
+          store_id: product.store_id,
+          store_name: product.storeName || product.store_name || '',
+          store_type: storeType,
+          notes: product.notes || '',
+          category: product.category || ''
+        };
         
-        let updatedCart;
-        if (existingItem) {
-          // Ürün sepette varsa, miktarını artır
-          updatedCart = prevItems.map(item => 
-            item.id === product.id 
-              ? { ...item, quantity: item.quantity + 1 } 
-              : item
-          );
-        } else {
-          // Ürün sepette yoksa, yeni ekle
-          updatedCart = [...prevItems, { ...product, quantity: 1 }];
-        }
-        
-        saveCartToStorage(updatedCart);
-        return updatedCart;
-      });
+        updatedCart = [...cartItems, newItem];
+      }
+      
+      setCartItems(updatedCart);
+      await saveCart(updatedCart);
     } catch (err) {
       console.error('Ürün ekleme hatası:', err);
       setError(err);
     }
-  }, [saveCartToStorage]);
+  }, [cartItems, saveCart]);
 
   // Sepetten ürün çıkarma
-  const removeFromCart = useCallback((productId) => {
+  const removeFromCart = useCallback(async (productId, storeId) => {
     try {
-      setCartItems(prevItems => {
-        const existingItem = prevItems.find(item => item.id === productId);
-        
-        if (!existingItem) return prevItems;
-        
-        let updatedCart;
-        if (existingItem.quantity > 1) {
-          // Miktarı birden fazlaysa, miktarı azalt
-          updatedCart = prevItems.map(item => 
-            item.id === productId 
-              ? { ...item, quantity: item.quantity - 1 } 
-              : item
-          );
-        } else {
-          // Miktar 1 ise, ürünü tamamen kaldır
-          updatedCart = prevItems.filter(item => item.id !== productId);
-        }
-        
-        saveCartToStorage(updatedCart);
-        return updatedCart;
-      });
+      const existingItem = cartItems.find(item => 
+        item.product_id === productId && 
+        (!storeId || item.store_id === storeId)
+      );
+      
+      if (!existingItem) return;
+      
+      let updatedCart = [];
+      
+      if (existingItem.quantity > 1) {
+        // Miktarı birden fazlaysa, miktarı azalt
+        updatedCart = cartItems.map(item => 
+          item.product_id === productId && (!storeId || item.store_id === storeId)
+            ? { ...item, quantity: item.quantity - 1 } 
+            : item
+        );
+      } else {
+        // Miktar 1 ise, ürünü tamamen kaldır
+        updatedCart = cartItems.filter(item => 
+          !(item.product_id === productId && (!storeId || item.store_id === storeId))
+        );
+      }
+      
+      setCartItems(updatedCart);
+      await saveCart(updatedCart);
     } catch (err) {
       console.error('Ürün çıkarma hatası:', err);
       setError(err);
     }
-  }, [saveCartToStorage]);
+  }, [cartItems, saveCart]);
 
   // Sepetten ürünü tamamen kaldırma
-  const removeItemCompletely = useCallback((productId) => {
+  const removeItemCompletely = useCallback(async (productId, storeId) => {
     try {
-      setCartItems(prevItems => {
-        const updatedCart = prevItems.filter(item => item.id !== productId);
-        saveCartToStorage(updatedCart);
-        return updatedCart;
-      });
+      const updatedCart = cartItems.filter(item => 
+        !(item.product_id === productId && (!storeId || item.store_id === storeId))
+      );
+      setCartItems(updatedCart);
+      await saveCart(updatedCart);
     } catch (err) {
       console.error('Ürünü tamamen kaldırma hatası:', err);
       setError(err);
     }
-  }, [saveCartToStorage]);
+  }, [cartItems, saveCart]);
 
   // Sepeti tamamen temizleme
-  const clearCart = useCallback(() => {
+  const clearCart = useCallback(async () => {
     try {
       setCartItems([]);
-      localStorage.removeItem(getCartKey());
+      
+      if (isAuthenticated && user) {
+        // Veritabanından sepeti temizle
+        const { error: deleteError } = await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', user.id);
+          
+        if (deleteError) throw deleteError;
+      } else {
+        // LocalStorage'dan sepeti temizle
+        localStorage.removeItem('cart_guest');
+      }
     } catch (err) {
       console.error('Sepeti temizleme hatası:', err);
       setError(err);
     }
-  }, [getCartKey]);
+  }, [isAuthenticated, user]);
+
+  // Mağaza tipine göre sepetteki ürünleri getir
+  const getCartItemsByStoreType = useCallback((storeType) => {
+    try {
+      return cartItems.filter(item => 
+        !storeType || item.store_type === storeType
+      );
+    } catch (err) {
+      console.error('Mağaza tipine göre sepet filtreleme hatası:', err);
+      return [];
+    }
+  }, [cartItems]);
 
   // Ara toplam hesaplama
-  const calculateSubtotal = useCallback(() => {
+  const calculateSubtotal = useCallback((storeType) => {
     try {
-      return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+      const items = storeType 
+        ? cartItems.filter(item => item.store_type === storeType) 
+        : cartItems;
+        
+      return items.reduce((total, item) => total + (item.price * item.quantity), 0);
     } catch (err) {
       console.error('Ara toplam hesaplama hatası:', err);
       setError(err);
@@ -173,9 +276,9 @@ export function CartProvider({ children }) {
   }, [cartItems]);
 
   // Teslimat ücreti hesaplama (150 TL üzeri ücretsiz)
-  const calculateDeliveryFee = useCallback(() => {
+  const calculateDeliveryFee = useCallback((storeType) => {
     try {
-      const subtotal = calculateSubtotal();
+      const subtotal = calculateSubtotal(storeType);
       return subtotal >= 150 ? 0 : 15;
     } catch (err) {
       console.error('Teslimat ücreti hesaplama hatası:', err);
@@ -185,9 +288,9 @@ export function CartProvider({ children }) {
   }, [calculateSubtotal]);
 
   // Toplam tutar hesaplama
-  const calculateTotal = useCallback(() => {
+  const calculateTotal = useCallback((storeType) => {
     try {
-      return calculateSubtotal() + calculateDeliveryFee();
+      return calculateSubtotal(storeType) + calculateDeliveryFee(storeType);
     } catch (err) {
       console.error('Toplam tutar hesaplama hatası:', err);
       setError(err);
@@ -218,7 +321,8 @@ export function CartProvider({ children }) {
     calculateSubtotal,
     calculateDeliveryFee,
     calculateTotal,
-    totalItems
+    totalItems,
+    getCartItemsByStoreType
   }), [
     cartItems, 
     loading, 
@@ -230,7 +334,8 @@ export function CartProvider({ children }) {
     calculateSubtotal, 
     calculateDeliveryFee, 
     calculateTotal, 
-    totalItems
+    totalItems,
+    getCartItemsByStoreType
   ]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

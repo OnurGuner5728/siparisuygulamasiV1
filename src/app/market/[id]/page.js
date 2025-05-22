@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { mockMarkets, mockProducts } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 
 export default function MarketDetailPage() {
   const params = useParams();
-  const marketId = params?.id ? parseInt(params.id) : null;
+  const marketId = params?.id || null;
   
   // useCart hook'unu doğrudan çağırıyoruz - React Hook kuralları gereği koşulsuz olmalı
   const cartFunctions = useCart();
@@ -17,65 +17,70 @@ export default function MarketDetailPage() {
   const removeFromCart = cartFunctions?.removeFromCart || (() => {});
   const cartItems = cartFunctions?.cartItems || [];
   
-  // Dummy veri - Gerçek uygulamada API'den gelecek
   const [market, setMarket] = useState(null);
   const [marketProducts, setMarketProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [localCart, setLocalCart] = useState([]);
   
-  // Sahte veritabanından market bilgilerini al
   useEffect(() => {
-    // Gerçek uygulamada bir API isteği yapılacak
-    setTimeout(() => {
-      if (marketId) {
-        const foundMarket = mockMarkets.find(m => m.id === marketId);
-        
-        if (foundMarket) {
-          setMarket(foundMarket);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        if (marketId) {
+          // Market bilgilerini getir
+          const marketData = await api.getStoreById(marketId);
           
-          // Market için ürünleri filtrele - Şimdi sadece bu mağazaya ait ürünleri gösteriyoruz
-          const marketRelatedProducts = mockProducts.filter(p => 
-            p.storeId === marketId
-          );
-          
-          // Ürünlerin kategorilerini al
-          const categories = [...new Set(marketRelatedProducts.map(p => p.category))];
-          
-          // Market nesnesini kategori bilgisi ile güncelle
-          setMarket({
-            ...foundMarket,
-            categories: categories,
-            products: marketRelatedProducts
-          });
-          
-          setMarketProducts(marketRelatedProducts);
-          
-          // İlk kategoriyi seç
-          setSelectedCategory('Tümü');
+          if (marketData) {
+            // Marketin ürünlerini getir
+            const productsData = await api.getProductsByStoreId(marketId);
+            
+            // Ürünlerin kategorilerini al
+            const categories = [...new Set(productsData.map(p => p.category))].filter(Boolean);
+            
+            // Market nesnesini kategori bilgisi ile güncelle
+            setMarket({
+              ...marketData,
+              categories: categories,
+              products: productsData
+            });
+            
+            setMarketProducts(productsData);
+            
+            // İlk kategoriyi seç
+            setSelectedCategory('Tümü');
+          }
         }
+      } catch (error) {
+        console.error('Market verileri yüklenirken hata:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 500);
+    }
+    
+    fetchData();
   }, [marketId]);
 
   useEffect(() => {
     // CartContext'ten bu markete ait ürünleri filtrele
     if (market && cartItems) {
       const marketItems = cartItems.filter(item => 
-        item.storeName === market.name
+        item.store_id === marketId
       );
       setLocalCart(marketItems);
     }
-  }, [cartItems, market]);
+  }, [cartItems, market, marketId]);
 
   const handleAddToCart = (item) => {
     addToCart({
-      id: item.id,
+      product_id: item.id,
       name: item.name,
       price: item.price,
       quantity: 1,
-      storeName: market.name,
+      store_id: marketId,
+      store_name: market.name,
+      store_type: 'market',
+      category: item.category || '',
       image: item.image || 'https://placehold.co/100'
     });
   };
@@ -129,12 +134,20 @@ export default function MarketDetailPage() {
       {/* Market bilgisi başlık kısmı */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
         <div className="h-64 bg-gray-200 relative">
-          <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-bold ${market.isOpen ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            {market.isOpen ? 'Açık' : 'Kapalı'}
+          <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-bold ${market.is_open ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            {market.is_open ? 'Açık' : 'Kapalı'}
           </div>
-          <div className="h-full w-full flex items-center justify-center">
-            <span className="text-gray-400">Market resmi yüklenemiyor</span>
-          </div>
+          {market.cover_image_url ? (
+            <img 
+              src={market.cover_image_url}
+              alt={market.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center">
+              <span className="text-gray-400">Market resmi yüklenemiyor</span>
+            </div>
+          )}
         </div>
         
         <div className="p-6">
@@ -142,22 +155,22 @@ export default function MarketDetailPage() {
             <div>
               <h1 className="text-3xl font-bold">{market.name}</h1>
               <div className="flex items-center text-sm text-gray-600 mt-1">
-                <span className="mr-2">{market.type}</span>
-                <span className="mr-2">⭐ {market.rating}</span>
-                <span>{market.deliveryTime} teslimat</span>
+                <span className="mr-2">{market.type || 'Market'}</span>
+                {market.rating !== null && <span className="mr-2">⭐ {market.rating.toFixed(1)}</span>}
+                <span>{market.delivery_time_estimation || 'Belirtilmemiş'} teslimat</span>
               </div>
-              <p className="text-gray-600 mt-2">{market.address}</p>
+              <p className="text-gray-600 mt-2">{market.address || 'Adres belirtilmemiş'}</p>
             </div>
             
             <div className="mt-4 md:mt-0">
               <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                 <p className="text-sm font-medium">Minimum Sipariş Tutarı</p>
-                <p className="text-xl font-bold text-green-700">{market.minOrder} TL</p>
+                <p className="text-xl font-bold text-green-700">{market.min_order_amount || 0} TL</p>
               </div>
             </div>
           </div>
           
-          <p className="mt-4 text-gray-700 border-t pt-4">{market.description}</p>
+          <p className="mt-4 text-gray-700 border-t pt-4">{market.description || 'Bu market hakkında detaylı bilgi bulunmamaktadır.'}</p>
         </div>
       </div>
       
@@ -201,14 +214,22 @@ export default function MarketDetailPage() {
               filteredProducts.map(product => (
                 <div key={product.id} className="bg-white rounded-lg shadow-sm p-4">
                   <div className="h-36 bg-gray-100 rounded-md mb-3 flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">Ürün resmi yüklenemiyor</span>
+                    {product.image ? (
+                      <img 
+                        src={product.image} 
+                        alt={product.name} 
+                        className="h-full w-full object-contain p-2"
+                      />
+                    ) : (
+                      <span className="text-gray-400 text-sm">Ürün resmi yüklenemiyor</span>
+                    )}
                   </div>
                   <h3 className="font-bold truncate">{product.name}</h3>
                   <p className="text-sm text-gray-500 mb-3">{product.category}</p>
                   <div className="flex justify-between items-center">
                     <p className="font-bold text-green-700">{product.price.toFixed(2)} TL</p>
                     
-                    {cartItems.find(item => item.id === product.id) ? (
+                    {cartItems.find(item => item.product_id === product.id) ? (
                       <div className="flex items-center">
                         <button 
                           onClick={() => handleRemoveFromCart(product.id)}
@@ -219,7 +240,7 @@ export default function MarketDetailPage() {
                           </svg>
                         </button>
                         <span className="mx-2 font-medium">
-                          {cartItems.find(item => item.id === product.id).quantity}
+                          {cartItems.find(item => item.product_id === product.id).quantity}
                         </span>
                         <button 
                           onClick={() => handleAddToCart(product)}
@@ -244,6 +265,62 @@ export default function MarketDetailPage() {
             ) : (
               <div className="text-center py-8 bg-gray-50 rounded-lg col-span-2">
                 <p className="text-gray-500">Bu kategoride ürün bulunamadı.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Sipariş Özeti */}
+        <div className="w-full lg:w-1/3">
+          <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
+            <h3 className="text-xl font-bold mb-4">Sipariş Özeti</h3>
+            
+            {localCart.length > 0 ? (
+              <>
+                <div className="space-y-3 mb-6">
+                  {localCart.map(item => (
+                    <div key={item.product_id} className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs mr-2">
+                          {item.quantity}x
+                        </span>
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      <span className="font-medium">{(item.price * item.quantity).toFixed(2)} TL</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="border-t border-gray-200 pt-4 mb-4">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600">Ara Toplam</span>
+                    <span className="font-medium">
+                      {localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)} TL
+                    </span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600">Teslimat Ücreti</span>
+                    <span className="font-medium">9.90 TL</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold mt-4">
+                    <span>Toplam</span>
+                    <span>
+                      {(localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 9.90).toFixed(2)} TL
+                    </span>
+                  </div>
+                </div>
+                
+                <Link 
+                  href="/sepet" 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md font-medium text-center block"
+                >
+                  Sepete Git
+                </Link>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">Henüz sepetinizde ürün bulunmamaktadır.</p>
+                <p className="text-sm text-gray-400">Sipariş vermek için ürün ekleyin.</p>
               </div>
             )}
           </div>

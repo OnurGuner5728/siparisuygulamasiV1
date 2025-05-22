@@ -1,134 +1,136 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { FiPhoneOff, FiMic, FiMicOff, FiVolume2, FiVolumeX } from 'react-icons/fi';
-import { mockOrders } from '@/app/data/mockdatas';
+import { useRouter, useParams } from 'next/navigation';
+import { FiPhoneCall, FiPhoneOff, FiMic, FiMicOff, FiVolume2, FiVolumeX } from 'react-icons/fi';
+import api from '@/lib/api';
 
-export default function CourierCall({ params }) {
+export default function CallPage() {
+  return <CallPageContent />;
+}
+
+function CallPageContent() {
   const router = useRouter();
-  const { id } = params;
+  const params = useParams();
+  const orderId = params.id;
+  
   const [callDuration, setCallDuration] = useState(0);
   const [callStatus, setCallStatus] = useState('connecting'); // 'connecting', 'connected', 'ended'
   const [muted, setMuted] = useState(false);
   const [speaker, setSpeaker] = useState(true);
-  const [courier, setCourier] = useState(null);
+  const [contactPerson, setContactPerson] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
   
-  // Çağrı süresini hesapla
   useEffect(() => {
     if (callStatus === 'connected') {
       intervalRef.current = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
     }
-    
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [callStatus]);
   
-  // Kurye verilerini yükle
   useEffect(() => {
-    const loadCourierData = () => {
-      try {
-        // Gerçek uygulamada API'dan getirme işlemi yapılır
-        setTimeout(() => {
-          // Sipariş bilgisini almak için
-          const order = mockOrders.find(order => order.id === id);
-          
-          if (!order) {
-            setLoading(false);
-            router.replace('/profil/siparisler');
-            return;
-          }
-          
-          // Demo kurye bilgileri
-          const courierData = {
-            id: 'CRR123',
-            name: 'Mehmet K.',
-            phone: '+90 555 987 65 43',
-            photo: '/images/couriers/courier-placeholder.jpg',
-            rating: 4.8
-          };
-          
-          setCourier(courierData);
-          setLoading(false);
-          
-          // Kurye ile bağlantı simülasyonu
-          setTimeout(() => {
-            setCallStatus('connected');
-            // Arka plan ses efekti (isteğe bağlı)
-            if (audioRef.current) {
-              audioRef.current.play().catch(e => console.log('Ses otomatik oynatılamadı:', e));
-            }
-          }, 2000);
-        }, 1000);
-      } catch (error) {
-        console.error('Kurye verileri yüklenirken hata:', error);
+    const loadOrderAndContactData = async () => {
+      if (!orderId) {
+        setError('Sipariş ID\'si bulunamadı.');
         setLoading(false);
         router.replace('/profil/siparisler');
+        return;
+      }
+      setLoading(true);
+      try {
+        const order = await api.getOrderById(orderId);
+        
+        if (!order) {
+          setError('Sipariş bulunamadı.');
+          setLoading(false);
+          router.replace('/profil/siparisler');
+          return;
+        }
+        
+        if (order.store) {
+          setContactPerson({
+            type: 'store',
+            name: order.store.name || 'Mağaza',
+            phone: order.store.phone || 'Telefon Bilgisi Yok',
+            photo: order.store.logo,
+          });
+        } else if (order.customer) {
+          setContactPerson({
+            type: 'customer',
+            name: order.customer.name || 'Müşteri',
+            phone: order.customer.phone || 'Telefon Bilgisi Yok',
+            photo: order.customer.avatar_url || '/images/avatar-placeholder.png',
+          });
+        } else {
+          setError('İletişim kurulacak kişi bilgisi eksik.');
+          setLoading(false);
+          return;
+        }
+        
+        setTimeout(() => {
+          setCallStatus('connected');
+          if (audioRef.current) {
+            audioRef.current.play().catch(e => console.warn('Ses otomatik oynatılamadı:', e));
+          }
+        }, 1500);
+
+      } catch (err) {
+        console.error('Sipariş ve iletişim verileri yüklenirken hata:', err);
+        setError('Veriler yüklenirken bir hata oluştu.');
+      } finally {
+        setLoading(false);
       }
     };
     
-    if (id) {
-      loadCourierData();
-    }
+    loadOrderAndContactData();
     
-    // Sayfa terk edildiğinde çağrıyı sonlandır
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [id, router]);
+  }, [orderId, router]);
   
-  // Çağrıyı sonlandır
   const endCall = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setCallStatus('ended');
-    
-    // Arama ekranından çık
-    setTimeout(() => {
-      router.back();
-    }, 1000);
+    if (audioRef.current) audioRef.current.pause();
+    setTimeout(() => router.back(), 1000);
   };
   
-  // Mikrofonu aç/kapat
-  const toggleMute = () => {
-    setMuted(!muted);
-  };
+  const toggleMute = () => setMuted(!muted);
+  const toggleSpeaker = () => setSpeaker(!speaker);
   
-  // Hoparlörü aç/kapat
-  const toggleSpeaker = () => {
-    setSpeaker(!speaker);
-  };
-  
-  // Çağrı süresini formatla
   const formatCallDuration = () => {
     const minutes = Math.floor(callDuration / 60);
     const seconds = callDuration % 60;
-    return `${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  if (loading) {
+  if (loading || !contactPerson && callStatus !== 'ended') {
     return (
-      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center">
-        <div className="text-white text-center">
+      <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50">
+        <div className="text-white text-center p-8 bg-gray-800 rounded-lg shadow-xl">
           <div className="animate-pulse flex flex-col items-center justify-center">
-            <div className="w-24 h-24 rounded-full bg-gray-700 mb-4 flex items-center justify-center">
-              <FiPhoneOff className="w-12 h-12 text-gray-500" />
-            </div>
-            <p className="text-xl font-semibold mb-2">Bağlanıyor...</p>
-            <p className="text-gray-400">Lütfen bekleyin</p>
+            <FiPhoneCall className="w-16 h-16 text-blue-500 mb-6" />
+            <p className="text-2xl font-semibold mb-2">{error ? 'Hata' : 'Bağlanıyor...'}</p>
+            <p className="text-gray-400 text-lg">
+              {error ? error : (contactPerson ? `${contactPerson.name} aranıyor...` : 'Lütfen bekleyin')}
+            </p>
+            {error && (
+                <button 
+                    onClick={() => router.back()}
+                    className="mt-6 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded"
+                >
+                    Geri Dön
+                </button>
+            )}
           </div>
         </div>
       </div>
@@ -136,83 +138,80 @@ export default function CourierCall({ params }) {
   }
   
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-gray-900 to-black flex flex-col">
-      {/* Ses efekti (sessiz bir dosya) */}
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col z-40">
       <audio ref={audioRef} loop className="hidden">
-        <source src="/sounds/call-ambient.mp3" type="audio/mpeg" />
       </audio>
       
-      {/* Üst bilgi bölümü */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-white">
-        {/* Kurye bilgileri ve durum */}
-        <div className="relative w-32 h-32 rounded-full bg-gray-800 overflow-hidden mb-6">
-          <div className="w-full h-full bg-gradient-to-br from-blue-800 to-blue-900 flex items-center justify-center">
-            <span className="text-5xl font-semibold text-blue-300">
-              {courier?.name?.charAt(0) || "K"}
-            </span>
-          </div>
-          
-          {/* Bağlantı durumu animasyonu */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-white pt-16 sm:pt-20">
+        <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full mb-6 shadow-lg ring-4 ring-gray-700">
+          {contactPerson?.photo ? (
+            <img 
+              src={contactPerson.photo} 
+              alt={contactPerson.name} 
+              className="w-full h-full rounded-full object-cover" 
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center rounded-full">
+              <span className="text-5xl sm:text-6xl font-semibold text-white opacity-80">
+                {contactPerson?.name?.charAt(0)?.toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
           {callStatus === 'connected' && (
-            <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-pulse"></div>
+            <div className="absolute inset-0 border-4 border-green-400 rounded-full animate-ping-slow opacity-75"></div>
           )}
         </div>
         
-        <h2 className="text-2xl font-bold mb-1">{courier?.name || "Kurye"}</h2>
-        
-        <div className="text-blue-300 mb-6">
-          {callStatus === 'connecting' && 'Bağlanıyor...'}
+        <h2 className="text-3xl sm:text-4xl font-bold mb-1 tracking-tight">{contactPerson?.name || 'Bilinmeyen Kişi'}</h2>
+        <p className="text-blue-300 text-lg mb-6">
+          {callStatus === 'connecting' && 'Bağlantı kuruluyor...'}
           {callStatus === 'connected' && formatCallDuration()}
-          {callStatus === 'ended' && 'Arama sonlandı'}
-        </div>
+          {callStatus === 'ended' && 'Arama Sonlandırıldı'}
+        </p>
         
-        {/* Bağlantı durumu göstergesi */}
         {callStatus === 'connecting' && (
-          <div className="flex space-x-1 mb-10">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          <div className="flex space-x-1.5 mb-10">
+            <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse-dot" style={{ animationDelay: '0s' }}></div>
+            <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse-dot" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse-dot" style={{ animationDelay: '0.4s' }}></div>
           </div>
         )}
       </div>
       
-      {/* Alt kontrol bölümü */}
-      <div className="p-8 pb-12">
-        <div className="flex justify-center space-x-6">
-          {/* Mikrofon kontrolü */}
+      <div className="p-6 sm:p-8 pb-10 sm:pb-12 bg-black bg-opacity-20 backdrop-blur-sm">
+        <div className="flex justify-around items-center max-w-xs mx-auto">
           <button 
             onClick={toggleMute}
-            className={`w-16 h-16 rounded-full flex items-center justify-center ${
-              muted ? 'bg-gray-800 text-white' : 'bg-gray-700 text-blue-400'
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-colors duration-200 ${
+              muted ? 'bg-gray-600 bg-opacity-70 text-white' : 'bg-gray-700 bg-opacity-50 text-blue-300 hover:bg-gray-600'
             }`}
+            aria-label={muted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
           >
-            {muted ? <FiMicOff size={24} /> : <FiMic size={24} />}
+            {muted ? <FiMicOff size={28} /> : <FiMic size={28} />}
           </button>
           
-          {/* Aramayı sonlandır */}
           <button 
             onClick={endCall}
-            className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white"
+            className="w-20 h-20 sm:w-24 sm:h-24 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-white shadow-lg transform active:scale-95 transition-transform duration-150"
+            aria-label="Aramayı Sonlandır"
           >
-            <FiPhoneOff size={28} />
+            <FiPhoneOff size={36} />
           </button>
           
-          {/* Hoparlör kontrolü */}
           <button 
             onClick={toggleSpeaker}
-            className={`w-16 h-16 rounded-full flex items-center justify-center ${
-              speaker ? 'bg-gray-700 text-blue-400' : 'bg-gray-800 text-white'
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-colors duration-200 ${
+              speaker ? 'bg-gray-700 bg-opacity-50 text-blue-300 hover:bg-gray-600' : 'bg-gray-600 bg-opacity-70 text-white'
             }`}
+            aria-label={speaker ? 'Hoparlörü Kapat' : 'Hoparlörü Aç'}
           >
-            {speaker ? <FiVolume2 size={24} /> : <FiVolumeX size={24} />}
+            {speaker ? <FiVolume2 size={28} /> : <FiVolumeX size={28} />}
           </button>
         </div>
       </div>
       
-      {/* Güvenlik notu */}
-      <div className="absolute bottom-0 inset-x-0 pb-6 text-center text-gray-500 text-xs">
-        <p>Bu görüşme SiparişApp üzerinden gerçekleştirilmektedir.</p>
-        <p>Güvenliğiniz için görüşmeler kaydedilmektedir.</p>
+      <div className="absolute bottom-4 inset-x-0 text-center text-gray-400 text-xs px-4">
+        <p>Bu görüşme SiparişApp güvencesiyle yapılmaktadır.</p>
       </div>
     </div>
   );

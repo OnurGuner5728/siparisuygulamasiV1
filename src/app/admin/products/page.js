@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
-import { mockProducts } from '@/app/data/mockdatas';
+import api from '@/lib/api';
 
 export default function AdminProducts() {
   return (
@@ -15,87 +16,92 @@ export default function AdminProducts() {
 }
 
 function AdminProductsContent() {
+  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [storeFilter, setStoreFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [stores, setStores] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [allStores, setAllStores] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
 
   useEffect(() => {
-    // Mock API çağrısı
-    setTimeout(() => {
-      // Merkezi mock veri deposundan veri çek
-      setProducts(mockProducts);
-      
-      // Mağazaları ve kategorileri oluştur
-      const storesSet = new Set();
-      const categoriesSet = new Set();
-      
-      mockProducts.forEach(product => {
-        storesSet.add(JSON.stringify({id: product.storeId, name: product.storeName}));
-        categoriesSet.add(product.category);
-      });
-      
-      const uniqueStores = Array.from(storesSet).map(store => JSON.parse(store));
-      const uniqueCategories = Array.from(categoriesSet);
-      
-      setStores(uniqueStores);
-      setCategories(uniqueCategories);
-      setLoading(false);
-    }, 1000);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const productsData = await api.getProducts();
+        const storesData = await api.getStores();
+        
+        setProducts(productsData || []);
+        setAllStores(storesData || []);
+
+        const uniqueCategories = Array.from(new Set(productsData.map(p => p.category).filter(Boolean)));
+        setAllCategories(uniqueCategories);
+
+      } catch (error) {
+        console.error("Veri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // Arama ve filtreleme
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const storeName = product.store?.name || '';
+    const matchesSearch = 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      storeName.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStore = storeFilter === 'all' || product.storeId === parseInt(storeFilter);
+    const matchesStore = storeFilter === 'all' || product.store_id === storeFilter;
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     
     return matchesSearch && matchesStore && matchesCategory;
   });
 
-  // Ürün silme
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     if (window.confirm('Bu ürünü silmek istediğinize emin misiniz?')) {
-      // Gerçek projede API isteği yapılır
-      setProducts(products.filter(product => product.id !== productId));
-    }
-  };
-
-  // Ürün durumunu değiştirme
-  const handleToggleStatus = (productId) => {
-    const updatedProducts = products.map(product => {
-      if (product.id === productId) {
-        return {
-          ...product,
-          status: product.status === 'active' ? 'inactive' : 'active'
-        };
+      try {
+        await api.deleteProduct(productId);
+        setProducts(prevProducts => prevProducts.filter(product => product.id !== productId));
+      } catch (error) {
+        console.error("Ürün silinirken hata:", error);
+        alert('Ürün silinirken bir hata oluştu.');
       }
-      return product;
-    });
-    
-    setProducts(updatedProducts);
-  };
-
-  // Ürün durumunu formatla
-  const formatStatus = (status) => {
-    switch (status) {
-      case 'active':
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Aktif</span>;
-      case 'inactive':
-        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Pasif</span>;
-      default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Bilinmiyor</span>;
     }
   };
 
-  // Fiyat formatlama
+  const handleToggleStatus = async (productId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      await api.updateProduct(productId, { is_available: newStatus });
+      setProducts(prevProducts =>
+        prevProducts.map(product =>
+          product.id === productId ? { ...product, is_available: newStatus } : product
+        )
+      );
+    } catch (error) {
+      console.error("Ürün durumu güncellenirken hata:", error);
+      alert('Ürün durumu güncellenemedi.');
+    }
+  };
+
+  const formatStatus = (isAvailable) => {
+    if (isAvailable) {
+      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Aktif</span>;
+    } else {
+      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Pasif</span>;
+    }
+  };
+
   const formatPrice = (price) => {
+    if (typeof price !== 'number') return '-';
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(price);
+  };
+
+  const handleEditProduct = (productId) => {
+    router.push(`/admin/products/${productId}`);
   };
 
   if (loading) {
@@ -160,7 +166,7 @@ function AdminProductsContent() {
               onChange={(e) => setStoreFilter(e.target.value)}
             >
               <option value="all">Tüm Mağazalar</option>
-              {stores.map((store) => (
+              {allStores.map((store) => (
                 <option key={store.id} value={store.id}>{store.name}</option>
               ))}
             </select>
@@ -170,7 +176,7 @@ function AdminProductsContent() {
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="all">Tüm Kategoriler</option>
-              {categories.map((category, index) => (
+              {allCategories.map((category, index) => (
                 <option key={index} value={category}>{category}</option>
               ))}
             </select>
@@ -207,11 +213,11 @@ function AdminProductsContent() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
-                        <img className="h-10 w-10 rounded-md object-cover" src={product.image} alt={product.name} />
+                        <img className="h-10 w-10 rounded-md object-cover" src={product.image || 'https://placehold.co/40'} alt={product.name} />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                        <div className="text-xs text-gray-500">{product.description.substring(0, 50)}...</div>
+                        <div className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => handleEditProduct(product.id)}>{product.name}</div>
+                        <div className="text-xs text-gray-500">{product.description ? product.description.substring(0, 50) + '...' : '-'}</div>
                       </div>
                     </div>
                   </td>
@@ -219,29 +225,30 @@ function AdminProductsContent() {
                     <div className="text-sm font-medium text-gray-900">{formatPrice(product.price)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{product.storeName}</div>
+                    <div className="text-sm text-gray-900">{product.store?.name || 'Bilinmiyor'}</div>
+                    <div className="text-xs text-gray-500">ID: {product.store_id.substring(0,8)}...</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                      {product.category}
+                      {product.category || 'Belirtilmemiş'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {formatStatus(product.status)}
+                    {formatStatus(product.is_available)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <Link 
-                        href={`/admin/products/${product.id}`}
+                      <button 
+                        onClick={() => handleEditProduct(product.id)}
                         className="text-blue-600 hover:text-blue-900"
                       >
                         Düzenle
-                      </Link>
+                      </button>
                       <button 
-                        onClick={() => handleToggleStatus(product.id)}
-                        className={`${product.status === 'active' ? 'text-amber-600 hover:text-amber-900' : 'text-green-600 hover:text-green-900'}`}
+                        onClick={() => handleToggleStatus(product.id, product.is_available)}
+                        className={`${product.is_available ? 'text-amber-600 hover:text-amber-900' : 'text-green-600 hover:text-green-900'}`}
                       >
-                        {product.status === 'active' ? 'Pasif Yap' : 'Aktif Yap'}
+                        {product.is_available ? 'Pasif Yap' : 'Aktif Yap'}
                       </button>
                       <button 
                         onClick={() => handleDeleteProduct(product.id)}

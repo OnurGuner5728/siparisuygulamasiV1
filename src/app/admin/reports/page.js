@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import AuthGuard from '../../../components/AuthGuard';
-import { mockOrders, mockUsers, mockStores, mockCategories } from '@/app/data/mockdatas';
+import api from '@/lib/api'; // API servisini import et
 
 export default function AdminReports() {
   return (
@@ -17,157 +17,142 @@ export default function AdminReports() {
 function AdminReportsContent() {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState({
-    sales: {},
-    orders: {},
-    users: {},
-    stores: {}
+    sales: { byCategory: {} }, // Başlangıçta byCategory tanımlı olmalı
+    orders: { byStatus: {}, byCategory: {} }, // Başlangıçta byStatus ve byCategory tanımlı olmalı
+    users: { byRole: {} }, // Başlangıçta byRole tanımlı olmalı
+    stores: { byCategory: {}, topStores: [] } // Başlangıçta byCategory ve topStores tanımlı olmalı
   });
-  const [dateRange, setDateRange] = useState('week');
+  // const [dateRange, setDateRange] = useState('week'); // Bu filtre henüz aktif değil
   const [reportType, setReportType] = useState('sales');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  // const [categoryFilter, setCategoryFilter] = useState('all'); // Bu filtre henüz aktif değil
+  const [mainCategories, setMainCategories] = useState([]);
 
   useEffect(() => {
-    // Mock veri yükleme - gerçekte bir API isteği olacak
-    setTimeout(() => {
-      const orders = mockOrders;
-      const users = mockUsers;
-      const stores = mockStores;
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const ordersData = await api.getAllOrders(); 
+        const usersData = await api.getAllUsers();
+        const storesData = await api.getStores();
+        const mainCategoriesData = await api.getMainCategories();
+        setMainCategories(mainCategoriesData);
 
-      // Satış raporları
-      const salesData = {
-        total: orders.reduce((sum, order) => sum + order.total, 0),
-        todayTotal: orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const today = new Date();
-          return orderDate.setHours(0, 0, 0, 0) === today.setHours(0, 0, 0, 0);
-        }).reduce((sum, order) => sum + order.total, 0),
-        weeklyTotal: orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const today = new Date();
-          const weekAgo = new Date();
-          weekAgo.setDate(today.getDate() - 7);
-          return orderDate >= weekAgo && orderDate <= today;
-        }).reduce((sum, order) => sum + order.total, 0),
-        monthlyTotal: orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const today = new Date();
-          const monthAgo = new Date();
-          monthAgo.setMonth(today.getMonth() - 1);
-          return orderDate >= monthAgo && orderDate <= today;
-        }).reduce((sum, order) => sum + order.total, 0),
-        averageOrderValue: orders.length > 0 ? 
-          orders.reduce((sum, order) => sum + order.total, 0) / orders.length : 0,
-        byCategory: {
-          Yemek: orders.filter(order => order.category === 'Yemek')
-            .reduce((sum, order) => sum + order.total, 0),
-          Market: orders.filter(order => order.category === 'Market')
-            .reduce((sum, order) => sum + order.total, 0),
-          Su: orders.filter(order => order.category === 'Su')
-            .reduce((sum, order) => sum + order.total, 0),
-          Aktüel: orders.filter(order => order.category === 'Aktüel')
-            .reduce((sum, order) => sum + order.total, 0)
-        }
-      };
+        // Tarih fonksiyonları
+        const today = new Date();
+        const weekAgo = new Date();
+        weekAgo.setDate(today.getDate() - 7);
+        const monthAgo = new Date();
+        monthAgo.setMonth(today.getMonth() - 1);
 
-      // Sipariş raporları
-      const ordersData = {
-        total: orders.length,
-        todayTotal: orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const today = new Date();
-          return orderDate.setHours(0, 0, 0, 0) === today.setHours(0, 0, 0, 0);
-        }).length,
-        weeklyTotal: orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const today = new Date();
-          const weekAgo = new Date();
-          weekAgo.setDate(today.getDate() - 7);
-          return orderDate >= weekAgo && orderDate <= today;
-        }).length,
-        monthlyTotal: orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const today = new Date();
-          const monthAgo = new Date();
-          monthAgo.setMonth(today.getMonth() - 1);
-          return orderDate >= monthAgo && orderDate <= today;
-        }).length,
-        byStatus: {
-          pending: orders.filter(order => order.status === 'pending').length,
-          in_progress: orders.filter(order => order.status === 'in_progress').length,
-          delivered: orders.filter(order => order.status === 'delivered').length,
-          cancelled: orders.filter(order => order.status === 'cancelled').length
-        },
-        byCategory: {
-          Yemek: orders.filter(order => order.category === 'Yemek').length,
-          Market: orders.filter(order => order.category === 'Market').length,
-          Su: orders.filter(order => order.category === 'Su').length,
-          Aktüel: orders.filter(order => order.category === 'Aktüel').length
-        }
-      };
+        // Rapor verilerini hesapla
+        const salesReport = {
+          total: ordersData.reduce((sum, order) => sum + order.total, 0),
+          todayTotal: ordersData.filter(order => new Date(order.order_date).setHours(0,0,0,0) === today.setHours(0,0,0,0)).reduce((sum, order) => sum + order.total, 0),
+          weeklyTotal: ordersData.filter(order => {
+            const orderDate = new Date(order.order_date);
+            return orderDate >= weekAgo && orderDate <= today;
+          }).reduce((sum, order) => sum + order.total, 0),
+          monthlyTotal: ordersData.filter(order => {
+            const orderDate = new Date(order.order_date);
+            return orderDate >= monthAgo && orderDate <= today;
+          }).reduce((sum, order) => sum + order.total, 0),
+          averageOrderValue: ordersData.length > 0 ? ordersData.reduce((sum, order) => sum + order.total, 0) / ordersData.length : 0,
+          byCategory: mainCategoriesData.reduce((acc, category) => {
+            acc[category.name] = ordersData
+              .filter(order => {
+                const store = storesData.find(s => s.id === order.store_id);
+                return store && store.category_id === category.id;
+              })
+              .reduce((sum, order) => sum + order.total, 0);
+            return acc;
+          }, {}),
+        };
 
-      // Kullanıcı raporları
-      const usersData = {
-        total: users.length,
-        active: users.filter(user => user.status === 'active').length,
-        inactive: users.filter(user => user.status === 'inactive').length,
-        byRole: {
-          user: users.filter(user => user.role === 'user').length,
-          store: users.filter(user => user.role === 'store').length,
-          admin: users.filter(user => user.role === 'admin').length
-        },
-        newUsersToday: users.filter(user => {
-          const regDate = new Date(user.registrationDate);
-          const today = new Date();
-          return regDate.setHours(0, 0, 0, 0) === today.setHours(0, 0, 0, 0);
-        }).length,
-        newUsersWeek: users.filter(user => {
-          const regDate = new Date(user.registrationDate);
-          const today = new Date();
-          const weekAgo = new Date();
-          weekAgo.setDate(today.getDate() - 7);
-          return regDate >= weekAgo && regDate <= today;
-        }).length,
-        newUsersMonth: users.filter(user => {
-          const regDate = new Date(user.registrationDate);
-          const today = new Date();
-          const monthAgo = new Date();
-          monthAgo.setMonth(today.getMonth() - 1);
-          return regDate >= monthAgo && regDate <= today;
-        }).length
-      };
+        const ordersReport = {
+          total: ordersData.length,
+          todayTotal: ordersData.filter(order => new Date(order.order_date).setHours(0,0,0,0) === today.setHours(0,0,0,0)).length,
+          weeklyTotal: ordersData.filter(order => {
+            const orderDate = new Date(order.order_date);
+            return orderDate >= weekAgo && orderDate <= today;
+          }).length,
+          monthlyTotal: ordersData.filter(order => {
+            const orderDate = new Date(order.order_date);
+            return orderDate >= monthAgo && orderDate <= today;
+          }).length,
+          byStatus: ordersData.reduce((acc, order) => {
+            acc[order.status] = (acc[order.status] || 0) + 1;
+            return acc;
+          }, {}),
+          byCategory: mainCategoriesData.reduce((acc, category) => {
+            acc[category.name] = ordersData
+              .filter(order => {
+                const store = storesData.find(s => s.id === order.store_id);
+                return store && store.category_id === category.id;
+              }).length;
+            return acc;
+          }, {}),
+        };
 
-      // Mağaza raporları
-      const storesData = {
-        total: stores.length,
-        active: stores.filter(store => store.status === 'active').length,
-        pending: stores.filter(store => store.status === 'pending').length,
-        byCategory: {
-          Yemek: stores.filter(store => store.category === 'Yemek').length,
-          Market: stores.filter(store => store.category === 'Market').length,
-          Su: stores.filter(store => store.category === 'Su').length,
-          Aktüel: stores.filter(store => store.category === 'Aktüel').length
-        },
-        topStores: stores
-          .filter(store => store.totalRevenue > 0)
-          .sort((a, b) => b.totalRevenue - a.totalRevenue)
-          .slice(0, 5)
-          .map(store => ({
-            id: store.id,
-            name: store.name,
-            revenue: store.totalRevenue,
-            orders: store.ordersCount
-          }))
-      };
+        const usersReport = {
+          total: usersData.length,
+          active: usersData.filter(user => user.status === 'active').length, // users tablosunda status alanı varsa
+          inactive: usersData.filter(user => user.status === 'inactive').length, // users tablosunda status alanı varsa
+          byRole: usersData.reduce((acc, user) => {
+            acc[user.role] = (acc[user.role] || 0) + 1;
+            return acc;
+          }, {}),
+          newUsersToday: usersData.filter(user => new Date(user.created_at).setHours(0,0,0,0) === today.setHours(0,0,0,0)).length,
+          newUsersWeek: usersData.filter(user => {
+            const regDate = new Date(user.created_at);
+            return regDate >= weekAgo && regDate <= today;
+          }).length,
+          newUsersMonth: usersData.filter(user => {
+            const regDate = new Date(user.created_at);
+            return regDate >= monthAgo && regDate <= today;
+          }).length,
+        };
 
-      setReportData({
-        sales: salesData,
-        orders: ordersData,
-        users: usersData,
-        stores: storesData
-      });
-      
-      setLoading(false);
-    }, 1000);
+        const storesReport = {
+          total: storesData.length,
+          active: storesData.filter(store => store.status === 'active').length,
+          pending: storesData.filter(store => store.status === 'pending').length, // stores tablosunda status alanı varsa
+          byCategory: mainCategoriesData.reduce((acc, category) => {
+            acc[category.name] = storesData.filter(store => store.category_id === category.id).length;
+            return acc;
+          }, {}),
+          topStores: storesData
+            .map(store => ({
+              ...store,
+              totalRevenue: ordersData
+                .filter(order => order.store_id === store.id)
+                .reduce((sum, order) => sum + order.total, 0),
+              ordersCount: ordersData.filter(order => order.store_id === store.id).length,
+            }))
+            .filter(store => store.totalRevenue > 0)
+            .sort((a, b) => b.totalRevenue - a.totalRevenue)
+            .slice(0, 5)
+            .map(store => ({
+              id: store.id,
+              name: store.name,
+              revenue: store.totalRevenue,
+              orders: store.ordersCount,
+            })),
+        };
+
+        setReportData({
+          sales: salesReport,
+          orders: ordersReport,
+          users: usersReport,
+          stores: storesReport,
+        });
+
+      } catch (error) {
+        console.error("Rapor verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
   // Rapor tipine göre içerik
@@ -210,8 +195,8 @@ function AdminReportsContent() {
                     <div className="flex-grow mx-2">
                       <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full ${getCategoryColor(category)}`} 
-                          style={{ width: `${(value / reportData.sales.total) * 100}%` }}
+                          className={`h-full ${getCategoryColorByName(category)}`} 
+                          style={{ width: `${reportData.sales.total > 0 ? (value / reportData.sales.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -288,7 +273,7 @@ function AdminReportsContent() {
                       <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${getStatusColor(status)}`} 
-                          style={{ width: `${(count / reportData.orders.total) * 100}%` }}
+                          style={{ width: `${reportData.orders.total > 0 ? (count / reportData.orders.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -307,8 +292,8 @@ function AdminReportsContent() {
                     <div className="flex-grow mx-2">
                       <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full ${getCategoryColor(category)}`} 
-                          style={{ width: `${(count / reportData.orders.total) * 100}%` }}
+                          className={`h-full ${getCategoryColorByName(category)}`} 
+                          style={{ width: `${reportData.orders.total > 0 ? (count / reportData.orders.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -359,7 +344,7 @@ function AdminReportsContent() {
                       <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${getRoleColor(role)}`} 
-                          style={{ width: `${(count / reportData.users.total) * 100}%` }}
+                          style={{ width: `${reportData.users.total > 0 ? (count / reportData.users.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -424,8 +409,8 @@ function AdminReportsContent() {
                     <div className="flex-grow mx-2">
                       <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full ${getCategoryColor(category)}`} 
-                          style={{ width: `${(count / reportData.stores.total) * 100}%` }}
+                          className={`h-full ${getCategoryColorByName(category)}`} 
+                          style={{ width: `${reportData.stores.total > 0 ? (count / reportData.stores.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -500,12 +485,15 @@ function AdminReportsContent() {
     }
   };
 
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case 'Yemek': return 'bg-blue-500';
-      case 'Market': return 'bg-green-500';
-      case 'Su': return 'bg-cyan-500';
-      case 'Aktüel': return 'bg-amber-500';
+  const getCategoryColorByName = (categoryName) => {
+    const category = mainCategories.find(cat => cat.name === categoryName);
+    if (!category) return 'bg-gray-500'; // Varsayılan renk
+
+    switch (category.id) { // ID'ye göre renk ataması daha tutarlı olabilir
+      case 1: return 'bg-red-500'; // Yemek
+      case 2: return 'bg-teal-500'; // Market (Orjinalde #4ECDC4, teal'e yakın)
+      case 3: return 'bg-sky-500'; // Su (Orjinalde #1A85FF, sky'a yakın)
+      case 4: return 'bg-purple-500'; // Aktüel (Orjinalde #9649CB, purple'a yakın)
       default: return 'bg-gray-500';
     }
   };
@@ -594,10 +582,11 @@ function AdminReportsContent() {
 function StatCard({ title, value, color }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-600">
+      {/* StatCard renkleri Tailwind CSS class'ları ile daha dinamik hale getirilebilir */}
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm text-gray-500">{title}</p>
-          <p className={`text-2xl font-bold text-${color}-700 mt-1`}>{value}</p>
+          <p className={`text-2xl font-bold text-${color}-700 mt-1`}>{value}</p> 
         </div>
       </div>
     </div>
