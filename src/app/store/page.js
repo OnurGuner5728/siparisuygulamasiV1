@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import StoreGuard from '@/components/StoreGuard';
+import api from '@/lib/api';
 
 export default function StorePanel() {
   return (
@@ -27,56 +28,33 @@ function StorePanelContent() {
   });
 
   useEffect(() => {
-    // Mock API isteği
-    const fetchStoreData = () => {
+    // Mağaza bilgilerini ve istatistiklerini yükle
+    const fetchStoreData = async () => {
+      if (!user) return;
+      
       setLoading(true);
-      setTimeout(() => {
-        // Gerçek projede bir API isteği yapılacak
-        const mockStore = {
-          id: 1,
-          name: 'Kebapçı Ahmet',
-          email: 'kebapci@example.com',
-          phone: '0505 333 4455',
-          category: 'Yemek',
-          description: 'En lezzetli kebaplar',
-          rating: 4.7,
-          status: 'active',
-          approved: true,
-          registrationDate: '2023-03-10',
-          lastLogin: '2023-05-20T14:30:00',
-          address: {
-            city: 'İstanbul',
-            district: 'Kadıköy',
-            neighborhood: 'Göztepe',
-            fullAddress: 'Örnek Sokak No:1 D:5',
-          },
-          workingHours: {
-            monday: '09:00 - 22:00',
-            tuesday: '09:00 - 22:00',
-            wednesday: '09:00 - 22:00',
-            thursday: '09:00 - 22:00',
-            friday: '09:00 - 23:00',
-            saturday: '10:00 - 23:00',
-            sunday: '10:00 - 22:00',
-          }
-        };
+      try {
+        // Kullanıcının mağaza ID'sini kullanarak mağaza bilgilerini getir
+        const storeData = await api.getStoreByUserId(user.id);
         
-        const mockStats = {
-          totalOrders: 230,
-          activeOrders: 12,
-          totalRevenue: 25800.50,
-          todaysOrders: 8,
-          todaysRevenue: 950.75
-        };
-        
-        setStore(mockStore);
-        setStats(mockStats);
+        if (storeData) {
+          setStore(storeData);
+          
+          // Mağaza istatistiklerini getir
+          const statsData = await api.getStoreStats(storeData.id);
+          setStats(statsData);
+        } else {
+          console.error('Mağaza bilgileri bulunamadı');
+        }
+      } catch (err) {
+        console.error('Mağaza bilgileri yüklenirken hata:', err);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     fetchStoreData();
-  }, []);
+  }, [user]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value);
@@ -235,43 +213,52 @@ function StorePanelContent() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {[...Array(5)].map((_, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    #ORD-{1000 + index}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    Müşteri {index + 1}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(Math.floor(Math.random() * 300) + 50)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(Date.now() - index * 86400000).toLocaleDateString('tr-TR')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      index === 0 ? 'bg-yellow-100 text-yellow-800' : 
-                      index === 1 ? 'bg-blue-100 text-blue-800' : 
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {index === 0 ? 'Hazırlanıyor' : index === 1 ? 'Yolda' : 'Tamamlandı'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Link href={`/store/orders/${1000 + index}`} className="text-blue-600 hover:text-blue-900">
-                      Görüntüle
-                    </Link>
+              {stats.recentOrders && stats.recentOrders.length > 0 ? (
+                stats.recentOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                      #{order.order_number || order.id.substring(0, 8)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.user_name || 'Müşteri'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(order.total)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(order.order_date).toLocaleDateString('tr-TR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.status === 'pending' ? 'Beklemede' :
+                         order.status === 'processing' ? 'Hazırlanıyor' :
+                         order.status === 'completed' ? 'Tamamlandı' :
+                         order.status === 'cancelled' ? 'İptal Edildi' :
+                         order.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link href={`/store/orders/${order.id}`} className="text-blue-600 hover:text-blue-900">
+                        Detay
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                    Henüz sipariş bulunmuyor
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
-        </div>
-        <div className="px-6 py-4 border-t border-gray-200">
-          <Link href="/store/orders" className="text-blue-600 hover:text-blue-900 text-sm font-medium">
-            Tüm siparişleri görüntüle →
-          </Link>
         </div>
       </div>
     </div>

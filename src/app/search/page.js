@@ -5,132 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiSearch, FiFilter, FiX, FiArrowLeft, FiChevronDown, FiStar } from 'react-icons/fi';
 import { BiSort } from 'react-icons/bi';
+import api from '@/lib/api';
 
-// Örnek veriler (gerçek projenizde API'dan gelecektir)
-const demoStores = [
-  {
-    id: 'store1',
-    name: 'Lezzet Durağı Restoran',
-    image: '/images/stores/store-placeholder.jpg',
-    category: 'Restoran',
-    rating: 4.8,
-    deliveryTime: '20-35 dk',
-    minOrder: 50,
-    deliveryFee: 10,
-    distance: 1.2,
-    tags: ['Burger', 'Pizza', 'Kebap']
-  },
-  {
-    id: 'store2',
-    name: 'Tatlı Küpü Pasta & Cafe',
-    image: '/images/stores/store-placeholder.jpg',
-    category: 'Cafe & Tatlı',
-    rating: 4.6,
-    deliveryTime: '25-40 dk',
-    minOrder: 60,
-    deliveryFee: 15,
-    distance: 2.4,
-    tags: ['Pasta', 'Tatlı', 'Kahve']
-  },
-  {
-    id: 'store3',
-    name: 'Yeşil Market',
-    image: '/images/stores/store-placeholder.jpg',
-    category: 'Market',
-    rating: 4.3,
-    deliveryTime: '15-25 dk',
-    minOrder: 75,
-    deliveryFee: 0,
-    distance: 0.8,
-    tags: ['Market', 'Temel Gıda', 'İçecek']
-  },
-  {
-    id: 'store4',
-    name: 'Gurme Pizzacı',
-    image: '/images/stores/store-placeholder.jpg',
-    category: 'Restoran',
-    rating: 4.7,
-    deliveryTime: '30-45 dk',
-    minOrder: 80,
-    deliveryFee: 5,
-    distance: 3.1,
-    tags: ['Pizza', 'İtalyan', 'Makarna']
-  },
-  {
-    id: 'store5',
-    name: 'Taze Su Dünyası',
-    image: '/images/stores/store-placeholder.jpg',
-    category: 'Su',
-    rating: 4.9,
-    deliveryTime: '10-15 dk',
-    minOrder: 30,
-    deliveryFee: 0,
-    distance: 1.7,
-    tags: ['Su', 'İçecek']
-  }
-];
+// Kategori verileri (API'den gelebilir)
+const categories = ['Hepsi', 'Yemek', 'Market', 'Su', 'Aktüel']; 
 
-const demoProducts = [
-  {
-    id: 'product1',
-    name: 'Kral Burger Menü',
-    image: '/images/products/product-placeholder.jpg',
-    category: 'Burger',
-    price: 125.90,
-    rating: 4.7,
-    storeName: 'Lezzet Durağı Restoran',
-    storeId: 'store1'
-  },
-  {
-    id: 'product2',
-    name: 'Karışık Pizza (Büyük Boy)',
-    image: '/images/products/product-placeholder.jpg',
-    category: 'Pizza',
-    price: 159.90,
-    rating: 4.9,
-    storeName: 'Gurme Pizzacı',
-    storeId: 'store4'
-  },
-  {
-    id: 'product3',
-    name: 'Çikolatalı Pasta Dilimi',
-    image: '/images/products/product-placeholder.jpg',
-    category: 'Tatlı',
-    price: 45.00,
-    rating: 4.8,
-    storeName: 'Tatlı Küpü Pasta & Cafe',
-    storeId: 'store2'
-  },
-  {
-    id: 'product4',
-    name: 'Tavuk Şiş Menü',
-    image: '/images/products/product-placeholder.jpg',
-    category: 'Kebap',
-    price: 110.00,
-    rating: 4.6,
-    storeName: 'Lezzet Durağı Restoran',
-    storeId: 'store1'
-  },
-  {
-    id: 'product5',
-    name: 'Damacana Su (19L)',
-    image: '/images/products/product-placeholder.jpg',
-    category: 'Su',
-    price: 35.00,
-    rating: 4.9,
-    storeName: 'Taze Su Dünyası',
-    storeId: 'store5'
-  }
-];
-
-const categories = [
-  'Hepsi', 'Yemek', 'Market', 'Su', 'Tatlı', 'Fast Food', 'Kebap', 'Pizza', 'Burger'
-];
-
-// Loading komponenti
 function SearchLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+    <div className="flex justify-center items-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
     </div>
   );
@@ -144,10 +26,12 @@ function SearchContent() {
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Hepsi');
-  const [sortOption, setSortOption] = useState('relevance'); // relevance, rating, deliveryTime, minPrice
+  
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'stores'); // stores, products
+  const [sortOption, setSortOption] = useState('relevance');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Arama işlemini gerçekleştir
   useEffect(() => {
@@ -156,51 +40,40 @@ function SearchContent() {
       return;
     }
 
-    const performSearch = () => {
+    const performSearch = async () => {
       setSearching(true);
       
-      // Simüle edilmiş arama (gerçek uygulamada API çağrısı yapılacak)
-      setTimeout(() => {
+      try {
         let results;
         
-        // Aktif sekmeye göre arama sonuçlarını filtreleme
+        // Aktif sekmeye göre farklı API çağrıları yap
         if (activeTab === 'stores') {
-          results = demoStores.filter(store => 
-            store.name.toLowerCase().includes(query.toLowerCase()) ||
-            store.category.toLowerCase().includes(query.toLowerCase()) ||
-            store.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
-          );
+          // Mağaza araması
+          const searchParams = {
+            query: query,
+            category: selectedCategory !== 'Hepsi' ? selectedCategory : null,
+            sort: sortOption
+          };
           
-          // Kategori filtrelemesi
-          if (selectedCategory !== 'Hepsi') {
-            results = results.filter(store => 
-              store.category === selectedCategory ||
-              store.tags.includes(selectedCategory)
-            );
-          }
-          
-          // Sıralama
-          results = sortResults(results, sortOption);
-          
+          results = await api.searchStores(searchParams);
         } else {
-          results = demoProducts.filter(product => 
-            product.name.toLowerCase().includes(query.toLowerCase()) ||
-            product.category.toLowerCase().includes(query.toLowerCase()) ||
-            product.storeName.toLowerCase().includes(query.toLowerCase())
-          );
+          // Ürün araması
+          const searchParams = {
+            query: query,
+            category: selectedCategory !== 'Hepsi' ? selectedCategory : null,
+            sort: sortOption
+          };
           
-          // Kategori filtrelemesi
-          if (selectedCategory !== 'Hepsi') {
-            results = results.filter(product => product.category === selectedCategory);
-          }
-          
-          // Sıralama (ürünler için farklı sıralama kriterleri)
-          results = sortProductResults(results, sortOption);
+          results = await api.searchProducts(searchParams);
         }
         
         setSearchResults(results);
+      } catch (err) {
+        console.error('Arama yapılırken hata:', err);
+        setSearchResults([]);
+      } finally {
         setSearching(false);
-      }, 500);
+      }
     };
     
     // Debouce arama işlemi
@@ -212,40 +85,6 @@ function SearchContent() {
       clearTimeout(timer);
     };
   }, [query, selectedCategory, sortOption, activeTab]);
-  
-  // Sıralama fonksiyonu (restoranlar için)
-  const sortResults = (results, option) => {
-    switch (option) {
-      case 'rating':
-        return [...results].sort((a, b) => b.rating - a.rating);
-      case 'deliveryTime':
-        return [...results].sort((a, b) => {
-          const timeA = parseInt(a.deliveryTime.split('-')[0]);
-          const timeB = parseInt(b.deliveryTime.split('-')[0]);
-          return timeA - timeB;
-        });
-      case 'minPrice':
-        return [...results].sort((a, b) => a.minOrder - b.minOrder);
-      case 'distance':
-        return [...results].sort((a, b) => a.distance - b.distance);
-      default:
-        return results; // Alakalılık sıralaması (varsayılan)
-    }
-  };
-  
-  // Sıralama fonksiyonu (ürünler için)
-  const sortProductResults = (results, option) => {
-    switch (option) {
-      case 'rating':
-        return [...results].sort((a, b) => b.rating - a.rating);
-      case 'minPrice':
-        return [...results].sort((a, b) => a.price - b.price);
-      case 'maxPrice':
-        return [...results].sort((a, b) => b.price - a.price);
-      default:
-        return results; // Alakalılık sıralaması (varsayılan)
-    }
-  };
   
   // Arama kutusu temizleme
   const clearSearch = () => {
@@ -483,27 +322,31 @@ function SearchContent() {
                   className="bg-white rounded-lg shadow-sm overflow-hidden flex border border-gray-100 hover:shadow-md transition-shadow"
                 >
                   <div className="w-24 h-24 bg-gray-200 shrink-0">
-                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-300">
-                      <span className="text-sm">Resim</span>
-                    </div>
+                    {store.image_url ? (
+                      <img src={store.image_url} alt={store.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-300">
+                        <span className="text-sm">Resim</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 p-3">
                     <h3 className="font-medium text-gray-900">{store.name}</h3>
                     <div className="flex items-center text-sm text-gray-500 mt-1">
-                      <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{store.category}</span>
+                      <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{store.category_name}</span>
                       <span className="mx-2">•</span>
                       <div className="flex items-center">
                         <FiStar className="text-yellow-500 mr-1" size={14} />
-                        <span>{store.rating}</span>
+                        <span>{store.rating || '0.0'}</span>
                       </div>
                     </div>
                     <div className="flex items-center text-xs text-gray-500 mt-2">
-                      <span>{store.deliveryTime}</span>
+                      <span>{store.delivery_time || '30-45 dk'}</span>
                       <span className="mx-2">•</span>
-                      <span>{store.distance} km</span>
+                      <span>{store.distance ? `${store.distance} km` : '---'}</span>
                       <span className="mx-2">•</span>
-                      <span>{store.deliveryFee === 0 ? 'Ücretsiz Teslimat' : `${store.deliveryFee} TL Teslimat`}</span>
+                      <span>{store.delivery_fee === 0 ? 'Ücretsiz Teslimat' : `${store.delivery_fee || '5'} TL Teslimat`}</span>
                     </div>
                   </div>
                 </Link>
@@ -513,29 +356,33 @@ function SearchContent() {
               searchResults.map((product) => (
                 <Link 
                   key={product.id} 
-                  href={`/yemek/${product.storeId}/${product.id}`}
+                  href={`/yemek/store/${product.store_id}/product/${product.id}`}
                   className="bg-white rounded-lg shadow-sm overflow-hidden flex border border-gray-100 hover:shadow-md transition-shadow"
                 >
                   <div className="w-24 h-24 bg-gray-200 shrink-0">
-                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-300">
-                      <span className="text-sm">Resim</span>
-                    </div>
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-300">
+                        <span className="text-sm">Resim</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 p-3">
                     <h3 className="font-medium text-gray-900">{product.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{product.storeName}</p>
+                    <p className="text-sm text-gray-500 mt-1">{product.store_name}</p>
                     <div className="flex justify-between items-center mt-2">
                       <div className="flex items-center text-xs text-gray-500">
-                        <span className="bg-gray-100 px-2 py-0.5 rounded">{product.category}</span>
+                        <span className="bg-gray-100 px-2 py-0.5 rounded">{product.category_name}</span>
                         <span className="mx-2">•</span>
                         <div className="flex items-center">
                           <FiStar className="text-yellow-500 mr-1" size={14} />
-                          <span>{product.rating}</span>
+                          <span>{product.rating || '0.0'}</span>
                         </div>
                       </div>
                       <div className="text-orange-600 font-medium">
-                        {product.price.toFixed(2)} TL
+                        {parseFloat(product.price).toFixed(2)} TL
                       </div>
                     </div>
                   </div>
