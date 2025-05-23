@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 import FileUploader from '@/components/FileUploader';
-import AdminLayout from '@/components/AdminLayout';
+
 import { use } from 'react';
 
 export default function EditProductPage({ params: promiseParams }) {
