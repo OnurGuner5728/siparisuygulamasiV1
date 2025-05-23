@@ -20,6 +20,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
   const { 
     cartItems, 
     removeFromCart, 
+    removeItemCompletely,
     addToCart, 
     clearCart,
     cartSummary
@@ -71,20 +72,23 @@ const CartSidebar = ({ isOpen, onClose }) => {
   
   // Ürün miktarını arttır
   const handleIncreaseQuantity = async (item) => {
-    await addToCart({ 
-      id: item.product?.id || item.product_id, 
-      price: item.product?.price || item.price 
-    }, 1);
+    const product = {
+      id: item.product_id,
+      price: item.price,
+      name: item.name,
+      store_id: item.store_id
+    };
+    await addToCart(product, 1, item.store_type);
   };
   
   // Ürün miktarını azalt veya kaldır
-  const handleDecreaseQuantity = async (itemId) => {
-    await removeFromCart(itemId);
+  const handleDecreaseQuantity = async (item) => {
+    await removeFromCart(item.product_id, item.store_id);
   };
   
   // Ürünü sepetten tamamen kaldır
-  const handleRemoveItem = async (itemId) => {
-    await removeFromCart(itemId);
+  const handleRemoveItem = async (item) => {
+    await removeItemCompletely(item.product_id, item.store_id);
   };
   
   // Sepet boşsa
@@ -140,6 +144,24 @@ const CartSidebar = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <div className="space-y-3">
+                {/* Mağaza bilgisi */}
+                {cartItems.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <span className="font-medium">
+                        {cartItems[0].store_name || 'Mağaza'} 
+                        <span className="ml-2 px-2 py-0.5 bg-white rounded text-xs">
+                          {cartItems[0].store_type === 'yemek' ? 'Yemek' : 
+                           cartItems[0].store_type === 'market' ? 'Market' : 'Su'}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Sepetteki ürünler */}
                 {cartItems.map((item) => (
                   <div key={item.id} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 relative">
@@ -169,7 +191,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                             <button 
                               className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-                              onClick={() => handleDecreaseQuantity(item.id)}
+                              onClick={() => handleDecreaseQuantity(item)}
                               aria-label="Azalt"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -200,7 +222,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                     {/* Silme butonu */}
                     <button 
                       className="absolute top-2 right-2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
-                      onClick={() => handleRemoveItem(item.id)}
+                      onClick={() => handleRemoveItem(item)}
                       aria-label="Sil"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

@@ -35,7 +35,7 @@ export default function RootLayout({ children }) {
             <FileProvider>
               <CartProvider>
                 <div className="min-h-screen bg-gray-50 flex flex-col">
-                  <HeaderWrapper onCartOpen={handleCartOpen} />
+                  <HeaderWrapper onCartClick={handleCartOpen} />
                   <main className="flex-1">
                     {children}
                   </main>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useModule } from '../contexts/ModuleContext';
+import NotificationDropdown from './NotificationDropdown';
 
 function Header({ onCartClick }) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -71,6 +72,9 @@ function Header({ onCartClick }) {
         
         {/* Kullanıcı İşlemleri */}
         <div className="hidden md:flex items-center space-x-4">
+          {/* Bildirimler - sadece giriş yapmış kullanıcılar için */}
+          {isAuthenticated && <NotificationDropdown />}
+          
           {/* Sepet ikonu her zaman görünür */}
           <button 
             onClick={onCartClick}
@@ -178,6 +182,9 @@ function Header({ onCartClick }) {
                   </Link>
                   <Link href="/profil/siparisler" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
                     Siparişlerim
+                  </Link>
+                  <Link href="/profil/bildirimler" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
+                    Bildirimlerim
                   </Link>
                   <Link href="/profil/adresler" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
                     Adreslerim
@@ -291,6 +298,9 @@ function Header({ onCartClick }) {
                 )}
                 <Link href="/profil/siparisler" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
                   Siparişlerim
+                </Link>
+                <Link href="/profil/bildirimler" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
+                  Bildirimlerim
                 </Link>
                 <Link href="/profil/adresler" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
                   Adreslerim

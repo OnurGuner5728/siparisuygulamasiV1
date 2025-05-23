@@ -6,17 +6,18 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api'; // API servisini import et
+import { use } from 'react';
 
-export default function OrderDetails() {
+export default function OrderDetailPage({ params: promiseParams }) {
   return (
     <AuthGuard requiredRole="admin">
-      <OrderDetailsContent />
+      <OrderDetailContent promiseParams={promiseParams} />
     </AuthGuard>
   );
 }
 
-function OrderDetailsContent() {
-  const params = useParams();
+function OrderDetailContent({ promiseParams }) {
+  const params = use(promiseParams);
   const orderId = params?.id;
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);

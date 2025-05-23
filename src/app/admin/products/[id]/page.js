@@ -8,18 +8,19 @@ import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 import FileUploader from '@/components/FileUploader';
 import AdminLayout from '@/components/AdminLayout';
+import { use } from 'react';
 
-export default function EditProductPage() {
+export default function EditProductPage({ params: promiseParams }) {
   return (
-    <AdminLayout>
-      <EditProductContent />
-    </AdminLayout>
+    <AuthGuard requiredRole="admin">
+      <EditProductContent promiseParams={promiseParams} />
+    </AuthGuard>
   );
 }
 
-function EditProductContent() {
+function EditProductContent({ promiseParams }) {
   const router = useRouter();
-  const params = useParams();
+  const params = use(promiseParams);
   const productId = params?.id;
   
   const [loading, setLoading] = useState(true);

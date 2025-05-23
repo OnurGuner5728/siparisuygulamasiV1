@@ -6,21 +6,28 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api'; // API servisini import et
+import { use } from 'react';
 
-export default function StoreDetail() {
+export default function StoreDetailPage({ params: promiseParams }) {
   return (
     <AuthGuard requiredRole="admin">
-      <StoreDetailContent />
+      <StoreDetailContent promiseParams={promiseParams} />
     </AuthGuard>
   );
 }
 
-function StoreDetailContent() {
-  const params = useParams();
+function StoreDetailContent({ promiseParams }) {
+  const params = use(promiseParams);
   const storeId = params?.id;
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
-  const [storeStats, setStoreStats] = useState({ ordersCount: 0, totalRevenue: 0, averageOrderValue: 0 });
+  const [storeStats, setStoreStats] = useState({ 
+    ordersCount: 0, 
+    totalRevenue: 0, 
+    averageOrderValue: 0,
+    commissionAmount: 0,
+    netRevenue: 0
+  });
   const [mainCategory, setMainCategory] = useState(null);
   const [owner, setOwner] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -56,12 +63,42 @@ function StoreDetailContent() {
             setMainCategory(categoryData);
           }
 
-          // Mağaza istatistiklerini hesapla (siparişler üzerinden)
-          const orders = await api.getAllOrders({ store_id: storeId });
-          const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-          const ordersCount = orders.length;
-          const averageOrderValue = ordersCount > 0 ? totalRevenue / ordersCount : 0;
-          setStoreStats({ ordersCount, totalRevenue, averageOrderValue });
+          // Mağaza istatistiklerini hesapla (komisyon özetinden)
+          let commissionSummary = null;
+          try {
+            commissionSummary = await api.getStoreCommissionSummary(storeId);
+          } catch (error) {
+            console.warn('Komisyon özeti alınamadı, fallback hesaplama kullanılacak:', error.message);
+            commissionSummary = null;
+          }
+          
+          if (commissionSummary) {
+            setStoreStats({
+              ordersCount: commissionSummary.total_orders,
+              totalRevenue: parseFloat(commissionSummary.total_revenue),
+              averageOrderValue: commissionSummary.total_orders > 0 
+                ? parseFloat(commissionSummary.total_revenue) / commissionSummary.total_orders 
+                : 0,
+              commissionAmount: parseFloat(commissionSummary.total_commission),
+              netRevenue: parseFloat(commissionSummary.net_revenue)
+            });
+          } else {
+            // Fallback: Eski hesaplama yöntemi
+            const fallbackOrders = await api.getAllOrders({ store_id: storeId });
+            const fallbackTotalRevenue = fallbackOrders.reduce((sum, order) => sum + order.total, 0);
+            const fallbackOrdersCount = fallbackOrders.length;
+            const fallbackAverageOrderValue = fallbackOrdersCount > 0 ? fallbackTotalRevenue / fallbackOrdersCount : 0;
+            const commissionRate = storeData.commission_rate || 0;
+            const commissionAmount = (fallbackTotalRevenue * commissionRate) / 100;
+            
+            setStoreStats({ 
+              ordersCount: fallbackOrdersCount, 
+              totalRevenue: fallbackTotalRevenue, 
+              averageOrderValue: fallbackAverageOrderValue,
+              commissionAmount,
+              netRevenue: fallbackTotalRevenue - commissionAmount
+            });
+          }
 
           setNotFound(false);
         } else {
@@ -285,6 +322,18 @@ function StoreDetailContent() {
               <div className="bg-yellow-50 p-4 rounded-md">
                 <p className="text-sm text-gray-600">Komisyon Oranı</p>
                 <p className="text-2xl font-bold text-yellow-700">%{store.commission_rate?.toFixed(2) || '0.00'}</p>
+              </div>
+              <div className="bg-red-50 p-4 rounded-md">
+                <p className="text-sm text-gray-600">Komisyon Tutarı</p>
+                <p className="text-2xl font-bold text-red-700">
+                  {storeStats.commissionAmount.toFixed(2)} TL
+                </p>
+              </div>
+              <div className="bg-teal-50 p-4 rounded-md">
+                <p className="text-sm text-gray-600">Net Gelir (Mağaza Alacağı)</p>
+                <p className="text-2xl font-bold text-teal-700">
+                  {storeStats.netRevenue.toFixed(2)} TL
+                </p>
               </div>
             </div>
           </div>

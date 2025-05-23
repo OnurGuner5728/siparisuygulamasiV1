@@ -23,17 +23,108 @@ function StorePanelContent() {
     activeOrders: 0,
     totalRevenue: 0,
     todaysOrders: 0,
-    todaysRevenue: 0
+    todaysRevenue: 0,
+    recentOrders: [],
+    commissionAmount: 0,
+    netRevenue: 0,
+    todayCommission: 0,
+    todayNetRevenue: 0
   });
 
   useEffect(() => {
-    // Sayfa yüklenirken loading'i false yap
+    // Sayfa yüklenirken loading'i false yap ve gerçek istatistikleri al
+    const loadStoreStats = async () => {
+      try {
+        if (user?.storeInfo?.id) {
+          // Database'den komisyon özetini al
+          let commissionSummary = null;
+          try {
+            commissionSummary = await api.getStoreCommissionSummary(user.storeInfo.id);
+          } catch (error) {
+            console.warn('Komisyon özeti alınamadı, fallback hesaplama kullanılacak:', error.message);
+            commissionSummary = null;
+          }
+          
+          if (commissionSummary) {
+            // Database'den gelen veriler
+            setStats({
+              totalOrders: commissionSummary.total_orders,
+              activeOrders: 0, // Bu alan için ayrı sorgu gerekebilir
+              totalRevenue: parseFloat(commissionSummary.total_revenue),
+              todaysOrders: commissionSummary.today_orders,
+              todaysRevenue: parseFloat(commissionSummary.today_revenue),
+              recentOrders: [], // Bu alan için ayrı sorgu
+              commissionAmount: parseFloat(commissionSummary.total_commission),
+              netRevenue: parseFloat(commissionSummary.net_revenue),
+              todayCommission: parseFloat(commissionSummary.today_commission),
+              todayNetRevenue: parseFloat(commissionSummary.today_net_revenue)
+            });
+            
+            // Aktif siparişleri ayrı al
+            const orders = await api.getAllOrders({ store_id: user.storeInfo.id });
+            const activeOrders = orders.filter(order => 
+              order.status === 'pending' || order.status === 'processing'
+            ).length;
+            
+            // Son siparişleri al
+            const recentOrders = orders.slice(0, 5);
+            
+            // Stats'i güncelle
+            setStats(prevStats => ({
+              ...prevStats,
+              activeOrders,
+              recentOrders
+            }));
+          } else {
+            // Komisyon özeti bulunamazsa fallback hesaplama kullan
+            const orders = await api.getAllOrders({ store_id: user.storeInfo.id });
+            
+            const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+            const activeOrders = orders.filter(order => 
+              order.status === 'pending' || order.status === 'processing'
+            ).length;
+            
+            // Bugünkü siparişler
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todaysOrders = orders.filter(order => {
+              const orderDate = new Date(order.order_date);
+              orderDate.setHours(0, 0, 0, 0);
+              return orderDate.getTime() === today.getTime();
+            });
+            
+            const todaysRevenue = todaysOrders.reduce((sum, order) => sum + order.total, 0);
+            const commissionRate = user.storeInfo.commission_rate || 0;
+            const commissionAmount = (totalRevenue * commissionRate) / 100;
+            const todayCommission = (todaysRevenue * commissionRate) / 100;
+            
+            setStats({
+              totalOrders: orders.length,
+              activeOrders,
+              totalRevenue,
+              todaysOrders: todaysOrders.length,
+              todaysRevenue,
+              recentOrders: orders.slice(0, 5),
+              commissionAmount,
+              netRevenue: totalRevenue - commissionAmount,
+              todayCommission,
+              todayNetRevenue: todaysRevenue - todayCommission
+            });
+          }
+        }
+      } catch (error) {
+        console.error('İstatistikler yüklenirken hata:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const timer = setTimeout(() => {
-      setLoading(false);
+      loadStoreStats();
     }, 500);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [user?.storeInfo?.id]);
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -167,7 +258,7 @@ function StorePanelContent() {
       )}
 
       {/* İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="text-sm font-medium text-gray-500 mb-1">Toplam Sipariş</div>
           <div className="text-2xl font-bold text-gray-900">{stats.totalOrders}</div>
@@ -192,7 +283,99 @@ function StorePanelContent() {
           <div className="text-sm font-medium text-gray-500 mb-1">Bugünkü Kazanç</div>
           <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.todaysRevenue)}</div>
         </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-sm font-medium text-gray-500 mb-1">Komisyon Oranı</div>
+          <div className="text-2xl font-bold text-orange-600">%{user?.storeInfo?.commission_rate || '0.00'}</div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-sm font-medium text-gray-500 mb-1">Komisyon Tutarı</div>
+          <div className="text-2xl font-bold text-red-600">
+            {formatCurrency(stats.commissionAmount)}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-sm font-medium text-gray-500 mb-1">Net Gelir</div>
+          <div className="text-2xl font-bold text-teal-600">
+            {formatCurrency(stats.netRevenue)}
+          </div>
+        </div>
       </div>
+
+      {/* Komisyon Özeti */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Komisyon Özeti</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-green-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-600 mb-2">Toplam Gelir</h3>
+            <p className="text-xl font-bold text-green-700">{formatCurrency(stats.totalRevenue)}</p>
+            <p className="text-sm text-gray-500 mt-1">Tüm siparişlerden</p>
+          </div>
+          <div className="bg-red-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-600 mb-2">Platform Komisyonu</h3>
+            <p className="text-xl font-bold text-red-700">
+              {formatCurrency(stats.commissionAmount)}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">%{user?.storeInfo?.commission_rate || '0.00'} komisyon</p>
+          </div>
+          <div className="bg-teal-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-600 mb-2">Sizin Alacağınız</h3>
+            <p className="text-xl font-bold text-teal-700">
+              {formatCurrency(stats.netRevenue)}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">Net gelir</p>
+          </div>
+        </div>
+        
+        {/* Günlük Komisyon */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h3 className="text-md font-semibold text-gray-700 mb-3">Bugünkü Durum</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Bugünkü Gelir</p>
+              <p className="text-lg font-bold text-green-600">{formatCurrency(stats.todaysRevenue)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Bugünkü Komisyon</p>
+              <p className="text-lg font-bold text-red-600">
+                {formatCurrency(stats.todayCommission)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Bugünkü Net Kazanç</p>
+              <p className="text-lg font-bold text-teal-600">
+                {formatCurrency(stats.todayNetRevenue)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ödeme Linki */}
+      {user?.storeInfo?.payment_link && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Ödeme Linki</h2>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-600 mb-1">Mağaza Ödeme Linkiniz:</p>
+                <p className="text-blue-600 font-medium truncate">{user.storeInfo.payment_link}</p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(user.storeInfo.payment_link);
+                  alert('Ödeme linki panoya kopyalandı!');
+                }}
+                className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                Kopyala
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hızlı Erişim Menüsü */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

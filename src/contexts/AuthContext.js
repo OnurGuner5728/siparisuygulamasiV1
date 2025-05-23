@@ -210,7 +210,8 @@ export function AuthProvider({ children }) {
     logout,
     updateProfile,
     hasPermission,
-    checkSession  // Manuel session kontrolü için
+    checkSession,  // Manuel session kontrolü için
+    refreshUser: checkSession  // refreshUser alias olarak checkSession kullan
   }), [user, loading, login, register, logout, updateProfile, hasPermission, checkSession]);
 
   return (

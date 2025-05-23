@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
+import ReviewSystem from '@/components/ReviewSystem';
 
 // React Icons'ları dinamik olarak import et
 const FiArrowLeft = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiArrowLeft })), { ssr: false });
@@ -127,19 +128,14 @@ export default function StoreDetailPage({ params }) {
   // Sepete ürünü ekle
   const addToCart = (product) => {
     try {
-      // CartContext'i kullanarak sepete ekle
-      contextAddToCart({
-        product_id: product.id,
-        name: product.name,
-        price: parseFloat(product.price) || 0,
-        quantity: 1,
-        image: product.image || null,
-        store_id: store?.id || null,
-        store_name: store?.name || '',
-        store_type: 'yemek',
-        category: product.category || '',
-        notes: ''
-      });
+      // Store bilgisini product objesine ekle
+      const productWithStore = {
+        ...product,
+        store_name: store?.name
+      };
+      
+      // CartContext'i kullanarak sepete ekle - sadece product objesini gönder
+      contextAddToCart(productWithStore, 1, 'yemek');
       
       // Sepeti göster
       setShowCart(true);
@@ -151,7 +147,11 @@ export default function StoreDetailPage({ params }) {
   
   // Ürün miktarını artır
   const increaseQuantity = (product) => {
-    addToCart(product);
+    const productWithStore = {
+      ...product,
+      store_name: store?.name
+    };
+    addToCart(productWithStore);
   };
   
   // Ürün miktarını azalt
@@ -434,6 +434,14 @@ export default function StoreDetailPage({ params }) {
                 </div>
               );
             })}
+            
+            {/* Review System */}
+            <div className="mt-12">
+              <ReviewSystem 
+                storeId={store?.id} 
+                type="store"
+              />
+            </div>
           </div>
           
           {/* Sepet */}

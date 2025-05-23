@@ -97,19 +97,14 @@ export default function MarketStoreDetailPage({ params }) {
   // Sepete ürünü ekle
   const addToCart = (product) => {
     try {
-      // CartContext'i kullanarak sepete ekle
-      contextAddToCart({
-        product_id: product.id,
-        name: product.name,
-        price: parseFloat(product.price) || 0,
-        quantity: 1,
-        image: product.image || null,
-        store_id: store?.id || null,
-        store_name: store?.name || '',
-        store_type: 'market',
-        category: product.category || '',
-        notes: ''
-      });
+      // Store bilgisini product objesine ekle
+      const productWithStore = {
+        ...product,
+        store_name: store?.name
+      };
+      
+      // CartContext'i kullanarak sepete ekle - sadece product objesini gönder
+      contextAddToCart(productWithStore, 1, 'market');
       
       // Sepeti göster
       setShowCart(true);
@@ -121,7 +116,11 @@ export default function MarketStoreDetailPage({ params }) {
   
   // Ürün miktarını artır
   const increaseQuantity = (product) => {
-    addToCart(product);
+    const productWithStore = {
+      ...product,
+      store_name: store?.name
+    };
+    addToCart(productWithStore);
   };
   
   // Ürün miktarını azalt

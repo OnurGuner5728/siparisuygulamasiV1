@@ -24,6 +24,15 @@ function AddStoreContent() {
     phone: '',
     category: 'Yemek',
     description: '',
+    workingHours: {
+      monday: '',
+      tuesday: '',
+      wednesday: '',
+      thursday: '',
+      friday: '',
+      saturday: '',
+      sunday: ''
+    }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -271,6 +280,148 @@ function AddStoreContent() {
                     Aktüel Modülü
                   </label>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">Çalışma Saatleri</h3>
+            <p className="text-gray-500 mb-3 text-sm">Mağazanın çalışma saatlerini belirleyin.</p>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-6">
+                  {Object.entries({
+                    monday: 'Pazartesi',
+                    tuesday: 'Salı', 
+                    wednesday: 'Çarşamba',
+                    thursday: 'Perşembe',
+                    friday: 'Cuma',
+                    saturday: 'Cumartesi',
+                    sunday: 'Pazar'
+                  }).map(([key, label]) => (
+                    <div key={key} className="flex items-center space-x-4">
+                      <div className="w-24 text-sm font-medium text-gray-700">
+                        {label}
+                      </div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <input
+                          type="checkbox"
+                          id={`${key}_open`}
+                          checked={formData.workingHours[key] !== 'Kapalı' && formData.workingHours[key] !== '' && formData.workingHours[key] !== 'Geçici Kapalı'}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                workingHours: {
+                                  ...prev.workingHours,
+                                  [key]: '09:00 - 18:00'
+                                }
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                workingHours: {
+                                  ...prev.workingHours,
+                                  [key]: 'Kapalı'
+                                }
+                              }));
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`${key}_open`} className="text-sm text-gray-600 w-12">
+                          Açık
+                        </label>
+                        
+                        {formData.workingHours[key] !== 'Kapalı' && formData.workingHours[key] !== '' && formData.workingHours[key] !== 'Geçici Kapalı' && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="time"
+                              value={formData.workingHours[key]?.split(' - ')[0] || '09:00'}
+                              onChange={(e) => {
+                                const endTime = formData.workingHours[key]?.split(' - ')[1] || '18:00';
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: `${e.target.value} - ${endTime}`
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <span className="text-gray-500">-</span>
+                            <input
+                              type="time"
+                              value={formData.workingHours[key]?.split(' - ')[1] || '18:00'}
+                              onChange={(e) => {
+                                const startTime = formData.workingHours[key]?.split(' - ')[0] || '09:00';
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: `${startTime} - ${e.target.value}`
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: 'Geçici Kapalı'
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs hover:bg-orange-200"
+                            >
+                              Geçici Kapat
+                            </button>
+                          </div>
+                        )}
+                        
+                        {formData.workingHours[key] === 'Geçici Kapalı' && (
+                          <div className="flex items-center space-x-2">
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm">
+                              Geçici Kapalı
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: '09:00 - 18:00'
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                            >
+                              Yeniden Aç
+                            </button>
+                          </div>
+                        )}
+                        
+                        {formData.workingHours[key] === 'Kapalı' && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                            Kapalı
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-4">
+                  • Çalışma saatlerini belirlemek için önce "Açık" seçeneğini işaretleyin<br/>
+                  • "Geçici Kapat" ile o günü geçici olarak kapatabilirsiniz<br/>
+                  • Zaman formatı: 09:00 - 18:00 şeklinde olmalıdır
+                </p>
               </div>
             </div>
           </div>

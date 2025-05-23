@@ -3,20 +3,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '../../../../contexts/AuthContext';
-import AuthGuard from '../../../../components/AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
+import { use } from 'react';
 
-export default function UserDetails() {
+export default function UserDetailPage({ params: promiseParams }) {
   return (
     <AuthGuard requiredRole="admin">
-      <UserDetailsContent />
+      <UserDetailContent promiseParams={promiseParams} />
     </AuthGuard>
   );
 }
 
-function UserDetailsContent() {
-  const params = useParams();
+function UserDetailContent({ promiseParams }) {
+  const params = use(promiseParams);
   const router = useRouter();
   const userId = params.id;
   const [user, setUser] = useState(null);

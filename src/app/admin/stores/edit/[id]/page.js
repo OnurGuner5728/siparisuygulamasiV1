@@ -6,22 +6,19 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api'; // API servisini import et
-import AdminLayout from '@/components/AdminLayout';
+import { use } from 'react';
 
-export default function EditStorePage() {
+export default function EditStorePage({ params: promiseParams }) {
   return (
-    <AdminLayout>
-      <AuthGuard requiredRole="admin">
-        <EditStoreContent />
-      </AuthGuard>
-    </AdminLayout>
+    <AuthGuard requiredRole="admin">
+      <EditStoreContent promiseParams={promiseParams} />
+    </AuthGuard>
   );
 }
 
-function EditStoreContent() {
+function EditStoreContent({ promiseParams }) {
   const router = useRouter();
-  const params = useParams();
-  // Next.js 15'te params artık senkron - useParams kullanıyoruz
+  const params = use(promiseParams);
   const storeId = params?.id; 
   
   const [formData, setFormData] = useState({
@@ -40,14 +37,14 @@ function EditStoreContent() {
       su: false,
       aktuel: false
     },
-    working_hours: { // Çalışma saatleri için state eklendi
-      monday: { open: '', close: '', is_open: false },
-      tuesday: { open: '', close: '', is_open: false },
-      wednesday: { open: '', close: '', is_open: false },
-      thursday: { open: '', close: '', is_open: false },
-      friday: { open: '', close: '', is_open: false },
-      saturday: { open: '', close: '', is_open: false },
-      sunday: { open: '', close: '', is_open: false },
+    workingHours: { // workingHours olarak değiştirildi ve string format
+      monday: '',
+      tuesday: '',
+      wednesday: '',
+      thursday: '',
+      friday: '',
+      saturday: '',
+      sunday: ''
     },
     delivery_settings: { // Teslimat ayarları için state eklendi
       min_order_amount: 0,
@@ -70,12 +67,16 @@ function EditStoreContent() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    console.log('useEffect called with storeId:', storeId); // Debug için
     if (storeId) {
       setLoading(true);
       
       const fetchData = async () => {
         try {
+          console.log('Fetching store data for ID:', storeId); // Debug için
           const storeData = await api.getStoreById(storeId);
+          console.log('API response - storeData:', storeData); // Debug için
+          
           const usersData = await api.getAllUsers(); // Tüm kullanıcıları al
           const categoriesData = await api.getMainCategories();
 
@@ -83,6 +84,48 @@ function EditStoreContent() {
           setMainCategories(categoriesData);
 
           if (storeData) {
+            console.log('Store Data workingHours:', storeData.workingHours); // Debug için
+            
+            // workingHours verisini işle
+            let workingHoursData = {
+              monday: '',
+              tuesday: '',
+              wednesday: '',
+              thursday: '',
+              friday: '',
+              saturday: '',
+              sunday: ''
+            };
+            
+            if (storeData.workingHours) {
+              try {
+                // workingHours string olarak gelebilir, parse etmeye çalış
+                let parsedWorkingHours = storeData.workingHours;
+                if (typeof storeData.workingHours === 'string') {
+                  parsedWorkingHours = JSON.parse(storeData.workingHours);
+                }
+                
+                console.log('Parsed workingHours:', parsedWorkingHours); // Debug için
+                
+                if (parsedWorkingHours && typeof parsedWorkingHours === 'object') {
+                  workingHoursData = {
+                    monday: parsedWorkingHours.monday || '',
+                    tuesday: parsedWorkingHours.tuesday || '',
+                    wednesday: parsedWorkingHours.wednesday || '',
+                    thursday: parsedWorkingHours.thursday || '',
+                    friday: parsedWorkingHours.friday || '',
+                    saturday: parsedWorkingHours.saturday || '',
+                    sunday: parsedWorkingHours.sunday || '',
+                  };
+                }
+              } catch (error) {
+                console.error('workingHours parse hatası:', error);
+                // Parse hatası durumunda varsayılan değerleri kullan
+              }
+            }
+            
+            console.log('Processed workingHoursData:', workingHoursData); // Debug için
+            
             setFormData({
               name: storeData.name || '',
               owner_id: storeData.owner_id || '',
@@ -92,22 +135,14 @@ function EditStoreContent() {
               description: storeData.description || '',
               address: storeData.address || '',
               status: storeData.status || 'active',
-              approved: storeData.approved !== undefined ? storeData.approved : true,
+              approved: storeData.is_approved !== undefined ? storeData.is_approved : true,
               module_permissions: { // enable_ prefix'lerini kaldırarak state'e ata
                 yemek: storeData.module_permissions?.enable_yemek || false,
                 market: storeData.module_permissions?.enable_market || false,
                 su: storeData.module_permissions?.enable_su || false,
                 aktuel: storeData.module_permissions?.enable_aktuel || false
               },
-              working_hours: { // Çalışma saatleri düzenle
-                monday: storeData.working_hours?.monday || { open: '', close: '', is_open: false },
-                tuesday: storeData.working_hours?.tuesday || { open: '', close: '', is_open: false },
-                wednesday: storeData.working_hours?.wednesday || { open: '', close: '', is_open: false },
-                thursday: storeData.working_hours?.thursday || { open: '', close: '', is_open: false },
-                friday: storeData.working_hours?.friday || { open: '', close: '', is_open: false },
-                saturday: storeData.working_hours?.saturday || { open: '', close: '', is_open: false },
-                sunday: storeData.working_hours?.sunday || { open: '', close: '', is_open: false },
-              },
+              workingHours: workingHoursData,
               delivery_settings: { // Teslimat ayarları düzenle
                 min_order_amount: storeData.delivery_settings?.min_order_amount || 0,
                 delivery_fee: storeData.delivery_settings?.delivery_fee || 0,
@@ -119,7 +154,14 @@ function EditStoreContent() {
               commission_rate: storeData.commission_rate || 0,
               payment_link: storeData.payment_link || '',
             });
+            
+            console.log('Set formData with workingHours:', workingHoursData); // Debug için
             setNotFound(false);
+            
+            // Async olarak formData'nın güncellenip güncellenmediğini kontrol et
+            setTimeout(() => {
+              console.log('formData after setState:', formData.workingHours);
+            }, 100);
           } else {
             setNotFound(true);
           }
@@ -153,6 +195,11 @@ function EditStoreContent() {
     }
   }, [storeId]);
 
+  // formData state'inin değişimlerini izle
+  useEffect(() => {
+    console.log('formData updated:', formData.workingHours);
+  }, [formData.workingHours]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
@@ -165,36 +212,11 @@ function EditStoreContent() {
           [moduleName]: checked
         }
       }));
-    } else if (name === 'approved' || name.endsWith('is_open')) { // working_hours için is_open kontrolü
-      if (name.includes('.')) { // working_hours.monday.is_open
-        const [parent, day, field] = name.split('.');
-         setFormData(prev => ({
-          ...prev,
-          [parent]: {
-            ...prev[parent],
-            [day]: {
-              ...prev[parent][day],
-              [field]: checked
-            }
-          }
-        }));
-      } else { // approved
-        setFormData(prev => ({ ...prev, [name]: checked }));
-      }
-    } else if (name.includes('.')) { // working_hours veya delivery_settings için
-        const [parent, dayOrField, field] = name.split('.'); // ör: working_hours.monday.open veya delivery_settings.min_order_amount
-        if (field) { // working_hours.monday.open
-            setFormData(prev => ({
-                ...prev,
-                [parent]: {
-                    ...prev[parent],
-                    [dayOrField]: {
-                        ...prev[parent][dayOrField],
-                        [field]: value
-                    }
-                }
-            }));
-        } else { // delivery_settings.min_order_amount
+    } else if (name === 'approved') {
+      setFormData(prev => ({ ...prev, [name]: checked }));
+    } else if (name.includes('.')) { // delivery_settings için
+        const [parent, dayOrField, field] = name.split('.');
+        if (!field) { // delivery_settings.min_order_amount
              setFormData(prev => ({
                 ...prev,
                 [parent]: {
@@ -237,15 +259,23 @@ function EditStoreContent() {
         modulePermissionsForSupabase[`enable_${key}`] = formData.module_permissions[key];
       }
 
+      // WorkingHours'u temizle - boş string'leri "Kapalı" yap
+      const cleanWorkingHours = {};
+      for (const [day, value] of Object.entries(formData.workingHours)) {
+        cleanWorkingHours[day] = (value && value.trim() !== '') ? value : 'Kapalı';
+      }
+
       const updateData = {
         ...formData,
         module_permissions: modulePermissionsForSupabase,
+        workingHours: cleanWorkingHours,
         // category_id zaten formData içinde doğru isimle bulunuyor.
         // owner_id de formData içinde doğru isimle bulunuyor.
       };
       // ownerName'i siliyoruz çünkü Supabase'de böyle bir alan yok
-      delete updateData.ownerName; 
-
+      delete updateData.ownerName;
+      
+      console.log('Submitting updateData.workingHours:', updateData.workingHours); // Debug için
 
       if (storeId) {
         await api.updateStore(storeId, updateData);
@@ -492,7 +522,7 @@ function EditStoreContent() {
                 type="checkbox"
                 id="approved"
                 name="approved"
-                checked={formData.approved}
+                checked={Boolean(formData.approved)}
                 onChange={handleChange}
                 className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
               />
@@ -552,7 +582,7 @@ function EditStoreContent() {
                   type="checkbox"
                   id={`module-${moduleName}`}
                   name={`module-${moduleName}`}
-                  checked={formData.module_permissions[moduleName]}
+                  checked={Boolean(formData.module_permissions[moduleName])}
                   onChange={handleChange}
                   className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
                 />
@@ -564,48 +594,148 @@ function EditStoreContent() {
           </div>
 
           <h2 className="text-xl font-semibold mb-4 mt-8 text-gray-700">Çalışma Saatleri</h2>
+          {!loading && (
           <div className="space-y-4 mb-6">
-            {Object.keys(formData.working_hours).map(day => (
-              <div key={day} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-3 border rounded-md">
-                <label className="font-medium capitalize md:col-span-1">{day.charAt(0).toUpperCase() + day.slice(1)}</label>
-                <div className="flex items-center md:col-span-1">
-                  <input 
-                    type="checkbox" 
-                    id={`working_hours.${day}.is_open`}
-                    name={`working_hours.${day}.is_open`}
-                    checked={formData.working_hours[day]?.is_open || false} 
-                    onChange={handleChange} 
-                    className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
-                  />
-                  <label htmlFor={`working_hours.${day}.is_open`} className="text-sm">Açık</label>
+            <div className="grid grid-cols-1 gap-6">
+              {Object.entries({
+                monday: 'Pazartesi',
+                tuesday: 'Salı', 
+                wednesday: 'Çarşamba',
+                thursday: 'Perşembe',
+                friday: 'Cuma',
+                saturday: 'Cumartesi',
+                sunday: 'Pazar'
+              }).map(([key, label]) => {
+                console.log(`Rendering ${key}:`, formData.workingHours[key]); // Debug için
+                const currentValue = formData.workingHours[key];
+                const isChecked = currentValue !== 'Kapalı' && currentValue !== '' && currentValue !== 'Geçici Kapalı';
+                console.log(`${key} - currentValue: "${currentValue}", isChecked: ${isChecked}`); // Debug için
+                return (
+                <div key={key} className="flex items-center space-x-4 p-3 border rounded-md">
+                  <div className="w-24 text-sm font-medium text-gray-700">
+                    {label}
+                  </div>
+                  <div className="flex items-center space-x-2 flex-1">
+                    <input
+                      type="checkbox"
+                      id={`${key}_open`}
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData(prev => ({
+                            ...prev,
+                            workingHours: {
+                              ...prev.workingHours,
+                              [key]: '09:00 - 18:00'
+                            }
+                          }));
+                        } else {
+                          setFormData(prev => ({
+                            ...prev,
+                            workingHours: {
+                              ...prev.workingHours,
+                              [key]: 'Kapalı'
+                            }
+                          }));
+                        }
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor={`${key}_open`} className="text-sm text-gray-600 w-12">
+                      Açık
+                    </label>
+                    
+                    {isChecked && (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="time"
+                          value={formData.workingHours[key]?.split(' - ')[0] || '09:00'}
+                          onChange={(e) => {
+                            const endTime = formData.workingHours[key]?.split(' - ')[1] || '18:00';
+                            setFormData(prev => ({
+                              ...prev,
+                              workingHours: {
+                                ...prev.workingHours,
+                                [key]: `${e.target.value} - ${endTime}`
+                              }
+                            }));
+                          }}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <span className="text-gray-500">-</span>
+                        <input
+                          type="time"
+                          value={formData.workingHours[key]?.split(' - ')[1] || '18:00'}
+                          onChange={(e) => {
+                            const startTime = formData.workingHours[key]?.split(' - ')[0] || '09:00';
+                            setFormData(prev => ({
+                              ...prev,
+                              workingHours: {
+                                ...prev.workingHours,
+                                [key]: `${startTime} - ${e.target.value}`
+                              }
+                            }));
+                          }}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              workingHours: {
+                                ...prev.workingHours,
+                                [key]: 'Geçici Kapalı'
+                              }
+                            }));
+                          }}
+                          className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs hover:bg-orange-200"
+                        >
+                          Geçici Kapat
+                        </button>
+                      </div>
+                    )}
+                    
+                    {currentValue === 'Geçici Kapalı' && (
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm">
+                          Geçici Kapalı
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              workingHours: {
+                                ...prev.workingHours,
+                                [key]: '09:00 - 18:00'
+                              }
+                            }));
+                          }}
+                          className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                        >
+                          Yeniden Aç
+                        </button>
+                      </div>
+                    )}
+                    
+                    {currentValue === 'Kapalı' && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                        Kapalı
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="md:col-span-1">
-                  <label htmlFor={`working_hours.${day}.open`} className="block text-xs text-gray-600">Açılış</label>
-                  <input 
-                    type="time" 
-                    id={`working_hours.${day}.open`}
-                    name={`working_hours.${day}.open`}
-                    value={formData.working_hours[day]?.open || ''} 
-                    onChange={handleChange} 
-                    disabled={!formData.working_hours[day]?.is_open}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label htmlFor={`working_hours.${day}.close`} className="block text-xs text-gray-600">Kapanış</label>
-                  <input 
-                    type="time" 
-                    id={`working_hours.${day}.close`}
-                    name={`working_hours.${day}.close`}
-                    value={formData.working_hours[day]?.close || ''} 
-                    onChange={handleChange} 
-                    disabled={!formData.working_hours[day]?.is_open}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100"
-                  />
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-4">
+              • Çalışma saatlerini belirlemek için önce "Açık" seçeneğini işaretleyin<br/>
+              • "Geçici Kapat" ile o günü geçici olarak kapatabilirsiniz<br/>
+              • Zaman formatı: 09:00 - 18:00 şeklinde olmalıdır
+            </p>
           </div>
+          )}
 
           <h2 className="text-xl font-semibold mb-4 mt-8 text-gray-700">Teslimat Ayarları</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

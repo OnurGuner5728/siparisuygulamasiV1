@@ -35,13 +35,74 @@ export function CartProvider({ children }) {
   }, [user?.id, loadCart]);
 
   // Sepete ekle
-  const addToCart = useCallback(async (product, quantity = 1) => {
+  const addToCart = useCallback(async (product, quantity = 1, storeType = 'yemek') => {
     if (!user?.id) {
       alert('Sepete ürün eklemek için giriş yapmalısınız.');
       return;
     }
 
     try {
+      // Sepette ürün var mı kontrol et
+      if (cartItems.length > 0) {
+        const firstItem = cartItems[0];
+        
+        // Farklı kategori kontrolü (yemek, market, su)
+        if (firstItem.store_type !== storeType) {
+          const currentCategoryName = firstItem.store_type === 'yemek' ? 'Yemek' : 
+                                     firstItem.store_type === 'market' ? 'Market' : 'Su';
+          const newCategoryName = storeType === 'yemek' ? 'Yemek' : 
+                                 storeType === 'market' ? 'Market' : 'Su';
+          
+          const shouldClear = confirm(
+            `Sepetinizde ${currentCategoryName} kategorisinden ürünler var.\n\n` +
+            `${newCategoryName} kategorisinden ürün eklemek için sepeti temizlememiz gerekiyor.\n\n` +
+            `Sepeti temizleyip yeni ürünü eklemek istiyor musunuz?`
+          );
+          
+          if (!shouldClear) {
+            return; // Kullanıcı iptal etti
+          }
+          
+          // Sepeti temizle
+          const clearPromises = cartItems.map(item => api.removeFromCart(item.id));
+          await Promise.all(clearPromises);
+          setCartItems([]);
+        }
+        // Farklı mağaza kontrolü (aynı kategori içinde)
+        else if (firstItem.store_id !== product.store_id) {
+          // Mağaza adını almaya çalış
+          let currentStoreName = 'mevcut mağaza';
+          let newStoreName = 'yeni mağaza';
+          
+          try {
+            // Store isimlerini products'tan veya cart items'dan alabiliyorsak al
+            if (firstItem.store_name) {
+              currentStoreName = firstItem.store_name;
+            }
+            if (product.store_name) {
+              newStoreName = product.store_name;
+            }
+          } catch (error) {
+            // Store isimleri alınamazsa default değerler kullanılır
+          }
+          
+          const shouldClear = confirm(
+            `Sepetinizde "${currentStoreName}" mağazasından ürünler var.\n\n` +
+            `"${newStoreName}" mağazasından ürün eklemek için sepeti temizlememiz gerekiyor.\n\n` +
+            `Sepeti temizleyip yeni ürünü eklemek istiyor musunuz?`
+          );
+          
+          if (!shouldClear) {
+            return; // Kullanıcı iptal etti
+          }
+          
+          // Sepeti temizle
+          const clearPromises = cartItems.map(item => api.removeFromCart(item.id));
+          await Promise.all(clearPromises);
+          setCartItems([]);
+        }
+      }
+
       // Mevcut sepette aynı ürün var mı kontrol et
       const existingItem = cartItems.find(item => item.product_id === product.id);
       
@@ -60,6 +121,11 @@ export function CartProvider({ children }) {
         const cartItem = {
           user_id: user.id,
           product_id: product.id,
+          store_id: product.store_id,
+          name: product.name,
+          store_name: product.store_name || '',
+          store_type: storeType,
+          category: product.category || '',
           quantity,
           price: product.price,
           total: product.price * quantity
@@ -76,17 +142,48 @@ export function CartProvider({ children }) {
     }
   }, [user?.id, cartItems, loadCart]);
 
-  // Sepetten kaldır
-  const removeFromCart = useCallback(async (itemId) => {
+  // Sepetten kaldır (miktar azalt)
+  const removeFromCart = useCallback(async (productId, storeId) => {
     try {
-      const result = await api.removeFromCart(itemId);
-      if (result.success) {
-        await loadCart(user?.id); // Sepeti yenile
+      const item = cartItems.find(item => item.product_id === productId && item.store_id === storeId);
+      if (!item) return;
+      
+      if (item.quantity > 1) {
+        // Miktarını azalt
+        const newQuantity = item.quantity - 1;
+        const result = await api.updateCartItem(item.id, {
+          quantity: newQuantity,
+          total: item.price * newQuantity
+        });
+        if (result.success) {
+          await loadCart(user?.id); // Sepeti yenile
+        }
+      } else {
+        // Tamamen kaldır
+        const result = await api.removeFromCart(item.id);
+        if (result.success) {
+          await loadCart(user?.id); // Sepeti yenile
+        }
       }
     } catch (error) {
       console.error('Sepetten kaldırma hatası:', error);
     }
-  }, [user?.id, loadCart]);
+  }, [user?.id, cartItems, loadCart]);
+
+  // Ürünü tamamen kaldır
+  const removeItemCompletely = useCallback(async (productId, storeId) => {
+    try {
+      const item = cartItems.find(item => item.product_id === productId && item.store_id === storeId);
+      if (!item) return;
+      
+      const result = await api.removeFromCart(item.id);
+      if (result.success) {
+        await loadCart(user?.id); // Sepeti yenile
+      }
+    } catch (error) {
+      console.error('Sepetten tamamen kaldırma hatası:', error);
+    }
+  }, [user?.id, cartItems, loadCart]);
 
   // Sepeti temizle
   const clearCart = useCallback(async () => {
@@ -99,22 +196,42 @@ export function CartProvider({ children }) {
     }
   }, [cartItems]);
 
+  // Sepet hesaplama fonksiyonları
+  const calculateSubtotal = useCallback(() => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  }, [cartItems]);
+
+  const calculateDeliveryFee = useCallback(() => {
+    const subtotal = calculateSubtotal();
+    // 150 TL üzeri ücretsiz teslimat
+    return subtotal >= 150 ? 0 : 15;
+  }, [calculateSubtotal]);
+
+  const calculateTotal = useCallback(() => {
+    return calculateSubtotal() + calculateDeliveryFee();
+  }, [calculateSubtotal, calculateDeliveryFee]);
+
   // Sepet toplamları - useMemo ile optimize et
   const cartSummary = React.useMemo(() => ({
     itemCount: cartItems.reduce((total, item) => total + item.quantity, 0),
-    subtotal: cartItems.reduce((total, item) => total + (item.price * item.quantity), 0),
-    total: cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
-  }), [cartItems]);
+    subtotal: calculateSubtotal(),
+    total: calculateTotal()
+  }), [cartItems, calculateSubtotal, calculateTotal]);
 
   const value = React.useMemo(() => ({
     cartItems,
     loading,
     addToCart,
     removeFromCart,
+    removeItemCompletely,
     clearCart,
     refreshCart: loadCart,
-    cartSummary
-  }), [cartItems, loading, addToCart, removeFromCart, clearCart, loadCart, cartSummary]);
+    cartSummary,
+    totalItems: cartSummary.itemCount,
+    calculateSubtotal,
+    calculateDeliveryFee,
+    calculateTotal
+  }), [cartItems, loading, addToCart, removeFromCart, removeItemCompletely, clearCart, loadCart, cartSummary, calculateSubtotal, calculateDeliveryFee, calculateTotal]);
 
   return (
     <CartContext.Provider value={value}>

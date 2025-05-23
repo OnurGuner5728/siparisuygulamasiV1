@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { FiArrowLeft, FiStar, FiClock, FiMapPin, FiInfo, FiShoppingBag, FiChevronDown, FiChevronUp, FiMinus, FiPlus } from 'react-icons/fi';
 import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
+import ReviewSystem from '@/components/ReviewSystem';
 
 export default function SuStoreDetailPage({ params }) {
   const router = useRouter();
@@ -97,19 +98,14 @@ export default function SuStoreDetailPage({ params }) {
   // Sepete ürünü ekle
   const addToCart = (product) => {
     try {
-      // CartContext'i kullanarak sepete ekle
-      contextAddToCart({
-        product_id: product.id,
-        name: product.name,
-        price: parseFloat(product.price) || 0,
-        quantity: 1,
-        image: product.image || null,
-        store_id: store?.id || null,
-        store_name: store?.name || '',
-        store_type: 'su',
-        category: product.category || '',
-        notes: ''
-      });
+      // Store bilgisini product objesine ekle
+      const productWithStore = {
+        ...product,
+        store_name: store?.name
+      };
+      
+      // CartContext'i kullanarak sepete ekle - sadece product objesini gönder
+      contextAddToCart(productWithStore, 1, 'su');
       
       // Sepeti göster
       setShowCart(true);
@@ -121,7 +117,11 @@ export default function SuStoreDetailPage({ params }) {
   
   // Ürün miktarını artır
   const increaseQuantity = (product) => {
-    addToCart(product);
+    const productWithStore = {
+      ...product,
+      store_name: store?.name
+    };
+    addToCart(productWithStore);
   };
   
   // Ürün miktarını azalt
@@ -353,7 +353,24 @@ export default function SuStoreDetailPage({ params }) {
                                   {storeCartItems.find(item => item.product_id === product.id).quantity}
                                 </span>
                                 
-                                                                <button                                   onClick={() => {                              const foundProduct = products.find(p => p.id === item.product_id);                              if (foundProduct) increaseQuantity(foundProduct);                            }}                            className="p-1 text-gray-500 hover:text-sky-600"                          >                            <FiPlus size={14} />                          </button>                              </div>                            ) : (                              <button                                 onClick={() => addToCart(product)}                                className="text-sm bg-sky-100 hover:bg-sky-200 text-sky-700 py-1 px-3 rounded-full transition-colors"                              >                                Sepete Ekle                              </button>                            )}
+                                <button 
+                                  onClick={() => {
+                                    const foundProduct = products.find(p => p.id === product.id);
+                                    if (foundProduct) increaseQuantity(foundProduct);
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-sky-600"
+                                >
+                                  <FiPlus size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => addToCart(product)}
+                                className="text-sm bg-sky-100 hover:bg-sky-200 text-sky-700 py-1 px-3 rounded-full transition-colors"
+                              >
+                                Sepete Ekle
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -362,6 +379,14 @@ export default function SuStoreDetailPage({ params }) {
                 </div>
               );
             })}
+            
+            {/* Review System */}
+            <div className="mt-12">
+              <ReviewSystem 
+                storeId={store?.id} 
+                type="store"
+              />
+            </div>
           </div>
           
           {/* Sepet */}
@@ -403,7 +428,15 @@ export default function SuStoreDetailPage({ params }) {
                           
                           <span className="mx-2 text-sm font-medium">{item.quantity}</span>
                           
-                                                    <button                             onClick={() => {                              const foundProduct = products.find(p => p.id === item.product_id);                              if (foundProduct) increaseQuantity(foundProduct);                            }}                            className="p-1 text-gray-500 hover:text-sky-600"                          >                            <FiPlus size={14} />                          </button>
+                          <button 
+                            onClick={() => {
+                              const foundProduct = products.find(p => p.id === item.product_id);
+                              if (foundProduct) increaseQuantity(foundProduct);
+                            }}
+                            className="p-1 text-gray-500 hover:text-sky-600"
+                          >
+                            <FiPlus size={14} />
+                          </button>
                         </div>
                       </div>
                     ))}
