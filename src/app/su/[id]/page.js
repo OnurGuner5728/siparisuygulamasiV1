@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 
-export default function SuRedirectPage({ params }) {
+export default function SuRedirectPage(props) {
+  const params = use(props.params);
   const router = useRouter();
   const { id } = params;
   const [error, setError] = useState(false);
-  
+
   useEffect(() => {
     const redirectToCorrectPage = async () => {
       try {
@@ -24,7 +25,7 @@ export default function SuRedirectPage({ params }) {
       redirectToCorrectPage();
     }
   }, [id, router]);
-  
+
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen flex-col">
@@ -39,7 +40,7 @@ export default function SuRedirectPage({ params }) {
       </div>
     );
   }
-  
+
   return (
     <div className="flex justify-center items-center min-h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>

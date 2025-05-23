@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiArrowLeft, FiPhone, FiMessageSquare, FiInfo, FiMapPin } from 'react-icons/fi';
@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 
-export default function OrderTracking({ params }) {
+export default function OrderTracking(props) {
+  const params = use(props.params);
   return (
     <AuthGuard>
       <OrderTrackingContent params={params} />
