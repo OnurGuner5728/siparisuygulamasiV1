@@ -29,23 +29,24 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="tr">
-      <head>
-        <title>Sipariş Uygulaması</title>
-        <meta name="description" content="Yemek, Market, Su ve Aktüel ürünler için çok kategorili sipariş uygulaması" />
-      </head>
-      <body className={inter.className + ' min-h-screen flex flex-col'}>
+      <body className={inter.className}>
         <AuthProvider>
           <ModuleProvider>
-            <CartProvider>
-              <FileProvider>
-                <div className="flex flex-col flex-grow">
-                  <HeaderWrapper onCartClick={handleCartOpen} />
-                  <CartSidebar isOpen={isCartOpen} onClose={handleCartClose} />
-                  <main className="flex-grow">{children}</main>
+            <FileProvider>
+              <CartProvider>
+                <div className="min-h-screen bg-gray-50 flex flex-col">
+                  <HeaderWrapper onCartOpen={handleCartOpen} />
+                  <main className="flex-1">
+                    {children}
+                  </main>
                   <Footer />
+                  <CartSidebar 
+                    isOpen={isCartOpen} 
+                    onClose={handleCartClose} 
+                  />
                 </div>
-              </FileProvider>
-            </CartProvider>
+              </CartProvider>
+            </FileProvider>
           </ModuleProvider>
         </AuthProvider>
       </body>

@@ -7,12 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 import FileUploader from '@/components/FileUploader';
+import AdminLayout from '@/components/AdminLayout';
 
-export default function EditProduct() {
+export default function EditProductPage() {
   return (
-    <AuthGuard requiredRole="admin">
+    <AdminLayout>
       <EditProductContent />
-    </AuthGuard>
+    </AdminLayout>
   );
 }
 

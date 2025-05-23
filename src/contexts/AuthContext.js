@@ -1,389 +1,229 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import supabase from '@/lib/supabase';
-import { 
-  signUp, 
-  signIn, 
-  signOut, 
-  getUser, 
-  getUserProfile, 
-  updateUserProfile 
-} from '@/lib/supabaseApi';
+import { signUp, signIn, signOut, getUserProfile, updateUserProfile } from '@/lib/supabaseApi';
+import api from '@/lib/api';
 
-// Auth Context oluşturma
 const AuthContext = createContext(null);
 
-// Auth Provider bileşeni
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-        // Supabase Auth kullanıcı durumunu dinle    const { data: { subscription } } = supabase.auth.onAuthStateChange(      async (event, session) => {        setLoading(true);                if (session && session.user) {          try {            // Kullanıcı oturum açmış, profil bilgilerini al            const { data: profile, error: profileError } = await getUserProfile(session.user.id);                        if (profileError) {              // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et              setUser({                ...session.user,                role: session.user.user_metadata?.role || 'user',                name: session.user.user_metadata?.name || 'Kullanıcı'              });            } else {              // Rolü auth'dan veya veritabanından al, auth öncelikli              const userRole = session.user.user_metadata?.role || profile?.role || 'user';                            // Kullanıcı bilgilerini ve profilini birleştir              const userWithProfile = {                ...session.user,                ...profile,                role: userRole              };                            setUser(userWithProfile);            }          } catch (error) {            // Hata durumunda en azından temel auth bilgilerini ayarla            setUser({              ...session.user,              role: session.user.user_metadata?.role || 'user',              name: session.user.user_metadata?.name || 'Kullanıcı'            });          }        } else {          // Kullanıcı oturum açmamış          setUser(null);        }                setLoading(false);      }    );
 
-      // Sayfa yüklendiğinde mevcut kullanıcıyı kontrol et
-  const fetchUser = async () => {
+  // Kullanıcı profili yükle - STABİL REFERANS
+  const loadUserProfile = useCallback(async (authUser) => {
     try {
-      setLoading(true);
-      console.log("Fetching initial user...");
+      const { data: profile } = await getUserProfile(authUser.id);
       
-      const { user: authUser, error: authError } = await getUser();
+      const userRole = authUser?.user_metadata?.role || profile?.role || 'user';
       
-      if (authError) {
-        // AuthSessionMissingError gibi hatalar normal durumlardır - session yoksa
-        if (authError.message.includes('Auth session missing')) {
-          console.log("Auth session missing - kullanıcı giriş yapmamış");
-          setUser(null);
-          return;
+      // Store bilgilerini al (sadece store rolü için)
+      let storeInfo = null;
+      if (userRole === 'store') {
+        try {
+          storeInfo = await api.getStoreByOwnerId(authUser.id);
+        } catch (error) {
+          console.warn('Store bilgileri alınamadı:', error);
         }
-        console.error("Auth user error:", authError);
-        setUser(null);
-        return;
       }
+      
+      return {
+        ...authUser,
+        ...profile,
+        role: userRole,
+        name: profile?.name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'Kullanıcı',
+        storeInfo
+      };
+    } catch (error) {
+      console.error('Profil yüklenirken hata:', error);
+      return {
+        ...authUser,
+        role: authUser?.user_metadata?.role || 'user',
+        name: authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'Kullanıcı'
+      };
+    }
+  }, []); // Boş dependency - external API kullanıyor
+
+  // Session kontrolü - STABİL REFERANS
+  const checkSession = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const fullUser = await loadUserProfile(session.user);
+        setUser(fullUser);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Session kontrol hatası:', error);
+      setUser(null);
+    }
+  }, [loadUserProfile]); // Sadece loadUserProfile dependency
+
+  // İlk yükleme ve auth state listener
+  useEffect(() => {
+    let mounted = true;
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (authUser) {
-          console.log("Initial Auth User:", authUser);
-          console.log("Initial Auth Metadata:", authUser.user_metadata);
-          
-          try {
-            // Kullanıcı profil bilgilerini al
-            const { data: profile, error: profileError } = await getUserProfile(authUser.id);
-            
-            if (profileError) {
-              console.error("Profil bilgileri alınamadı:", profileError);
-              
-              // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et
-              setUser({
-                ...authUser,
-                role: authUser.user_metadata?.role || 'user',
-                name: authUser.user_metadata?.name || 'Kullanıcı'
-              });
-            } else {
-              console.log("Initial DB Profile:", profile);
-              
-              // Rolü auth'dan veya veritabanından al, auth öncelikli
-              const userRole = authUser.user_metadata?.role || profile?.role || 'user';
-              console.log("Initial Determined Role:", userRole);
-              
-              // Kullanıcı bilgilerini ve profilini birleştir
-              const userWithProfile = {
-                ...authUser,
-                ...profile,
-                role: userRole
-              };
-              
-              setUser(userWithProfile);
-            }
-          } catch (error) {
-            console.error("Fetch user profile error:", error);
-            // Hata durumunda en azından temel auth bilgilerini ayarla
-            setUser({
-              ...authUser,
-              role: authUser.user_metadata?.role || 'user',
-              name: authUser.user_metadata?.name || 'Kullanıcı'
-            });
-          }
-        } else {
-          console.log("No initial user found");
-          setUser(null);
+        if (session?.user && mounted) {
+          const fullUser = await loadUserProfile(session.user);
+          setUser(fullUser);
         }
       } catch (error) {
-        console.error('Kullanıcı bilgileri alınamadı:', error);
-        setUser(null);
+        console.error('Auth başlatma hatası:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchUser();
+    initAuth();
 
-    // Cleanup
+    // Auth state değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        setUser(null);
+      } else if (session?.user) {
+        const fullUser = await loadUserProfile(session.user);
+        setUser(fullUser);
+      }
+      
+      setLoading(false);
+    });
+
     return () => {
+      mounted = false;
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [loadUserProfile]); // Sadece loadUserProfile dependency
 
-  // Kullanıcı girişi işlemi - useCallback ile memoization
+  // Page visibility kontrolü - AYRI useEffect
+  useEffect(() => {
+    let lastVisibilityChange = Date.now();
+    
+    const handleVisibilityChange = () => {
+      // En az 5 dakika geçtiyse ve user varsa kontrol et
+      const now = Date.now();
+      if (document.visibilityState === 'visible' && 
+          user?.id && 
+          (now - lastVisibilityChange) > 5 * 60 * 1000) {
+        lastVisibilityChange = now;
+        setTimeout(checkSession, 2000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [checkSession]); // user dependency'den çıkarıldı
+
+  // Login
   const login = useCallback(async (email, password) => {
+    setLoading(true);
     try {
-      console.log("Login attempt for:", email);
       const { data, error } = await signIn(email, password);
-      
-      if (error) {
-        console.error("Login auth error:", error);
-        throw error;
-      }
-      
-      if (!data || !data.user) {
-        console.error("Login succeeded but no user data returned");
-        throw new Error("Kullanıcı bilgileri alınamadı");
-      }
-      
-      console.log("Login Auth User:", data.user);
-      console.log("Login Metadata:", data.user.user_metadata);
-      
-      try {
-        // Kullanıcı profil bilgilerini al
-        const { data: profile, error: profileError } = await getUserProfile(data.user.id);
-        
-        if (profileError) {
-          console.error("Login - profil bilgileri alınamadı:", profileError);
-          
-          // Profil bilgileri alınamazsa sadece auth bilgileriyle devam et
-          const basicUser = {
-            ...data.user,
-            role: data.user.user_metadata?.role || 'user',
-            name: data.user.user_metadata?.name || 'Kullanıcı'
-          };
-          
-          setUser(basicUser);
-          return { success: true, user: basicUser };
-        }
-        
-        console.log("Login DB Profile:", profile);
-        
-        // Rolü auth'dan veya veritabanından al, auth öncelikli
-        const userRole = data.user.user_metadata?.role || profile?.role || 'user';
-        console.log("Login Determined Role:", userRole);
-        
-        // Kullanıcı bilgilerini ve profilini birleştir
-        const userWithProfile = {
-          ...data.user,
-          ...profile,
-          role: userRole
-        };
-        
-        setUser(userWithProfile);
-        
-        return { success: true, user: userWithProfile };
-      } catch (error) {
-        console.error("Login - profil alma hatası:", error);
-        
-        // Hata durumunda en azından temel auth bilgilerini ayarla
-        const basicUser = {
-          ...data.user,
-          role: data.user.user_metadata?.role || 'user',
-          name: data.user.user_metadata?.name || 'Kullanıcı'
-        };
-        
-        setUser(basicUser);
-        return { success: true, user: basicUser };
-      }
+      if (error) throw error;
+      return { success: true, user: data.user };
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: error.message || 'Giriş sırasında bir hata oluştu' };
+      setUser(null);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Kullanıcı çıkışı işlemi
+  // Register
+  const register = useCallback(async (email, password, userData) => {
+    setLoading(true);
+    try {
+      const { data, error } = await signUp(email, password, userData);
+      if (error) throw error;
+      return { success: true, user: data.user };
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Logout
   const logout = useCallback(async () => {
+    setLoading(true);
     try {
       const { error } = await signOut();
-      
-      if (error) {
-        throw error;
-      }
-      
-      setUser(null);
-      
-      return { success: true };
+      if (error) throw error;
     } catch (error) {
-      console.error('Logout error:', error);
-      return { success: false, error: error.message };
+      throw error;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Yeni kullanıcı kaydı işlemi - store sahipleri ve normal kullanıcılar için
-  const register = useCallback(async (name, email, password, role = 'user', businessData = null) => {
-    try {
-      // İsimi parçalara ayırma
-      const nameParts = name.split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ') || '';
-
-      // User metadata
-      const userData = {
-        name,
-        firstName,
-        lastName,
-        role,
-        phone: businessData?.phone || '',
-      };
-
-      // Supabase Auth'a kullanıcı kaydet
-      const { user: authUser, error: signUpError } = await signUp(email, password, userData);
-      
-      if (signUpError) {
-        throw signUpError;
-      }
-      
-      if (!authUser) {
-        throw new Error('Kullanıcı oluşturulamadı');
-      }
-
-      // Profil tablosuna ek bilgileri kaydet
-      const profileData = {
-        id: authUser.id,
-        name,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        phone: businessData?.phone || '',
-        role,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Profil tablosuna kaydet
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert(profileData);
-      
-      if (profileError) {
-        throw profileError;
-      }
-      
-      // Store sahibi kaydı ise mağaza bilgilerini de ekle
-      if (role === 'store' && businessData) {
-        const storeData = {
-          owner_id: authUser.id,
-          name: businessData.businessName,
-          email: businessData.businessEmail,
-          phone: businessData.businessPhone,
-          address: businessData.businessAddress,
-          category_id: parseInt(businessData.categoryId),
-          subcategories: businessData.subcategories || [],
-          logo: "https://placehold.co/400x400/png",
-          cover_image: "https://placehold.co/1200x300/png",
-          rating: 0,
-          review_count: 0,
-          status: 'pending', // Yeni mağaza onay bekliyor durumunda
-          created_at: new Date().toISOString(),
-          description: `${businessData.businessName} mağazası`
-        };
-        
-        // Stores tablosuna kaydet
-        const { error: storeError } = await supabase
-          .from('stores')
-          .insert(storeData);
-        
-        if (storeError) {
-          throw storeError;
-        }
-      }
-      
-      return { success: true, user: { ...authUser, ...profileData } };
-    } catch (error) {
-      console.error('Register error:', error);
-      return { success: false, error: error.message || 'Kayıt sırasında bir hata oluştu' };
-    }
-  }, []);
-
-  // Kullanıcı verisini güncelle (adres, profil bilgileri, vb.)
-  const updateUserData = useCallback(async (updatedUserData) => {
-    try {
-      if (!user) {
-        throw new Error('Kullanıcı oturum açmamış');
-      }
-      
-      // Sadece profil bilgilerini güncelle
-      const { 
-        email, password, id, created_at, updated_at, 
-        role, ...profileData 
-      } = updatedUserData;
-      
-      // updated_at ekle
-      profileData.updated_at = new Date().toISOString();
-      
-      // Profil bilgilerini güncelle
-      const { data, error } = await supabase
-        .from('users')
-        .update(profileData)
-        .eq('id', user.id)
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Kullanıcı bilgilerini güncelle
-      const updatedUser = { ...user, ...profileData };
-      setUser(updatedUser);
-      
-      return { success: true, user: updatedUser };
-    } catch (error) {
-      console.error('Update user data error:', error);
-      return { success: false, error: error.message || 'Profil güncellenirken bir hata oluştu' };
-    }
-  }, [user]);
-
-  // Kullanıcı yetkisini kontrol et
-  const hasPermission = useCallback((module, action) => {
-    if (!user) return false;
+  // Update profile
+  const updateProfile = useCallback(async (updates) => {
+    if (!user?.id) throw new Error('Kullanıcı oturumu bulunamadı');
     
-    // Admin her şeye erişebilir
+    setLoading(true);
+    try {
+      const { data, error } = await updateUserProfile(user.id, updates);
+      if (error) throw error;
+      
+      const fullUser = await loadUserProfile(user);
+      setUser(fullUser);
+      return { success: true, user: fullUser };
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadUserProfile]);
+
+  // Permission check
+  const hasPermission = useCallback((module) => {
+    if (!user) return false;
+    if (module === 'any_auth') return true;
     if (user.role === 'admin') return true;
     
-    // Modül bazlı yetkilendirme
     switch (module) {
-      case 'kampanya':
-        // Mağaza sahipleri kampanya oluşturabilir
-        if (action === 'create' && user.role === 'store') return true;
-        
-        // Kampanyaları herkes görüntüleyebilir
-        if (action === 'view') return true;
-        
-        // Admin olmayan kullanıcılar admin sayfasına erişemez
-        if (action === 'admin') return false;
-        
-        return false;
-        
-      case 'siparis':
-        // Kullanıcılar kendi siparişlerini görüntüleyebilir
-        if (action === 'view' && (user.role === 'user' || user.role === 'store')) return true;
-        
-        // Mağaza sahipleri kendilerine gelen siparişleri yönetebilir
-        if ((action === 'manage' || action === 'update') && user.role === 'store') return true;
-        
-        return false;
-        
-      case 'magaza':
-        // Mağaza sahipleri kendi mağazalarını düzenleyebilir
-        if ((action === 'edit' || action === 'manage') && user.role === 'store') return true;
-        
-        // Herkes mağazaları görüntüleyebilir
-        if (action === 'view') return true;
-        
-        return false;
-        
-      default:
-        return false;
+      case 'admin': return user.role === 'admin';
+      case 'store': return user.role === 'store';
+      case 'user': return user.role === 'user' || user.role === 'admin';
+      default: return false;
     }
   }, [user]);
 
-  // Memoize edilen context değeri
   const value = useMemo(() => ({
     user,
     loading,
     isAuthenticated: !!user,
     login,
-    logout,
     register,
-    updateUserData,
+    logout,
+    updateProfile,
     hasPermission,
-    getUserProfile,
-    isAdmin: user?.role === 'admin',
-    isStore: user?.role === 'store',
-    isUser: user?.role === 'user',
-  }), [user, loading, login, logout, register, updateUserData, hasPermission, getUserProfile]);
+    checkSession  // Manuel session kontrolü için
+  }), [user, loading, login, register, logout, updateProfile, hasPermission, checkSession]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-// Auth Context hook'u
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === null) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error('useAuth hook AuthProvider içinde kullanılmalıdır');
   }
   return context;
 } 

@@ -110,7 +110,8 @@ function CampaignsContent() {
       const categorySlug = categoryMapping[campaign.store.category_id] || 'yemek';
       const storeId = campaign.store.id;
       
-      router.push(`/${categorySlug}/${storeId}`);
+      // Yemek için doğrudan yemek/store/id, diğerleri için category/store/id
+      router.push(`/${categorySlug}/store/${storeId}`);
     } else {
       console.warn("Kampanyaya ait mağaza bilgisi eksik:", campaign);
       router.push('/'); 

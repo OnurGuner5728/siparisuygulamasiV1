@@ -66,8 +66,48 @@ export const getStoreById = async (storeId) => {
   return data;
 };
 
+export const getStoreByOwnerId = async (ownerId) => {
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .select(`
+        *,
+        owner:users (id, name, email, phone),
+        category:categories (id, name, slug)
+      `)
+      .eq('owner_id', ownerId)
+      .single();
+      
+    if (error) {
+      console.error(`Mağaza bilgisini getirirken hata (Owner ID: ${ownerId}):`, error);
+      return null;
+    }
+    
+    // Çalışma saatlerini ayrıca çek
+    const { data: workingHours, error: workingHoursError } = await supabase
+      .from('store_working_hours')
+      .select('*')
+      .eq('store_id', data.id)
+      .order('day_of_week');
+    
+    if (workingHoursError) {
+      console.error(`Mağaza çalışma saatlerini getirirken hata (Store ID: ${data.id}):`, workingHoursError);
+    } else {
+      data.working_hours = workingHours || [];
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Mağaza bilgisini getirirken beklenmeyen hata:', error);
+    return null;
+  }
+};
+
+// getStoreByUserId da aynı şeyi yapıyor - alias olarak kullan
+export const getStoreByUserId = getStoreByOwnerId;
+
 export const getStoresByCategory = async (categoryId) => {
-  return getStores({ category_id: categoryId, status: 'active' });
+  return getStores({ category_id: categoryId });
 };
 
 export const createStore = async (storeData) => {
@@ -85,6 +125,8 @@ export const createStore = async (storeData) => {
 };
 
 export const updateStore = async (storeId, updates) => {
+  console.log('updateStore called with:', { storeId, updates });
+  
   const { data, error } = await supabase
     .from('stores')
     .update(updates)
@@ -94,6 +136,29 @@ export const updateStore = async (storeId, updates) => {
     
   if (error) {
     console.error(`Mağaza güncellenirken hata (ID: ${storeId}):`, error);
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
+    throw error;
+  }
+  
+  console.log('updateStore successful, returned data:', data);
+  return data;
+};
+
+export const updateStoreStatus = async (storeId, status) => {
+  const { data, error } = await supabase
+    .from('stores')
+    .update({ status })
+    .eq('id', storeId)
+    .select()
+    .single();
+    
+  if (error) {
+    console.error(`Mağaza durumu güncellenirken hata (ID: ${storeId}):`, error);
     throw error;
   }
   return data;
@@ -581,6 +646,40 @@ export const getMainCategories = async (useAdmin = false) => {
   return data || [];
 };
 
+// Alt kategorileri getir
+export const getAllSubcategories = async (useAdmin = false) => {
+  const client = useAdmin ? supabaseAdmin : supabase;
+  
+  const { data, error } = await client
+    .from('categories')
+    .select('*')
+    .not('parent_id', 'is', null) // Alt kategorileri getirmek için parent_id'si null olmayanları filtrele
+    .order('name');
+    
+  if (error) {
+    console.error('Alt kategorileri getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+// Belirli bir ana kategorinin alt kategorilerini getir
+export const getSubcategoriesByParentId = async (parentId, useAdmin = false) => {
+  const client = useAdmin ? supabaseAdmin : supabase;
+  
+  const { data, error } = await client
+    .from('categories')
+    .select('*')
+    .eq('parent_id', parentId)
+    .order('name');
+    
+  if (error) {
+    console.error(`Alt kategorileri getirirken hata (Parent ID: ${parentId}):`, error);
+    return [];
+  }
+  return data || [];
+};
+
 export const getCategoryById = async (categoryId) => {
   const { data, error } = await supabase
     .from('categories')
@@ -596,7 +695,8 @@ export const getCategoryById = async (categoryId) => {
 };
 
 export const createCategory = async (categoryData) => {
-  const { data, error } = await supabase
+  // Admin işlemleri için admin client kullan
+  const { data, error } = await supabaseAdmin
     .from('categories')
     .insert(categoryData)
     .select()
@@ -610,7 +710,8 @@ export const createCategory = async (categoryData) => {
 };
 
 export const updateCategory = async (categoryId, updates) => {
-  const { data, error } = await supabase
+  // Admin işlemleri için admin client kullan
+  const { data, error } = await supabaseAdmin
     .from('categories')
     .update(updates)
     .eq('id', categoryId)
@@ -625,7 +726,8 @@ export const updateCategory = async (categoryId, updates) => {
 };
 
 export const deleteCategory = async (categoryId) => {
-  const { error } = await supabase
+  // Admin işlemleri için admin client kullan
+  const { error } = await supabaseAdmin
     .from('categories')
     .delete()
     .eq('id', categoryId);
@@ -815,9 +917,268 @@ export const getStoreIdByProductId = async (productId) => {
   }
 };
 
+// Storage (Dosya Yükleme)
+export const uploadImage = async (file, bucketName = 'products') => {
+  try {
+    // Kullanıcı authentication durumunu kontrol et
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('Upload - Auth User:', user);
+    console.log('Upload - Auth Error:', authError);
+    
+    if (authError) {
+      throw new Error(`Authentication hatası: ${authError.message}`);
+    }
+    
+    if (!user) {
+      throw new Error('Kullanıcı giriş yapmamış');
+    }
+
+    // Dosya formatını kontrol et
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Sadece JPG, PNG, GIF ve WebP formatındaki resimler yüklenebilir.');
+    }
+
+    // Dosya boyutunu kontrol et (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new Error('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+    }
+
+    // Dosya adını oluştur (zaman damgası + orijinal dosya adı)
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(7);
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`;
+
+    console.log(`Upload details:`, {
+      bucketName,
+      fileName,
+      fileSize: file.size,
+      fileType: file.type,
+      userId: user.id
+    });
+
+    // Bucket'in var olup olmadığını kontrol et
+    const { data: buckets, error: bucketListError } = await supabase.storage.listBuckets();
+    console.log('Available buckets:', buckets);
+    console.log('Bucket list error:', bucketListError);
+    
+    if (bucketListError) {
+      console.warn('Bucket listesi alınamadı, devam ediliyor:', bucketListError);
+    }
+    
+    // Desteklenen bucket'ları kontrol et
+    const supportedBuckets = ['products', 'stores', 'categories', 'avatars', 'pub'];
+    if (!supportedBuckets.includes(bucketName)) {
+      console.warn(`Desteklenmeyen bucket: ${bucketName}. Varsayılan olarak products kullanılıyor.`);
+      bucketName = 'products';
+    }
+    
+    if (buckets && buckets.length > 0) {
+      const bucketExists = buckets.find(bucket => bucket.name === bucketName);
+      if (!bucketExists) {
+        console.warn(`Bucket '${bucketName}' bulunamadı. Mevcut bucket'ler: ${buckets.map(b => b.name).join(', ')}`);
+        console.log('Yine de upload işlemi deneniyor...');
+      }
+    } else {
+      console.warn('Bucket listesi boş veya alınamadı, yine de upload işlemi deneniyor...');
+    }
+
+    // Supabase Storage'a yükle
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Storage upload error details:', {
+        error,
+        message: error.message,
+        statusCode: error.statusCode,
+        error_description: error.error_description
+      });
+      throw new Error(`Dosya yüklenirken hata: ${error.message}`);
+    }
+
+    console.log('Upload successful, storage data:', data);
+
+    // Public URL'i al
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(data.path);
+
+    console.log('Upload successful, public URL:', urlData.publicUrl);
+    return urlData.publicUrl;
+
+  } catch (error) {
+    console.error('uploadImage error:', error);
+    throw error;
+  }
+};
+
+// Resim silme fonksiyonu
+export const deleteImage = async (imageUrl, bucketName = 'products') => {
+  try {
+    if (!imageUrl) return { success: true };
+
+    // URL'den dosya yolunu çıkar
+    const urlParts = imageUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+
+    if (!fileName) {
+      throw new Error('Geçersiz resim URL\'si');
+    }
+
+    console.log(`Deleting file from bucket: ${bucketName}, fileName: ${fileName}`);
+
+    // Supabase Storage'dan sil
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .remove([fileName]);
+
+    if (error) {
+      console.error('Storage delete error:', error);
+      throw new Error(`Dosya silinirken hata: ${error.message}`);
+    }
+
+    console.log('Delete successful');
+    return { success: true };
+
+  } catch (error) {
+    console.error('deleteImage error:', error);
+    throw error;
+  }
+};
+
+// Search fonksiyonları
+export const searchStores = async (searchParams) => {
+  try {
+    let query = supabase
+      .from('stores')
+      .select(`
+        *,
+        category:categories (id, name, slug)
+      `)
+      .eq('is_approved', true)
+      .eq('status', 'active');
+
+    // Arama sorgusu
+    if (searchParams.query && searchParams.query.trim() !== '') {
+      const searchTerm = searchParams.query.trim();
+      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    }
+
+    // Kategori filtresi - category_id kullanarak
+    if (searchParams.category && searchParams.category !== 'Hepsi') {
+      // Önce kategori adından ID'yi bul
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', searchParams.category)
+        .single();
+      
+      if (categoryData) {
+        query = query.eq('category_id', categoryData.id);
+      }
+    }
+
+    // Sıralama
+    switch (searchParams.sort) {
+      case 'rating':
+        query = query.order('rating', { ascending: false });
+        break;
+      case 'deliveryTime':
+        query = query.order('delivery_time', { ascending: true });
+        break;
+      case 'minPrice':
+        query = query.order('min_order_amount', { ascending: true });
+        break;
+      case 'distance':
+        // Mesafe sıralaması için koordinat gerekir - şimdilik name'e göre sırala
+        query = query.order('name', { ascending: true });
+        break;
+      case 'relevance':
+      default:
+        query = query.order('name', { ascending: true });
+        break;
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Mağaza arama hatası:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Mağaza arama beklenmeyen hatası:', error);
+    return [];
+  }
+};
+
+export const searchProducts = async (searchParams) => {
+  try {
+    let query = supabase
+      .from('products')
+      .select(`
+        *,
+        store:stores!inner (id, name, status, category_id, is_approved)
+      `)
+      .eq('is_available', true)
+      .eq('store.status', 'active')
+      .eq('store.is_approved', true);
+
+    // Arama sorgusu
+    if (searchParams.query && searchParams.query.trim() !== '') {
+      const searchTerm = searchParams.query.trim();
+      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    }
+
+    // Kategori filtresi
+    if (searchParams.category && searchParams.category !== 'Hepsi') {
+      query = query.eq('category', searchParams.category);
+    }
+
+    // Sıralama
+    switch (searchParams.sort) {
+      case 'rating':
+        query = query.order('rating', { ascending: false });
+        break;
+      case 'minPrice':
+        query = query.order('price', { ascending: true });
+        break;
+      case 'maxPrice':
+        query = query.order('price', { ascending: false });
+        break;
+      case 'relevance':
+      default:
+        query = query.order('name', { ascending: true });
+        break;
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Ürün arama hatası:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Ürün arama beklenmeyen hatası:', error);
+    return [];
+  }
+};
+
 export default {
   getStores,
   getStoreById,
+  getStoreByOwnerId,
+  getStoreByUserId,
   getStoresByCategory,
   getProducts,
   getProductById,
@@ -837,6 +1198,8 @@ export default {
   removeFromCart,
   getCategories,
   getMainCategories,
+  getAllSubcategories,
+  getSubcategoriesByParentId,
   getCategoryById,
   createCategory,
   updateCategory,
@@ -849,6 +1212,7 @@ export default {
   deleteUser,
   createStore,
   updateStore,
+  updateStoreStatus,
   deleteStore,
   createProduct,
   updateProduct,
@@ -858,5 +1222,9 @@ export default {
   deleteCampaign,
   getStoreIdByProductId,
   getModulePermissions,
-  isModuleEnabled
+  isModuleEnabled,
+  uploadImage,
+  deleteImage,
+  searchStores,
+  searchProducts
 }; 

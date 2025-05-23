@@ -4,20 +4,19 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import StoreGuard from '@/components/StoreGuard';
+import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 
 export default function StorePanel() {
   return (
-    <StoreGuard>
+    <AuthGuard requiredRole="store">
       <StorePanelContent />
-    </StoreGuard>
+    </AuthGuard>
   );
 }
 
 function StorePanelContent() {
-  const { user } = useAuth();
-  const [store, setStore] = useState(null);
+  const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -28,33 +27,24 @@ function StorePanelContent() {
   });
 
   useEffect(() => {
-    // Mağaza bilgilerini ve istatistiklerini yükle
-    const fetchStoreData = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        // Kullanıcının mağaza ID'sini kullanarak mağaza bilgilerini getir
-        const storeData = await api.getStoreByUserId(user.id);
-        
-        if (storeData) {
-          setStore(storeData);
-          
-          // Mağaza istatistiklerini getir
-          const statsData = await api.getStoreStats(storeData.id);
-          setStats(statsData);
-        } else {
-          console.error('Mağaza bilgileri bulunamadı');
-        }
-      } catch (err) {
-        console.error('Mağaza bilgileri yüklenirken hata:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Sayfa yüklenirken loading'i false yap
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
-    fetchStoreData();
-  }, [user]);
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      await refreshUser();
+    } catch (error) {
+      console.error('Yenileme hatası:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value);
@@ -68,14 +58,81 @@ function StorePanelContent() {
     );
   }
 
+  // Mağaza onaylanmamışsa özel ekran göster
+  if (!user?.storeInfo?.is_approved) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <div className="mb-6">
+              <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Mağaza Onayı Bekleniyor</h1>
+              <p className="text-gray-600 mb-6">
+                Mağaza başvurunuz admin onayında. Onaylandıktan sonra mağaza panelinize erişebilirsiniz.
+              </p>
+            </div>
+            
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-orange-800 mb-2">Başvuru Detayları</h3>
+              <div className="text-left space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">İşletme Adı:</span>
+                  <span className="font-medium">{user.storeInfo?.name || 'Belirtilmemiş'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">E-posta:</span>
+                  <span className="font-medium">{user.storeInfo?.email || 'Belirtilmemiş'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Durum:</span>
+                  <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-sm font-medium">
+                    Onay Bekleniyor
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg disabled:opacity-50"
+              >
+                {loading ? 'Kontrol Ediliyor...' : 'Onay Durumunu Kontrol Et'}
+              </button>
+              
+              <Link
+                href="/profil"
+                className="inline-block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg"
+              >
+                Profilime Dön
+              </Link>
+            </div>
+            
+            <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-blue-800 mb-2">📞 Destek Gerekli mi?</h4>
+              <p className="text-sm text-blue-700">
+                Onay süreci hakkında sorularınız için destek ekibimizle iletişime geçebilirsiniz.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Mağaza Paneli</h1>
-        <p className="text-gray-600 mt-1">Hoş geldiniz, {store?.name}</p>
+        <p className="text-gray-600 mt-1">Hoş geldiniz, {user?.storeInfo?.name}</p>
       </div>
 
-      {!store?.approved && (
+      {!user?.storeInfo?.is_approved && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -92,7 +149,7 @@ function StorePanelContent() {
         </div>
       )}
 
-      {store?.status === 'inactive' && (
+      {user?.storeInfo?.status === 'inactive' && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
           <div className="flex">
             <div className="flex-shrink-0">

@@ -1,17 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { use } from 'react';
+import { use, useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiArrowLeft, FiStar, FiClock, FiMapPin, FiInfo, FiShoppingBag, FiChevronDown, FiChevronUp, FiMinus, FiPlus } from 'react-icons/fi';
+import dynamic from 'next/dynamic';
 import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
+import { toast } from 'react-hot-toast';
+
+// React Icons'ları dinamik olarak import et
+const FiArrowLeft = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiArrowLeft })), { ssr: false });
+const FiStar = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiStar })), { ssr: false });
+const FiClock = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiClock })), { ssr: false });
+const FiMapPin = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiMapPin })), { ssr: false });
+const FiInfo = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiInfo })), { ssr: false });
+const FiShoppingBag = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiShoppingBag })), { ssr: false });
+const FiChevronDown = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiChevronDown })), { ssr: false });
+const FiChevronUp = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiChevronUp })), { ssr: false });
+const FiMinus = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiMinus })), { ssr: false });
+const FiPlus = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiPlus })), { ssr: false });
+
+// İkon bileşenleri
+function PlusIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+    </svg>
+  );
+}
+
+function MinusIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+    </svg>
+  );
+}
 
 export default function StoreDetailPage({ params }) {
   const router = useRouter();
-  // Next.js params artık Promise olduğu için React.use ile çözümlüyoruz
+  // Next.js 15'te params Promise olduğu için React.use ile çözümlüyoruz
   const resolvedParams = use(params);
   const { id } = resolvedParams;
   
@@ -191,9 +220,38 @@ export default function StoreDetailPage({ params }) {
               <FiArrowLeft size={20} />
             </button>
             <h1 className="text-xl font-bold text-gray-800 truncate">{store.name}</h1>
+            {store.status !== 'active' && (
+              <span className="ml-2 bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                Kapalı
+              </span>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* Kapalı Mağaza Uyarısı */}
+      {store.status !== 'active' && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Bu restoran şu anda kapalı
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>
+                  Bu restoran geçici olarak kapalıdır ve sipariş alamamaktadır. 
+                  Lütfen daha sonra tekrar deneyin veya başka bir restoran seçin.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Restoran Bilgileri */}
       <div className="bg-white shadow-sm">
@@ -329,7 +387,12 @@ export default function StoreDetailPage({ params }) {
                               <div className="flex items-center">
                                 <button 
                                   onClick={() => decreaseQuantity(product.id)}
-                                  className="p-1 text-gray-500 hover:text-orange-600"
+                                  disabled={store.status !== 'active'}
+                                  className={`p-1 ${
+                                    store.status === 'active' 
+                                      ? 'text-gray-500 hover:text-orange-600' 
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
                                 >
                                   <FiMinus size={14} />
                                 </button>
@@ -338,7 +401,31 @@ export default function StoreDetailPage({ params }) {
                                   {storeCartItems.find(item => item.product_id === product.id).quantity}
                                 </span>
                                 
-                                                                <button                                   onClick={() => increaseQuantity(product)}                                  className="p-1 text-gray-500 hover:text-orange-600"                                >                                  <FiPlus size={14} />                                </button>                              </div>                            ) : (                              <button                                 onClick={() => addToCart(product)}                                className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 py-1 px-3 rounded-full transition-colors"                              >                                Sepete Ekle                              </button>                            )}
+                                <button 
+                                  onClick={() => increaseQuantity(product)}
+                                  disabled={store.status !== 'active'}
+                                  className={`p-1 ${
+                                    store.status === 'active' 
+                                      ? 'text-gray-500 hover:text-orange-600' 
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                >
+                                  <FiPlus size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => addToCart(product)}
+                                disabled={store.status !== 'active'}
+                                className={`text-sm py-1 px-3 rounded-full transition-colors ${
+                                  store.status === 'active'
+                                    ? 'bg-orange-100 hover:bg-orange-200 text-orange-700'
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                }`}
+                              >
+                                {store.status === 'active' ? 'Sepete Ekle' : 'Sipariş Alınamıyor'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -381,7 +468,12 @@ export default function StoreDetailPage({ params }) {
                         <div className="flex items-center">
                           <button 
                             onClick={() => decreaseQuantity(item.product_id)}
-                            className="p-1 text-gray-500 hover:text-orange-600"
+                            disabled={store.status !== 'active'}
+                            className={`p-1 ${
+                              store.status === 'active' 
+                                ? 'text-gray-500 hover:text-orange-600' 
+                                : 'text-gray-300 cursor-not-allowed'
+                            }`}
                           >
                             <FiMinus size={14} />
                           </button>
@@ -393,7 +485,12 @@ export default function StoreDetailPage({ params }) {
                               const foundProduct = products.find(p => p.id === item.product_id);
                               if (foundProduct) increaseQuantity(foundProduct);
                             }}
-                            className="p-1 text-gray-500 hover:text-orange-600"
+                            disabled={store.status !== 'active'}
+                            className={`p-1 ${
+                              store.status === 'active' 
+                                ? 'text-gray-500 hover:text-orange-600' 
+                                : 'text-gray-300 cursor-not-allowed'
+                            }`}
                           >
                             <FiPlus size={14} />
                           </button>
@@ -419,12 +516,21 @@ export default function StoreDetailPage({ params }) {
                     </div>
                   </div>
                   
-                  <Link 
-                    href="/sepet"
-                    className="block w-full text-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-700 mt-4"
-                  >
-                    Siparişi Tamamla
-                  </Link>
+                  {store.status === 'active' ? (
+                    <Link 
+                      href="/sepet"
+                      className="block w-full text-center bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-700 mt-4"
+                    >
+                      Siparişi Tamamla
+                    </Link>
+                  ) : (
+                    <button 
+                      disabled
+                      className="block w-full text-center bg-gray-300 text-gray-500 font-medium py-3 px-4 rounded-lg mt-4 cursor-not-allowed"
+                    >
+                      Sipariş Verilemez
+                    </button>
+                  )}
                 </>
               )}
             </div>

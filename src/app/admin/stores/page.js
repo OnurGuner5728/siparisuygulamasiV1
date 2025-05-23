@@ -71,13 +71,13 @@ function AdminStoresContent() {
     let matchesStatus = true;
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
-        matchesStatus = !store.approved;
+        matchesStatus = !store.is_approved;
       } else if (statusFilter === 'approved') {
-        matchesStatus = store.approved;
+        matchesStatus = store.is_approved;
       } else if (statusFilter === 'active') {
-        matchesStatus = store.approved && store.status === 'active';
+        matchesStatus = store.is_approved && store.status === 'active';
       } else if (statusFilter === 'inactive') {
-        matchesStatus = store.approved && store.status === 'inactive';
+        matchesStatus = store.is_approved && store.status === 'inactive';
       }
     }
     
@@ -153,13 +153,13 @@ function AdminStoresContent() {
       const store = allStores.find(store => store.id === storeId);
       if (!store) return;
       
-      const newApprovalStatus = !store.approved;
-      // Yeni durum değeri - eğer onaylanıyorsa active, değilse mevcut durumu koru
-      const newStatus = newApprovalStatus ? 'active' : store.status;
+      const newApprovalStatus = !store.is_approved;
+      // Yeni durum değeri - eğer onaylanıyorsa active, değilse inactive
+      const newStatus = newApprovalStatus ? 'active' : 'inactive';
       
       // Veritabanını güncelle
       await api.updateStore(storeId, { 
-        approved: newApprovalStatus,
+        is_approved: newApprovalStatus,
         status: newStatus
       });
       
@@ -168,7 +168,7 @@ function AdminStoresContent() {
         if (s.id === storeId) {
           return {
             ...s,
-            approved: newApprovalStatus,
+            is_approved: newApprovalStatus,
             status: newStatus
           };
         }
@@ -186,8 +186,8 @@ function AdminStoresContent() {
   };
 
   // Mağaza durumunu formatla
-  const formatStatus = (status, approved) => {
-    if (!approved) {
+  const formatStatus = (status, is_approved) => {
+    if (!is_approved) {
       return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Onay Bekliyor</span>;
     }
     
@@ -331,7 +331,7 @@ function AdminStoresContent() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {formatStatus(store.status, store.approved)}
+                    {formatStatus(store.status, store.is_approved)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -360,7 +360,7 @@ function AdminStoresContent() {
                       >
                         Görüntüle
                       </Link>
-                      {!store.approved ? (
+                      {!store.is_approved ? (
                         <button
                           onClick={() => handleToggleApproval(store.id)}
                           className="text-green-600 hover:text-green-900"

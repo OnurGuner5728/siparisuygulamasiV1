@@ -26,6 +26,12 @@ export default function AuthGuard({ children, requiredRole, permissionType = 'vi
       return;
     }
 
+    // any_auth durumu: sadece giriş yapmış olmayı kontrol et
+    if (requiredRole === 'any_auth') {
+      // İsAuthenticated kontrolü yukarıda yapıldı, burada başka bir şey yapmaya gerek yok
+      return;
+    }
+
     // Özel izin kontrolü: Eğer istenilen role sahip değilse ana sayfaya yönlendir
     // Bunu hasPermission fonksiyonu ile kontrol ediyoruz
     if (requiredRole && !hasPermission(requiredRole, permissionType)) {
@@ -47,6 +53,11 @@ export default function AuthGuard({ children, requiredRole, permissionType = 'vi
   // Checkout sayfası için özel durum
   if (requiredRole === 'user' && pathname === '/checkout') {
     return children; // Herkese erişim izni ver
+  }
+
+  // any_auth durumu: sadece giriş yapmış olmayı kontrol et
+  if (requiredRole === 'any_auth') {
+    return isAuthenticated ? children : null;
   }
 
   // Erişim izni yoksa veya yükleme sırasında null döndür

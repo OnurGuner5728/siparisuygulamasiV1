@@ -2,11 +2,20 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
+import AuthGuard from '../../../components/AuthGuard';
 import { useRouter } from 'next/navigation';
 import { FiHome, FiMapPin, FiBriefcase, FiPlus, FiMoreVertical, FiChevronRight, FiEdit2, FiTrash2, FiArrowLeft } from 'react-icons/fi';
 import api from '@/lib/api';
 
 export default function AddressesPage() {
+  return (
+    <AuthGuard requiredRole="any_auth">
+      <AddressesContent />
+    </AuthGuard>
+  );
+}
+
+function AddressesContent() {
   const { user } = useAuth();
   const router = useRouter();
   const [addresses, setAddresses] = useState([]);

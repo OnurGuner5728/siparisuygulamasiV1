@@ -144,7 +144,7 @@ export default function CampaignBanner() {
   const navigateToStore = (campaign) => {
     if (campaign.store_id) {
       // Mağaza kampanyası ise ilgili mağazaya yönlendir
-      router.push(`/${campaign.categoryName}/${campaign.store_id}`);
+      router.push(`/${campaign.categoryName}/store/${campaign.store_id}`);
     } else if (campaign.main_category_id) {
       // Kategori kampanyası ise kategoriye yönlendir
       router.push(`/${campaign.categoryName}`);

@@ -102,28 +102,76 @@ function Header({ onCartClick }) {
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center text-gray-600 hover:text-orange-500 font-medium"
               >
-                <span className="mr-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </span>
-                {user?.name || 'Kullanıcı'}
+                {/* Mağaza sahibi ise logo göster */}
+                {user?.role === 'store' && user?.storeInfo?.logo && user.storeInfo.logo.trim() !== '' ? (
+                  <div className="flex items-center">
+                    <img 
+                      src={user.storeInfo.logo} 
+                      alt={user.storeInfo.name || 'Mağaza'}
+                      className="h-8 w-8 rounded-full object-cover mr-2 border border-gray-300"
+                    />
+                    <span className="hidden sm:inline">{user.storeInfo.name || user?.name || 'Mağaza'}</span>
+                    <span className="sm:hidden">{user?.name || 'Kullanıcı'}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <span className="mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    {user?.name || 'Kullanıcı'}
+                  </div>
+                )}
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-1 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               
               {isUserMenuOpen && (
-                <div className="absolute right-0 w-48 mt-2 py-1 bg-white rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 w-56 mt-2 py-1 bg-white rounded-lg shadow-lg z-50">
                   {user?.role === 'admin' && (
                     <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
                       Admin Paneli
                     </Link>
                   )}
                   {user?.role === 'store' && (
-                    <Link href="/store" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
-                      Mağaza Paneli
-                    </Link>
+                    <div>
+                      {/* Mağaza Bilgileri */}
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          {user?.storeInfo?.logo && user.storeInfo.logo.trim() !== '' && (
+                            <img 
+                              src={user.storeInfo.logo} 
+                              alt={user.storeInfo.name || 'Mağaza'}
+                              className="h-10 w-10 rounded-full object-cover border border-gray-300"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {user.storeInfo?.name || 'Mağaza Adı'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {user.storeInfo?.is_approved ? 'Onaylanmış Mağaza' : 'Onay Bekleniyor'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {user?.storeInfo?.is_approved ? (
+                        <Link href="/store" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
+                          Mağaza Paneli
+                        </Link>
+                      ) : (
+                        <Link href="/store" className="block px-4 py-2 text-sm text-orange-600 hover:bg-orange-50">
+                          Mağaza Paneli (Onay Bekleniyor)
+                        </Link>
+                      )}
+                      
+                      <Link href="/store/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
+                        Mağaza Profili
+                      </Link>
+                    </div>
                   )}
                   <Link href="/profil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500">
                     Profilim
@@ -198,6 +246,25 @@ function Header({ onCartClick }) {
               </>
             ) : (
               <>
+                {/* Kullanıcı/Mağaza Bilgileri */}
+                {user?.role === 'store' && user?.storeInfo?.logo && user.storeInfo.logo.trim() !== '' && (
+                  <div className="flex items-center py-2 border-b border-gray-200 mb-2">
+                    <img 
+                      src={user.storeInfo.logo} 
+                      alt={user.storeInfo.name || 'Mağaza'}
+                      className="h-10 w-10 rounded-full object-cover mr-3 border border-gray-300"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.storeInfo.name || 'Mağaza Adı'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {user.storeInfo.is_approved ? 'Onaylanmış Mağaza' : 'Onay Bekleniyor'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 <Link href="/profil" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
                   Profilim
                 </Link>
@@ -207,9 +274,20 @@ function Header({ onCartClick }) {
                   </Link>
                 )}
                 {user?.role === 'store' && (
-                  <Link href="/store" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
-                    Mağaza Paneli
-                  </Link>
+                  <>
+                    {user?.storeInfo?.is_approved ? (
+                      <Link href="/store" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
+                        Mağaza Paneli
+                      </Link>
+                    ) : (
+                      <Link href="/store" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
+                        Mağaza Paneli (Onay Bekleniyor)
+                      </Link>
+                    )}
+                    <Link href="/store/profile" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
+                      Mağaza Profili
+                    </Link>
+                  </>
                 )}
                 <Link href="/profil/siparisler" className="text-gray-600 hover:text-orange-500 py-2 font-medium">
                   Siparişlerim

@@ -3,14 +3,16 @@ import { supabaseAdmin } from './supabase'
 
 // Kullanıcı işlemleri
 export const signUp = async (email, password, userData) => {
-  const { user, error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: userData
     }
   })
-  return { user, error }
+  
+  // Supabase v2'de user data.user içinde geliyor
+  return { user: data?.user || null, error }
 }
 
 export const signIn = async (email, password) => {

@@ -136,10 +136,10 @@ function CampaignsManagement() {
       if (category) {
         router.push(`/${category.name.toLowerCase()}/store/${store.id}`);
       } else {
-        router.push(`/magaza/${store.id}`);
+        router.push(`/magaza/store/${store.id}`);
       }
     } else {
-      router.push(`/magaza/${storeId}`);
+      router.push(`/magaza/store/${storeId}`);
     }
   };
 

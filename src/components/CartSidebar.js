@@ -15,36 +15,19 @@ import { useCart } from '@/contexts/CartContext';
 const CartSidebar = ({ isOpen, onClose }) => {
   const router = useRouter();
   const sidebarRef = useRef(null);
-  const [newDiscountCode, setNewDiscountCode] = useState('');
-  const [showDiscountInput, setShowDiscountInput] = useState(false);
   
   // CartContext'ten sepet fonksiyonlarını al
   const { 
     cartItems, 
     removeFromCart, 
     addToCart, 
-    removeItemCompletely, 
     clearCart,
-    calculateSubtotal, 
-    calculateDeliveryFee,
-    calculateTotal,
-    totalItems
+    cartSummary
   } = useCart();
   
-  // Ürünleri mağaza türüne göre grupla
-  const groupedItems = React.useMemo(() => {
-    const groupsByType = {};
-    
-    cartItems.forEach(item => {
-      const storeType = item.store_type || 'market';
-      if (!groupsByType[storeType]) {
-        groupsByType[storeType] = [];
-      }
-      groupsByType[storeType].push(item);
-    });
-    
-    return groupsByType;
-  }, [cartItems]);
+  // Teslimat ücreti hesaplama (150 TL üzeri ücretsiz)
+  const deliveryFee = cartSummary.subtotal >= 150 ? 0 : 15;
+  const total = cartSummary.subtotal + deliveryFee;
 
   // ESC tuşuna basıldığında sidebar'ı kapat
   useEffect(() => {
@@ -87,35 +70,25 @@ const CartSidebar = ({ isOpen, onClose }) => {
   };
   
   // Ürün miktarını arttır
-  const handleIncreaseQuantity = (product) => {
-    addToCart(product);
+  const handleIncreaseQuantity = async (item) => {
+    await addToCart({ 
+      id: item.product?.id || item.product_id, 
+      price: item.product?.price || item.price 
+    }, 1);
   };
   
-  // Ürün miktarını azalt
-  const handleDecreaseQuantity = (productId, storeId) => {
-    removeFromCart(productId, storeId);
+  // Ürün miktarını azalt veya kaldır
+  const handleDecreaseQuantity = async (itemId) => {
+    await removeFromCart(itemId);
   };
   
   // Ürünü sepetten tamamen kaldır
-  const handleRemoveItem = (productId, storeId) => {
-    removeItemCompletely(productId, storeId);
+  const handleRemoveItem = async (itemId) => {
+    await removeFromCart(itemId);
   };
-  
-  // Toplam tutar
-  const total = calculateTotal();
   
   // Sepet boşsa
   const isCartEmpty = cartItems.length === 0;
-  
-  // Türkçe kategori isimleri
-  const storeTypeNames = {
-    'market': 'Market',
-    'yemek': 'Yemek',
-    'su': 'Su',
-    'cicek': 'Çiçek',
-    'eczane': 'Eczane',
-    'petshop': 'Petshop'
-  };
   
   if (!isOpen) return null;
   
@@ -139,7 +112,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
               <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              Sepetim {totalItems > 0 && `(${totalItems})`}
+              Sepetim {cartSummary.itemCount > 0 && `(${cartSummary.itemCount})`}
             </h2>
             <button 
               onClick={onClose}
@@ -166,91 +139,74 @@ const CartSidebar = ({ isOpen, onClose }) => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-6">
-                {/* Mağaza türüne göre gruplandırılmış ürünler */}
-                {Object.keys(groupedItems).map((storeType) => (
-                  <div key={storeType} className="space-y-3">
-                    <h3 className="font-medium text-gray-800 border-b pb-1">
-                      {storeTypeNames[storeType] || storeType}
-                    </h3>
-                    
-                    {groupedItems[storeType].map((item) => (
-                      <div key={`${item.product_id}-${item.store_id}`} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 relative">
-                        <div className="flex items-start">
-                          {/* Ürün resmi */}
-                          <div className="w-20 h-20 rounded-lg bg-gray-100 mr-3 overflow-hidden">
-                            {item.image ? (
-                              <img 
-                                src={item.image} 
-                                alt={item.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
+              <div className="space-y-3">
+                {/* Sepetteki ürünler */}
+                {cartItems.map((item) => (
+                  <div key={item.id} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 relative">
+                    <div className="flex items-start">
+                      {/* Ürün resmi */}
+                      <div className="w-20 h-20 rounded-lg bg-gray-100 mr-3 overflow-hidden">
+                        {item.image ? (
+                          <img 
+                            src={item.image} 
+                            alt={item.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Ürün detayları */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>
+                        
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                            <button 
+                              className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                              onClick={() => handleDecreaseQuantity(item.id)}
+                              aria-label="Azalt"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                              </svg>
+                            </button>
+                            <span className="w-8 text-center text-sm font-medium text-gray-700">{item.quantity}</span>
+                            <button 
+                              className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                              onClick={() => handleIncreaseQuantity(item)}
+                              aria-label="Arttır"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                            </button>
                           </div>
                           
-                          {/* Ürün detayları */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>
-                            {item.store_name && (
-                              <p className="text-xs text-gray-500 mt-0.5">{item.store_name}</p>
-                            )}
-                            
-                            <div className="flex items-center justify-between mt-2">
-                              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                                <button 
-                                  className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-                                  onClick={() => handleDecreaseQuantity(item.product_id, item.store_id)}
-                                  disabled={item.quantity <= 1}
-                                  aria-label="Azalt"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                                  </svg>
-                                </button>
-                                <span className="w-8 text-center text-sm font-medium text-gray-700">{item.quantity}</span>
-                                <button 
-                                  className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-                                  onClick={() => handleIncreaseQuantity(item)}
-                                  aria-label="Arttır"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                  </svg>
-                                </button>
-                              </div>
-                              
-                              <div className="text-right">
-                                <span className="text-sm font-semibold text-gray-800">
-                                  {(item.price * item.quantity).toFixed(2)} TL
-                                </span>
-                              </div>
-                            </div>
+                          <div className="text-right">
+                            <span className="text-sm font-semibold text-gray-800">
+                              {(item.price * item.quantity).toFixed(2)} TL
+                            </span>
                           </div>
                         </div>
-                        
-                        {/* Silme butonu */}
-                        <button 
-                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
-                          onClick={() => handleRemoveItem(item.product_id, item.store_id)}
-                          aria-label="Sil"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
                       </div>
-                    ))}
-                    
-                    {/* Kategori için ara toplam */}
-                    <div className="text-right text-sm text-gray-700 pt-1">
-                      Ara Toplam: <span className="font-medium">{calculateSubtotal(storeType).toFixed(2)} TL</span>
                     </div>
+                    
+                    {/* Silme butonu */}
+                    <button 
+                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
+                      onClick={() => handleRemoveItem(item.id)}
+                      aria-label="Sil"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
                 
@@ -279,11 +235,11 @@ const CartSidebar = ({ isOpen, onClose }) => {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Ara Toplam:</span>
-                  <span className="text-gray-800">{calculateSubtotal().toFixed(2)} TL</span>
+                  <span className="text-gray-800">{cartSummary.subtotal.toFixed(2)} TL</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Teslimat Ücreti:</span>
-                  <span className="text-gray-800">{calculateDeliveryFee().toFixed(2)} TL</span>
+                  <span className="text-gray-800">{deliveryFee.toFixed(2)} TL</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2 mt-2">
                   <div className="flex justify-between font-medium">

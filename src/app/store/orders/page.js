@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import AuthGuard from '@/components/AuthGuard';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { FiPackage, FiClock, FiCheckCircle, FiXCircle, FiUser, FiPhone, FiMapPin, FiCalendar, FiDollarSign } from 'react-icons/fi';
@@ -17,23 +18,43 @@ const StoreHeader = ({ title }) => (
 );
 
 export default function StoreOrdersPage() {
-  const { user, isAuthenticated, isStoreOwner } = useAuth();
+  return (
+    <AuthGuard requiredRole="store">
+      <StoreOrdersContent />
+    </AuthGuard>
+  );
+}
+
+function StoreOrdersContent() {
+  const { user } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Mağaza onaylanmamışsa yönlendir
+  if (!user?.storeInfo?.is_approved) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-orange-500 text-5xl mb-4">⏳</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Mağaza Onayı Gerekli</h2>
+            <p className="text-gray-600 mb-4">
+              Siparişleri görüntülemek için mağazanızın onaylanması gerekiyor.
+            </p>
+            <Link
+              href="/store"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+            >
+              Ana Panele Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   useEffect(() => {
-    // Mağaza sahibi değilse yönlendir
-    if (!isAuthenticated) {
-      router.push('/auth/login?redirect=/store/orders');
-      return;
-    }
-    
-    if (isAuthenticated && !isStoreOwner) {
-      router.push('/');
-      return;
-    }
-    
     // Siparişleri yükle
     const loadOrders = async () => {
       try {
@@ -57,7 +78,7 @@ export default function StoreOrdersPage() {
     if (user?.store_id) {
       loadOrders();
     }
-  }, [isAuthenticated, isStoreOwner, router, user]);
+  }, [user?.store_id]);
   
   // Sipariş durumunu güncelle
   const updateOrderStatus = async (orderId, newStatus) => {

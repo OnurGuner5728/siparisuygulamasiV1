@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,9 +8,11 @@ import { FiArrowLeft, FiFilter, FiStar, FiShoppingBag } from 'react-icons/fi';
 import api from '@/lib/api';
 
 export default function CategoryPage({ params }) {
-  const router = useRouter();
-  const { categoryId } = params;
+  // Next.js 15'te params Promise olduğu için React.use ile çözümlüyoruz
+  const resolvedParams = use(params);
+  const { categoryId } = resolvedParams;
   
+  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +21,7 @@ export default function CategoryPage({ params }) {
   const [priceRange, setPriceRange] = useState({ min: 0, max: 500 });
   const [ratings, setRatings] = useState([]);
   const [categoryName, setCategoryName] = useState('');
+  const [error, setError] = useState(null);
   
   // Ürünleri ve mağazaları yükle
   useEffect(() => {
@@ -44,7 +47,9 @@ export default function CategoryPage({ params }) {
             const productsWithStoreInfo = storeProducts.map(product => ({
               ...product,
               storeName: store.name,
-              storeId: store.id
+              storeId: store.id,
+              storeStatus: store.status,
+              storeIsApproved: store.is_approved
             }));
             
             allProducts = [...allProducts, ...productsWithStoreInfo];
@@ -57,6 +62,7 @@ export default function CategoryPage({ params }) {
         setProducts(allProducts);
       } catch (error) {
         console.error('Kategori ve ürün verileri yüklenirken hata:', error);
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -241,8 +247,19 @@ export default function CategoryPage({ params }) {
               <Link
                 key={`${product.storeId}-${product.id}`}
                 href={`/yemek/store/${product.storeId}`}
-                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow relative ${
+                  product.storeStatus !== 'active' ? 'opacity-75' : ''
+                }`}
               >
+                {/* Kapalı mağaza etiketi */}
+                {product.storeStatus !== 'active' && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                      Mağaza Kapalı
+                    </span>
+                  </div>
+                )}
+                
                 <div className="relative h-40 bg-gray-200">
                   {product.image ? (
                     <Image
@@ -250,17 +267,29 @@ export default function CategoryPage({ params }) {
                       alt={product.name}
                       layout="fill"
                       objectFit="cover"
+                      className={product.storeStatus !== 'active' ? 'filter grayscale' : ''}
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                    <div className={`absolute inset-0 flex items-center justify-center ${
+                      product.storeStatus !== 'active' ? 'text-gray-300' : 'text-gray-400'
+                    }`}>
                       <span>Resim Yok</span>
                     </div>
                   )}
                 </div>
                 
                 <div className="p-4">
-                  <h2 className="font-semibold text-gray-800 truncate">{product.name}</h2>
-                  <p className="text-sm text-gray-500 truncate">{product.storeName}</p>
+                  <h2 className={`font-semibold truncate ${
+                    product.storeStatus !== 'active' ? 'text-gray-600' : 'text-gray-800'
+                  }`}>{product.name}</h2>
+                  <p className={`text-sm truncate flex items-center ${
+                    product.storeStatus !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    {product.storeName}
+                    {product.storeStatus !== 'active' && (
+                      <span className="ml-1 text-red-500 font-medium">(Kapalı)</span>
+                    )}
+                  </p>
                   
                   <div className="flex items-center mt-2">
                     {product.rating !== undefined && (
@@ -275,8 +304,12 @@ export default function CategoryPage({ params }) {
                   </div>
                   
                   <div className="mt-3 flex justify-between items-center">
-                    <p className="font-bold text-orange-600">{product.price.toFixed(2)} TL</p>
-                    <span className="text-xs text-gray-500">
+                    <p className={`font-bold ${
+                      product.storeStatus !== 'active' ? 'text-gray-500' : 'text-orange-600'
+                    }`}>{product.price.toFixed(2)} TL</p>
+                    <span className={`text-xs ${
+                      product.storeStatus !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
                       {product.storeName}
                     </span>
                   </div>

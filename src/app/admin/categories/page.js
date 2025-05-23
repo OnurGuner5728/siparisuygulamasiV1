@@ -28,6 +28,7 @@ function AdminCategoriesContent() {
     status: 'active'
   });
   const [editingCategory, setEditingCategory] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [modulePermissions, setModulePermissions] = useState({
     yemek: true,
     market: true,
@@ -47,7 +48,13 @@ function AdminCategoriesContent() {
         
         // Kategorileri getir
         const categoriesData = await api.getCategories();
-        setCategories(categoriesData);
+        // Image alanı yoksa boş string olarak ayarla
+        const categoriesWithImages = categoriesData.map(category => ({
+          ...category,
+          image: category.image || '',
+          description: category.description || ''
+        }));
+        setCategories(categoriesWithImages);
 
         // Modül izinlerini getir
         // Bu örnek için varsayılan değerler kullanıyoruz, gerçek projede API'den gelecek
@@ -204,6 +211,55 @@ function AdminCategoriesContent() {
     }
   };
 
+  // Resim yükleme fonksiyonu
+  const handleImageUpload = async (e, isEditMode = false) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Dosya boyutu kontrolü (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Dosya boyutu 5MB\'dan büyük olamaz.');
+      return;
+    }
+
+    // Dosya formatı kontrolü
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Sadece JPG, PNG, GIF ve WebP formatındaki resimler yüklenebilir.');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      // Eski resmi sil (eğer varsa)
+      const currentImage = isEditMode ? editingCategory?.image : newCategory.image;
+      if (currentImage) {
+        try {
+          await api.deleteImage(currentImage, 'categories');
+        } catch (deleteError) {
+          console.log('Eski resim silinirken hata (normal olabilir):', deleteError);
+        }
+      }
+
+      // Yeni resmi yükle
+      const imageUrl = await api.uploadImage(file, 'categories');
+      
+      if (isEditMode) {
+        setEditingCategory(prev => ({ ...prev, image: imageUrl }));
+      } else {
+        setNewCategory(prev => ({ ...prev, image: imageUrl }));
+      }
+      
+      alert('Resim başarıyla yüklendi!');
+    } catch (error) {
+      console.error('Resim yükleme hatası:', error);
+      alert('Resim yüklenirken bir hata oluştu: ' + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -328,7 +384,15 @@ function AdminCategoriesContent() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <img className="h-10 w-10 rounded-md object-cover" src={category.image} alt={category.name} />
+                            {category.image ? (
+                              <img className="h-10 w-10 rounded-md object-cover" src={category.image} alt={category.name} />
+                            ) : (
+                              <div className="h-10 w-10 rounded-md bg-gray-200 flex items-center justify-center">
+                                <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{category.name}</div>
@@ -351,7 +415,11 @@ function AdminCategoriesContent() {
                         <div className="flex space-x-2">
                           <button 
                             onClick={() => {
-                              setEditingCategory(category);
+                              setEditingCategory({
+                                ...category,
+                                image: category.image || '',
+                                description: category.description || ''
+                              });
                               setActiveTab('edit');
                             }}
                             className="text-blue-600 hover:text-blue-900"
@@ -417,17 +485,63 @@ function AdminCategoriesContent() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-                    Resim URL
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kategori Resmi
                   </label>
-                  <input
-                    type="text"
-                    id="image"
-                    value={newCategory.image}
-                    onChange={(e) => setNewCategory({ ...newCategory, image: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Resim URL'sini girin"
-                  />
+                  
+                  {/* Mevcut Resim Gösterimi */}
+                  {newCategory.image && (
+                    <div className="mb-4 flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={newCategory.image}
+                          alt="Kategori resmi"
+                          className="h-16 w-16 object-cover rounded-lg border border-gray-300"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600">Mevcut resim</p>
+                        <button
+                          type="button"
+                          onClick={() => setNewCategory({ ...newCategory, image: '' })}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          Resmi Kaldır
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Dosya Yükleme */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      id="category-image-upload"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={(e) => handleImageUpload(e, false)}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="category-image-upload"
+                      className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50' : ''}`}
+                    >
+                      {uploadingImage ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+                          <span className="text-sm text-gray-600">Yükleniyor...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <svg className="h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">Resim yükle</span>
+                          <span className="text-xs text-gray-500">PNG, JPG, GIF, WebP</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
@@ -435,7 +549,7 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="status"
-                    value={newCategory.status}
+                    value={newCategory.status || 'active'}
                     onChange={(e) => setNewCategory({ ...newCategory, status: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
@@ -449,7 +563,7 @@ function AdminCategoriesContent() {
                   </label>
                   <textarea
                     id="description"
-                    value={newCategory.description}
+                    value={newCategory.description || ''}
                     onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -502,28 +616,75 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="edit-mainCategory"
-                    value={editingCategory.main_category}
+                    value={editingCategory.main_category || ''}
                     onChange={(e) => setEditingCategory({ ...editingCategory, main_category: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
+                    <option value="">Ana kategori seçin</option>
                     {filteredMainCategories.map((category) => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="edit-image" className="block text-sm font-medium text-gray-700 mb-1">
-                    Resim URL
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kategori Resmi
                   </label>
-                  <input
-                    type="text"
-                    id="edit-image"
-                    value={editingCategory.image}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, image: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Resim URL'sini girin"
-                  />
+                  
+                  {/* Mevcut Resim Gösterimi */}
+                  {editingCategory.image && (
+                    <div className="mb-4 flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={editingCategory.image}
+                          alt="Kategori resmi"
+                          className="h-16 w-16 object-cover rounded-lg border border-gray-300"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600">Mevcut resim</p>
+                        <button
+                          type="button"
+                          onClick={() => setEditingCategory({ ...editingCategory, image: '' })}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          Resmi Kaldır
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Dosya Yükleme */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      id="edit-category-image-upload"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={(e) => handleImageUpload(e, true)}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="edit-category-image-upload"
+                      className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50' : ''}`}
+                    >
+                      {uploadingImage ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+                          <span className="text-sm text-gray-600">Yükleniyor...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <svg className="h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">Resim yükle</span>
+                          <span className="text-xs text-gray-500">PNG, JPG, GIF, WebP</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="edit-status" className="block text-sm font-medium text-gray-700 mb-1">
@@ -531,7 +692,7 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="edit-status"
-                    value={editingCategory.status}
+                    value={editingCategory.status || 'active'}
                     onChange={(e) => setEditingCategory({ ...editingCategory, status: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
@@ -545,7 +706,7 @@ function AdminCategoriesContent() {
                   </label>
                   <textarea
                     id="edit-description"
-                    value={editingCategory.description}
+                    value={editingCategory.description || ''}
                     onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"

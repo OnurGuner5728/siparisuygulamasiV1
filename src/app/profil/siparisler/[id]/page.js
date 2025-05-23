@@ -9,7 +9,7 @@ import api from '@/lib/api';
 
 export default function OrderDetail() {
   return (
-    <AuthGuard requiredRole="user">
+    <AuthGuard requiredRole="any_auth">
       <OrderDetailContent />
     </AuthGuard>
   );
@@ -32,8 +32,11 @@ function OrderDetailContent() {
         const orderData = await api.getOrderById(params.id);
         
         if (orderData) {
-          // Kullanıcının kendi siparişi mi kontrol et
-          if (orderData.customer_id !== user?.id) {
+          // Kullanıcının kendi siparişi mi veya store sahibinin mağaza siparişi mi kontrol et
+          const isCustomerOrder = orderData.customer_id === user?.id;
+          const isStoreOwnerOrder = user?.role === 'store' && orderData.store?.owner_id === user?.id;
+          
+          if (!isCustomerOrder && !isStoreOwnerOrder) {
             setError('Bu siparişi görüntüleme yetkiniz yok.');
             return;
           }

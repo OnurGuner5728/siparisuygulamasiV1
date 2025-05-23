@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import StoreGuard from '@/components/StoreGuard';
+import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 
 export default function AddProduct() {
   return (
-    <StoreGuard>
+    <AuthGuard requiredRole="store">
       <AddProductContent />
-    </StoreGuard>
+    </AuthGuard>
   );
 }
 
@@ -31,19 +31,55 @@ function AddProductContent() {
   const [error, setError] = useState('');
   const [store, setStore] = useState(null);
 
+  // Mağaza onaylanmamışsa yönlendir
+  if (!user?.storeInfo?.is_approved) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-orange-500 text-5xl mb-4">⏳</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Mağaza Onayı Gerekli</h2>
+            <p className="text-gray-600 mb-4">
+              Ürün eklemek için mağazanızın onaylanması gerekiyor.
+            </p>
+            <Link
+              href="/store"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+            >
+              Ana Panele Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     // Kategori verilerini ve mağaza bilgilerini yükle
     const fetchData = async () => {
       try {
         // Kullanıcının mağaza bilgilerini al
         if (user) {
+          console.log("Add Product - User:", user);
           const storeData = await api.getStoreByUserId(user.id);
+          console.log("Add Product - Store Data:", storeData);
+          
           if (storeData) {
             setStore(storeData);
             
             // Mağaza kategorisine uygun alt kategorileri getir
-            const categoriesData = await api.getCategoriesByMainCategory(storeData.category_id);
-            setCategories(categoriesData);
+            console.log("Add Product - Store category_id:", storeData.category_id);
+            const categoriesData = await api.getSubcategoriesByParentId(storeData.category_id);
+            console.log("Add Product - Categories Data:", categoriesData);
+            setCategories(categoriesData || []);
+            
+            // Eğer alt kategori yoksa, ana kategorilerin tümünü getir
+            if (!categoriesData || categoriesData.length === 0) {
+              console.log("Add Product - No subcategories, fetching all categories");
+              const allCategories = await api.getCategories();
+              console.log("Add Product - All Categories:", allCategories);
+              setCategories(allCategories || []);
+            }
           }
         }
       } catch (err) {
@@ -57,6 +93,8 @@ function AddProductContent() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log(`handleChange - ${name}:`, value);
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -82,6 +120,10 @@ function AddProductContent() {
     setLoading(true);
     setError('');
 
+    console.log("Submit - Form Data:", formData);
+    console.log("Submit - Categories:", categories);
+    console.log("Submit - Store:", store);
+
     // Form doğrulama
     if (!formData.name || !formData.price || !formData.category) {
       setError('Lütfen zorunlu alanları doldurun');
@@ -100,16 +142,73 @@ function AddProductContent() {
     try {
       // Ürünü ekle
       const productData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description || '',
+        price: parseFloat(formData.price),
+        category: formData.category, // Bu category ID'si veya name'i olabilir
+        image: formData.image || 'https://via.placeholder.com/150',
         store_id: store.id,
-        price: parseFloat(formData.price)
+        is_available: formData.status === 'active', // status'u is_available'a çevir
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
+      
+      // Eğer category numeric ise integer'a çevir
+      if (formData.category && !isNaN(formData.category)) {
+        productData.category = parseInt(formData.category);
+      }
+      
+      console.log("Submit - Product Data:", productData);
+      console.log("Submit - Store ID:", store.id);
+      console.log("Submit - Category Value:", formData.category);
+      console.log("Submit - Category Type:", typeof productData.category);
       
       await api.createProduct(productData);
       router.push('/store/products');
     } catch (err) {
       console.error('Ürün eklenirken hata:', err);
-      setError('Ürün eklenirken bir hata oluştu');
+      console.error('Hata detayı:', {
+        message: err.message,
+        stack: err.stack,
+        response: err.response,
+        data: err.response?.data,
+        status: err.response?.status
+      });
+      
+      // Daha anlamlı hata mesajları
+      let errorMessage = 'Ürün eklenirken bir hata oluştu';
+      
+      if (err.response) {
+        const status = err.response.status;
+        const errorData = err.response.data;
+        
+        switch (status) {
+          case 400:
+            if (errorData?.message) {
+              errorMessage = `Geçersiz veri: ${errorData.message}`;
+            } else if (errorData?.error) {
+              errorMessage = `Veritabanı hatası: ${errorData.error}`;
+            } else {
+              errorMessage = 'Gönderilen veriler geçersiz. Lütfen tüm alanları kontrol edin.';
+            }
+            break;
+          case 401:
+            errorMessage = 'Yetkiniz yok. Lütfen tekrar giriş yapın.';
+            break;
+          case 403:
+            errorMessage = 'Bu işlem için yetkiniz bulunmuyor.';
+            break;
+          case 500:
+            errorMessage = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
+            break;
+          default:
+            errorMessage = `Beklenmeyen hata (${status}). Lütfen tekrar deneyin.`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -196,6 +295,10 @@ function AddProductContent() {
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Yüklenen kategori sayısı: {categories.length}
+                {categories.length > 0 && ` - İlk kategori: ${categories[0]?.name}`}
+              </p>
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">

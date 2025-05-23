@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiArrowLeft, FiStar, FiClock, FiMapPin, FiInfo, FiShoppingBag, FiChevronDown, FiChevronUp, FiMinus, FiPlus } from 'react-icons/fi';
@@ -11,7 +10,7 @@ import { useCart } from '@/contexts/CartContext';
 
 export default function MarketStoreDetailPage({ params }) {
   const router = useRouter();
-  // Next.js params artık Promise olduğu için React.use ile çözümlüyoruz
+  // Next.js 15'te params Promise olduğu için React.use ile çözümlüyoruz
   const resolvedParams = use(params);
   const { id } = resolvedParams;
   
@@ -366,7 +365,21 @@ export default function MarketStoreDetailPage({ params }) {
                                   {storeCartItems.find(item => item.product_id === product.id).quantity}
                                 </span>
                                 
-                                                                <button                                   onClick={() => increaseQuantity(product)}                                  className="p-1 text-gray-500 hover:text-green-600"                                >                                  <FiPlus size={14} />                                </button>                              </div>                            ) : (                              <button                                 onClick={() => addToCart(product)}                                className="text-sm bg-green-100 hover:bg-green-200 text-green-700 py-1 px-3 rounded-full transition-colors"                              >                                Sepete Ekle                              </button>                            )}
+                                <button 
+                                  onClick={() => increaseQuantity(product)}
+                                  className="p-1 text-gray-500 hover:text-green-600"
+                                >
+                                  <FiPlus size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => addToCart(product)}
+                                className="text-sm bg-green-100 hover:bg-green-200 text-green-700 py-1 px-3 rounded-full transition-colors"
+                              >
+                                Sepete Ekle
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

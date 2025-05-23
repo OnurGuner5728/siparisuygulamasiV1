@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import StoreGuard from '@/components/StoreGuard';
+import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 
 export default function StoreProfile() {
   return (
-    <StoreGuard>
+    <AuthGuard requiredRole="store">
       <StoreProfileContent />
-    </StoreGuard>
+    </AuthGuard>
   );
 }
 
@@ -25,6 +25,7 @@ function StoreProfileContent() {
     email: '',
     phone: '',
     description: '',
+    logo: '',
     address: {
       city: '',
       district: '',
@@ -43,8 +44,32 @@ function StoreProfileContent() {
   });
   const [activeTab, setActiveTab] = useState('general');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  // Mağaza onaylanmamışsa özel ekran göster
+  if (!user?.storeInfo?.is_approved) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-orange-500 text-5xl mb-4">⏳</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Mağaza Onayı Gerekli</h2>
+            <p className="text-gray-600 mb-4">
+              Mağaza profilinizi düzenlemek için önce mağazanızın onaylanması gerekiyor.
+            </p>
+            <Link
+              href="/store"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+            >
+              Ana Panele Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // API'den mağaza verilerini yükle
@@ -58,26 +83,95 @@ function StoreProfileContent() {
         
         if (storeData) {
           setStore(storeData);
+          
+          // Eğer mağaza adresinde bilgi yoksa, kullanıcının varsayılan adresini al
+          let addressData = {
+            city: '',
+            district: '',
+            neighborhood: '',
+            fullAddress: ''
+          };
+          
+          if (storeData.address) {
+            // Mağaza adres bilgileri varsa onları kullan
+            try {
+              const parsedAddress = typeof storeData.address === 'string' 
+                ? JSON.parse(storeData.address) 
+                : storeData.address;
+              addressData = {
+                city: parsedAddress?.city || '',
+                district: parsedAddress?.district || '',
+                neighborhood: parsedAddress?.neighborhood || '',
+                fullAddress: parsedAddress?.fullAddress || ''
+              };
+            } catch (parseError) {
+              console.log('Adres JSON parse hatası, string olarak kullanılıyor:', parseError);
+              // Eğer JSON parse edilemezse, string'i fullAddress olarak kullan
+              addressData = {
+                city: '',
+                district: '',
+                neighborhood: '',
+                fullAddress: storeData.address || ''
+              };
+            }
+          } else {
+            // Mağaza adres bilgisi yoksa kullanıcının varsayılan adresini al
+            try {
+              const userAddresses = await api.getUserAddresses(user.id);
+              const defaultAddress = userAddresses.find(addr => addr.is_default) || userAddresses[0];
+              
+              if (defaultAddress) {
+                addressData = {
+                  city: defaultAddress.city || '',
+                  district: defaultAddress.district || '',
+                  neighborhood: defaultAddress.neighborhood || '',
+                  fullAddress: defaultAddress.full_address || ''
+                };
+              }
+            } catch (addressError) {
+              console.log('Kullanıcı adresleri alınamadı:', addressError);
+            }
+          }
+          
+          // WorkingHours parse işlemi
+          let workingHoursData = {
+            monday: '',
+            tuesday: '',
+            wednesday: '',
+            thursday: '',
+            friday: '',
+            saturday: '',
+            sunday: ''
+          };
+          
+          if (storeData.workingHours) {
+            try {
+              const parsedWorkingHours = typeof storeData.workingHours === 'string' 
+                ? JSON.parse(storeData.workingHours) 
+                : storeData.workingHours;
+              workingHoursData = {
+                monday: parsedWorkingHours?.monday || '',
+                tuesday: parsedWorkingHours?.tuesday || '',
+                wednesday: parsedWorkingHours?.wednesday || '',
+                thursday: parsedWorkingHours?.thursday || '',
+                friday: parsedWorkingHours?.friday || '',
+                saturday: parsedWorkingHours?.saturday || '',
+                sunday: parsedWorkingHours?.sunday || ''
+              };
+            } catch (parseError) {
+              console.log('WorkingHours JSON parse hatası, varsayılan değerler kullanılıyor:', parseError);
+              // Parse edilemezse varsayılan boş değerler kullanılır
+            }
+          }
+          
           setFormData({
             name: storeData.name || '',
-            email: storeData.email || '',
+            email: storeData.email || user.email || '', // Kullanıcı email'i ile senkronize
             phone: storeData.phone || '',
             description: storeData.description || '',
-            address: { 
-              city: storeData.address?.city || '',
-              district: storeData.address?.district || '',
-              neighborhood: storeData.address?.neighborhood || '',
-              fullAddress: storeData.address?.fullAddress || '' 
-            },
-            workingHours: { 
-              monday: storeData.workingHours?.monday || '',
-              tuesday: storeData.workingHours?.tuesday || '',
-              wednesday: storeData.workingHours?.wednesday || '',
-              thursday: storeData.workingHours?.thursday || '',
-              friday: storeData.workingHours?.friday || '',
-              saturday: storeData.workingHours?.saturday || '',
-              sunday: storeData.workingHours?.sunday || '' 
-            }
+            logo: storeData.logo || '',
+            address: addressData,
+            workingHours: workingHoursData
           });
         } else {
           setError('Mağaza bilgileri bulunamadı');
@@ -112,6 +206,52 @@ function StoreProfileContent() {
     }
   };
 
+  // Resim yükleme fonksiyonu
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Dosya boyutu kontrolü (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Dosya boyutu 5MB\'dan büyük olamaz.');
+      return;
+    }
+
+    // Dosya formatı kontrolü
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Sadece JPG, PNG, GIF ve WebP formatındaki resimler yüklenebilir.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+
+    try {
+      // Eski resmi sil (eğer varsa)
+      if (formData.logo) {
+        try {
+          await api.deleteImage(formData.logo, 'stores');
+        } catch (deleteError) {
+          console.log('Eski resim silinirken hata (normal olabilir):', deleteError);
+        }
+      }
+
+      // Yeni resmi yükle
+      const imageUrl = await api.uploadImage(file, 'stores');
+      setFormData(prev => ({ ...prev, logo: imageUrl }));
+      setSuccess('Resim başarıyla yüklendi!');
+      
+      // Success mesajını 3 saniye sonra temizle
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Resim yükleme hatası:', error);
+      setError('Resim yüklenirken bir hata oluştu: ' + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -119,18 +259,31 @@ function StoreProfileContent() {
     setError('');
 
     try {
-      // Mağaza verilerini güncelle
-      const updatedStore = await api.updateStore(store.id, {
-        ...formData,
+      console.log('Update edilecek form data:', formData);
+      console.log('Store ID:', store.id);
+      
+      // Güncellenecek verileri hazırla
+      const updateData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        description: formData.description,
+        logo: formData.logo,
         address: JSON.stringify(formData.address),
         workingHours: JSON.stringify(formData.workingHours)
-      });
+      };
       
+      console.log('Update API\'ye gönderilecek data:', updateData);
+      
+      // Mağaza verilerini güncelle
+      const updatedStore = await api.updateStore(store.id, updateData);
+      
+      console.log('API\'den dönen updatedStore:', updatedStore);
       setStore(updatedStore);
       setSuccess('Bilgileriniz başarıyla güncellendi.');
     } catch (err) {
       console.error('Mağaza güncelleme hatası:', err);
-      setError('Bilgileriniz güncellenirken bir hata oluştu.');
+      setError('Bilgileriniz güncellenirken bir hata oluştu: ' + (err.message || 'Bilinmeyen hata'));
     } finally {
       setSubmitting(false);
     }
@@ -186,29 +339,29 @@ function StoreProfileContent() {
           <div className="flex flex-col md:flex-row md:items-center">
             <div className="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
               <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-3xl font-semibold">
-                {store.name.charAt(0)}
+                {store?.name?.charAt(0) || '?'}
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-800">{store.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-800">{store?.name || 'Mağaza Adı'}</h2>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                  {store.category}
+                  {typeof store?.category === 'object' ? store?.category?.name || 'Kategori' : store?.category || 'Kategori'}
                 </span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  store.status === 'active' 
+                  store?.status === 'active' 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {store.status === 'active' ? 'Aktif' : 'Pasif'}
+                  {store?.status === 'active' ? 'Aktif' : 'Pasif'}
                 </span>
-                {!store.approved && (
+                {!store?.is_approved && (
                   <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
                     Onay Bekliyor
                   </span>
                 )}
                 <div className="flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                  <span className="mr-1">{store.rating}</span>
+                  <span className="mr-1">{store?.rating || '0.0'}</span>
                   <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
@@ -219,13 +372,13 @@ function StoreProfileContent() {
               <button
                 onClick={handleToggleStatus}
                 className={`px-4 py-2 rounded-md ${
-                  store.status === 'active' 
+                  store?.status === 'active' 
                     ? 'bg-amber-600 hover:bg-amber-700 text-white' 
                     : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
-                disabled={!store.approved}
+                disabled={!store?.is_approved}
               >
-                {store.status === 'active' ? 'Mağazayı Kapat' : 'Mağazayı Aç'}
+                {store?.status === 'active' ? 'Mağazayı Kapat' : 'Mağazayı Aç'}
               </button>
             </div>
           </div>
@@ -352,7 +505,7 @@ function StoreProfileContent() {
                   <input
                     type="text"
                     id="category"
-                    value={store.category}
+                    value={typeof store?.category === 'object' ? store?.category?.name || 'Kategori' : store?.category || 'Kategori'}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
                     disabled
                   />
@@ -370,6 +523,71 @@ function StoreProfileContent() {
                     rows={4}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   ></textarea>
+                </div>
+                
+                {/* Logo Yükleme */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mağaza Logosu
+                  </label>
+                  
+                  {/* Mevcut Logo Gösterimi */}
+                  {formData.logo && (
+                    <div className="mb-4 flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={formData.logo}
+                          alt="Mağaza logosu"
+                          className="h-16 w-16 object-cover rounded-lg border border-gray-300"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600">Mevcut logo</p>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, logo: '' }))}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          Logoyu Kaldır
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Dosya Yükleme */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      id="logo-upload"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="logo-upload"
+                      className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50' : ''}`}
+                    >
+                      {uploadingImage ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                          <span className="text-sm text-gray-600">Yükleniyor...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">Logo yüklemek için tıklayın</span>
+                          <span className="text-xs text-gray-500 mt-1">PNG, JPG, GIF, WebP (Max 5MB)</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    En iyi sonuç için kare format (örn: 200x200px) önerilir.
+                  </p>
                 </div>
               </div>
             )}
@@ -439,108 +657,137 @@ function StoreProfileContent() {
             {/* Çalışma Saatleri Formu */}
             {activeTab === 'hours' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="workingHours.monday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Pazartesi
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.monday"
-                      name="workingHours.monday"
-                      value={formData.workingHours.monday}
-                      onChange={handleChange}
-                      placeholder="09:00 - 18:00"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="workingHours.tuesday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Salı
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.tuesday"
-                      name="workingHours.tuesday"
-                      value={formData.workingHours.tuesday}
-                      onChange={handleChange}
-                      placeholder="09:00 - 18:00"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="workingHours.wednesday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Çarşamba
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.wednesday"
-                      name="workingHours.wednesday"
-                      value={formData.workingHours.wednesday}
-                      onChange={handleChange}
-                      placeholder="09:00 - 18:00"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="workingHours.thursday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Perşembe
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.thursday"
-                      name="workingHours.thursday"
-                      value={formData.workingHours.thursday}
-                      onChange={handleChange}
-                      placeholder="09:00 - 18:00"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="workingHours.friday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Cuma
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.friday"
-                      name="workingHours.friday"
-                      value={formData.workingHours.friday}
-                      onChange={handleChange}
-                      placeholder="09:00 - 18:00"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="workingHours.saturday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Cumartesi
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.saturday"
-                      name="workingHours.saturday"
-                      value={formData.workingHours.saturday}
-                      onChange={handleChange}
-                      placeholder="10:00 - 17:00 (veya Kapalı)"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="workingHours.sunday" className="block text-sm font-medium text-gray-700 mb-1">
-                      Pazar
-                    </label>
-                    <input
-                      type="text"
-                      id="workingHours.sunday"
-                      name="workingHours.sunday"
-                      value={formData.workingHours.sunday}
-                      onChange={handleChange}
-                      placeholder="Kapalı (veya çalışma saati)"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 gap-6">
+                  {Object.entries({
+                    monday: 'Pazartesi',
+                    tuesday: 'Salı', 
+                    wednesday: 'Çarşamba',
+                    thursday: 'Perşembe',
+                    friday: 'Cuma',
+                    saturday: 'Cumartesi',
+                    sunday: 'Pazar'
+                  }).map(([key, label]) => (
+                    <div key={key} className="flex items-center space-x-4">
+                      <div className="w-24 text-sm font-medium text-gray-700">
+                        {label}
+                      </div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <input
+                          type="checkbox"
+                          id={`${key}_open`}
+                          checked={formData.workingHours[key] !== 'Kapalı' && formData.workingHours[key] !== ''}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                workingHours: {
+                                  ...prev.workingHours,
+                                  [key]: '09:00 - 18:00'
+                                }
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                workingHours: {
+                                  ...prev.workingHours,
+                                  [key]: 'Kapalı'
+                                }
+                              }));
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`${key}_open`} className="text-sm text-gray-600 w-12">
+                          Açık
+                        </label>
+                        
+                        {formData.workingHours[key] !== 'Kapalı' && formData.workingHours[key] !== '' && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="time"
+                              value={formData.workingHours[key]?.split(' - ')[0] || '09:00'}
+                              onChange={(e) => {
+                                const endTime = formData.workingHours[key]?.split(' - ')[1] || '18:00';
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: `${e.target.value} - ${endTime}`
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                            <span className="text-gray-500">-</span>
+                            <input
+                              type="time"
+                              value={formData.workingHours[key]?.split(' - ')[1] || '18:00'}
+                              onChange={(e) => {
+                                const startTime = formData.workingHours[key]?.split(' - ')[0] || '09:00';
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: `${startTime} - ${e.target.value}`
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: 'Geçici Kapalı'
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs hover:bg-orange-200"
+                            >
+                              Geçici Kapat
+                            </button>
+                          </div>
+                        )}
+                        
+                        {formData.workingHours[key] === 'Geçici Kapalı' && (
+                          <div className="flex items-center space-x-2">
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm">
+                              Geçici Kapalı
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  workingHours: {
+                                    ...prev.workingHours,
+                                    [key]: '09:00 - 18:00'
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                            >
+                              Yeniden Aç
+                            </button>
+                          </div>
+                        )}
+                        
+                        {formData.workingHours[key] === 'Kapalı' && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                            Kapalı
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Çalışma saatlerini &ldquo;HH:MM - HH:MM&rdquo; formatında girin. Kapalı günler için &ldquo;Kapalı&rdquo; yazabilirsiniz.
+                <p className="text-xs text-gray-500 mt-4">
+                  • Çalışma saatlerini belirlemek için önce "Açık" seçeneğini işaretleyin<br/>
+                  • "Geçici Kapat" ile o günü geçici olarak kapatabilirsiniz<br/>
+                  • Değişiklikler otomatik olarak kaydedilir
                 </p>
               </div>
             )}

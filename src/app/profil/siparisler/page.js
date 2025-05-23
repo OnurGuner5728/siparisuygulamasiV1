@@ -10,7 +10,7 @@ import ProfileSidebar from '@/components/ProfileSidebar';
 
 export default function Orders() {
   return (
-    <AuthGuard>
+    <AuthGuard requiredRole="any_auth">
       <OrdersList />
     </AuthGuard>
   );

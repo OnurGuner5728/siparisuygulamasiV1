@@ -94,12 +94,10 @@ function StoreDetailContent() {
   };
 
   // Onay durumunu formatla
-  const formatApproval = (approved) => {
-    if (approved) {
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Onaylı</span>;
-    } else {
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Onay Bekliyor</span>;
-    }
+  const formatApproval = (is_approved) => {
+    return is_approved 
+      ? <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Onaylanmış</span>
+      : <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Onay Bekliyor</span>;
   };
 
   if (loading) {
@@ -171,7 +169,7 @@ function StoreDetailContent() {
               <h2 className="text-xl font-bold text-gray-800">Mağaza Bilgileri</h2>
               <div className="flex items-center space-x-2">
                 {formatStatus(store.status)}
-                {formatApproval(store.approved)}
+                {formatApproval(store.is_approved)}
               </div>
             </div>
 

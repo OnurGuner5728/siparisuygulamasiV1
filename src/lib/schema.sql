@@ -1,6 +1,36 @@
 -- Tablolarımızı oluşturmadan önce UUID eklentisini etkinleştirelim
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Kategoriler Tablosu
+CREATE TABLE IF NOT EXISTS public.categories (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE,
+    description TEXT,
+    parent_id INTEGER REFERENCES public.categories(id) ON DELETE CASCADE,
+    image TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Kategoriler için RLS politikaları
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Herkes kategorileri görebilir" ON public.categories
+    FOR SELECT
+    USING (true);
+
+CREATE POLICY "Admin kategorileri yönetebilir" ON public.categories
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
 -- Kullanıcılar Tablosu
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -106,6 +136,7 @@ CREATE TABLE IF NOT EXISTS public.stores (
     rating NUMERIC(3,2) DEFAULT 0,
     review_count INTEGER DEFAULT 0,
     status TEXT DEFAULT 'pending',
+    is_approved BOOLEAN DEFAULT FALSE,
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -474,4 +505,52 @@ BEGIN
         ', t);
     END LOOP;
 END;
-$$ LANGUAGE plpgsql; 
+$$ LANGUAGE plpgsql;
+
+-- Auth trigger'ları
+-- Yeni kullanıcı kayıt olduğunda public.users tablosuna da ekle
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.users (id, name, email, first_name, last_name, phone, role, avatar_url, created_at, updated_at)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'firstName', ''),
+        COALESCE(NEW.raw_user_meta_data->>'lastName', ''),
+        COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+        COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
+        NEW.raw_user_meta_data->>'avatar_url',
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        name = COALESCE(EXCLUDED.name, public.users.name),
+        email = EXCLUDED.email,
+        first_name = COALESCE(EXCLUDED.first_name, public.users.first_name),
+        last_name = COALESCE(EXCLUDED.last_name, public.users.last_name),
+        phone = COALESCE(EXCLUDED.phone, public.users.phone),
+        role = COALESCE(EXCLUDED.role, public.users.role),
+        avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url),
+        updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Kullanıcı silindiğinde public.users tablosundan da sil
+CREATE OR REPLACE FUNCTION public.handle_user_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM public.users WHERE id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_deleted
+AFTER DELETE ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_user_delete(); 

@@ -36,6 +36,29 @@ function EditProductContent() {
   const [success, setSuccess] = useState('');
   const [store, setStore] = useState(null);
 
+  // Mağaza onaylanmamışsa yönlendir
+  if (!user?.storeInfo?.is_approved) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-orange-500 text-5xl mb-4">⏳</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Mağaza Onayı Gerekli</h2>
+            <p className="text-gray-600 mb-4">
+              Ürün düzenlemek için mağazanızın onaylanması gerekiyor.
+            </p>
+            <Link
+              href="/store"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+            >
+              Ana Panele Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     // Ürün ve kategori verilerini yükle
     const fetchData = async () => {
@@ -72,8 +95,19 @@ function EditProductContent() {
         
         // Kategorileri getir
         const mainCategoryId = storeData.category_id;
-        const allCategories = await api.getSubcategories(mainCategoryId);
-        setCategories(allCategories || []);
+        console.log("Edit Product - Store category_id:", mainCategoryId);
+        
+        let categoriesData = await api.getSubcategoriesByParentId(mainCategoryId);
+        console.log("Edit Product - Categories Data:", categoriesData);
+        
+        // Eğer alt kategori yoksa, ana kategorilerin tümünü getir
+        if (!categoriesData || categoriesData.length === 0) {
+          console.log("Edit Product - No subcategories, fetching all categories");
+          categoriesData = await api.getCategories();
+          console.log("Edit Product - All Categories:", categoriesData);
+        }
+        
+        setCategories(categoriesData || []);
         
         // Form verilerini doldur
         setFormData({
@@ -300,6 +334,10 @@ function EditProductContent() {
                   <option key={category.id} value={category.name}>{category.name}</option>
                 ))}
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Yüklenen kategori sayısı: {categories.length}
+                {categories.length > 0 && ` - İlk kategori: ${categories[0]?.name}`}
+              </p>
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">

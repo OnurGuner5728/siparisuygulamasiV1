@@ -93,20 +93,17 @@ export default function Home() {
         
         setCategories(filteredCategories);
         
-        // Mağazaları yükle - Yönetici yetkisiyle
-        const storesData = await api.getStores({
-          status: 'active'
-        }, true);
+        // Mağazaları yükle - Yönetici yetkisiyle (tüm mağazalar, kapalı olanlar da dahil)
+        const storesData = await api.getStores({}, true);
         setStores(storesData);
         
         // Her kategori için mağaza sayısını hesapla
         const storeCount = {};
         
-        // Mağazaları kategorilere göre grupla
+        // Mağazaları kategorilere göre grupla (kapalı olanlar da dahil)
         categoriesData.forEach(category => {
           const categoryStores = storesData.filter(store => 
-            store.category_id === category.id && 
-            store.status === 'active'
+            store.category_id === category.id && store.is_approved
           );
           storeCount[category.id] = categoryStores.length;
         });
@@ -174,8 +171,10 @@ export default function Home() {
               name={category.name}
               description={category.description}
               color={getCategoryColor(category.id)}
+              imageUrl={category.image}
               storeCount={storeCountByCategory[category.id] || 0}
               isOpen={isCategoryOpen(category.id)}
+              url={`/${category.name.toLowerCase()}`}
             />
           ))}
         </div>
@@ -190,23 +189,40 @@ export default function Home() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {stores
-                .filter(store => store.category_id === 1)
+                .filter(store => store.category_id === 1 && store.is_approved)
                 .slice(0, 4)
                 .map(store => (
                   <Link key={store.id} href={`/yemek/store/${store.id}`} className="group">
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
+                      store.status !== 'active' ? 'opacity-75' : ''
+                    }`}>
+                      {/* Kapalı mağaza etiketi */}
+                      {store.status !== 'active' && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                            Kapalı
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="h-32 bg-gray-200 relative">
                         {store.logo && (
                           <img 
                             src={store.logo} 
                             alt={store.name} 
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover ${
+                              store.status !== 'active' ? 'filter grayscale' : ''
+                            }`}
                           />
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-bold text-gray-800">{store.name}</h3>
-                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Lezzetli yemekler'}</p>
+                        <h3 className={`font-bold ${
+                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
+                        }`}>{store.name}</h3>
+                        <p className={`text-sm line-clamp-1 ${
+                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>{store.description || 'Lezzetli yemekler'}</p>
                         <div className="flex items-center mt-2">
                           <div className="text-yellow-500 flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -215,7 +231,11 @@ export default function Home() {
                             <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
                           </div>
                           <span className="mx-2 text-gray-300">•</span>
-                          <span className="text-xs text-gray-500">30-45 dk</span>
+                          <span className={`text-xs ${
+                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {store.status === 'active' ? '30-45 dk' : 'Kapalı'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -235,23 +255,40 @@ export default function Home() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {stores
-                .filter(store => store.category_id === 2)
+                .filter(store => store.category_id === 2 && store.is_approved)
                 .slice(0, 4)
                 .map(store => (
                   <Link key={store.id} href={`/market/store/${store.id}`} className="group">
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
+                      store.status !== 'active' ? 'opacity-75' : ''
+                    }`}>
+                      {/* Kapalı mağaza etiketi */}
+                      {store.status !== 'active' && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                            Kapalı
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="h-32 bg-gray-200 relative">
                         {store.logo && (
                           <img 
                             src={store.logo} 
                             alt={store.name} 
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover ${
+                              store.status !== 'active' ? 'filter grayscale' : ''
+                            }`}
                           />
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-bold text-gray-800">{store.name}</h3>
-                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Taze ürünler'}</p>
+                        <h3 className={`font-bold ${
+                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
+                        }`}>{store.name}</h3>
+                        <p className={`text-sm line-clamp-1 ${
+                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>{store.description || 'Taze ürünler'}</p>
                         <div className="flex items-center mt-2">
                           <div className="text-yellow-500 flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -260,7 +297,11 @@ export default function Home() {
                             <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
                           </div>
                           <span className="mx-2 text-gray-300">•</span>
-                          <span className="text-xs text-gray-500">15-25 dk</span>
+                          <span className={`text-xs ${
+                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {store.status === 'active' ? '15-25 dk' : 'Kapalı'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -280,23 +321,40 @@ export default function Home() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {stores
-                .filter(store => store.category_id === 3)
+                .filter(store => store.category_id === 3 && store.is_approved)
                 .slice(0, 4)
                 .map(store => (
                   <Link key={store.id} href={`/su/store/${store.id}`} className="group">
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
+                      store.status !== 'active' ? 'opacity-75' : ''
+                    }`}>
+                      {/* Kapalı mağaza etiketi */}
+                      {store.status !== 'active' && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                            Kapalı
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="h-32 bg-gray-200 relative">
                         {store.logo && (
                           <img 
                             src={store.logo} 
                             alt={store.name} 
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover ${
+                              store.status !== 'active' ? 'filter grayscale' : ''
+                            }`}
                           />
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-bold text-gray-800">{store.name}</h3>
-                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Kaliteli içme suyu'}</p>
+                        <h3 className={`font-bold ${
+                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
+                        }`}>{store.name}</h3>
+                        <p className={`text-sm line-clamp-1 ${
+                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>{store.description || 'Kaliteli içme suyu'}</p>
                         <div className="flex items-center mt-2">
                           <div className="text-yellow-500 flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -305,7 +363,11 @@ export default function Home() {
                             <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
                           </div>
                           <span className="mx-2 text-gray-300">•</span>
-                          <span className="text-xs text-gray-500">45-60 dk</span>
+                          <span className={`text-xs ${
+                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {store.status === 'active' ? '45-60 dk' : 'Kapalı'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -325,25 +387,46 @@ export default function Home() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {stores
-                .filter(store => store.category_id === 4)
+                .filter(store => store.category_id === 4 && store.is_approved)
                 .slice(0, 4)
                 .map(store => (
                   <Link key={store.id} href={`/aktuel/store/${store.id}`} className="group">
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
+                      store.status !== 'active' ? 'opacity-75' : ''
+                    }`}>
+                      {/* Kapalı mağaza etiketi */}
+                      {store.status !== 'active' && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                            Kapalı
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="h-32 bg-gray-200 relative">
                         {store.logo && (
                           <img 
                             src={store.logo} 
                             alt={store.name} 
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover ${
+                              store.status !== 'active' ? 'filter grayscale' : ''
+                            }`}
                           />
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-bold text-gray-800">{store.name}</h3>
-                        <p className="text-gray-500 text-sm line-clamp-1">{store.description || 'Güncel kampanyalar'}</p>
+                        <h3 className={`font-bold ${
+                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
+                        }`}>{store.name}</h3>
+                        <p className={`text-sm line-clamp-1 ${
+                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>{store.description || 'Güncel kampanyalar'}</p>
                         <div className="flex items-center mt-2">
-                          <span className="text-xs text-gray-500">Yeni Kampanyalar</span>
+                          <span className={`text-xs ${
+                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {store.status === 'active' ? 'Yeni Kampanyalar' : 'Kapalı'}
+                          </span>
                         </div>
                       </div>
                     </div>

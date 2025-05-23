@@ -10,6 +10,15 @@ const nextConfig = {
   },
   // Development'ta double rendering'i önlemek için (production'da zaten kapalı)
   reactStrictMode: false,
+  // External packages to transpile
+  transpilePackages: ['react-icons'],
+  // External image hostnames için
+  images: {
+    domains: [
+      'via.placeholder.com',
+      'ozqsbbngkkssstmaktou.supabase.co'
+    ],
+  },
 };
 
 export default nextConfig;

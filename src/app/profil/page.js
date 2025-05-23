@@ -13,8 +13,9 @@ export default function Profile() {
 }
 
 function ProfileContent() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     // Profil verilerini yükleme simülasyonu
@@ -22,6 +23,17 @@ function ProfileContent() {
       setLoading(false);
     }, 1000);
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshUser();
+    } catch (error) {
+      console.error('Yenileme hatası:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -56,13 +68,35 @@ function ProfileContent() {
               <p>{user.role === 'user' ? 'Müşteri' : user.role === 'admin' ? 'Admin' : 'Mağaza'}</p>
             </div>
             {user.role === 'store' && (
-              <div>
+              <div className="space-y-2">
                 <p className="text-sm text-gray-500">Mağaza Durumu</p>
-                <p>
-                  {user.storeInfo?.approved 
-                    ? <span className="text-green-600">Onaylanmış</span> 
-                    : <span className="text-red-600">Onay Bekliyor</span>}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    {user.storeInfo?.is_approved 
+                      ? <span className="text-green-600 font-medium">✅ Onaylanmış</span> 
+                      : <span className="text-orange-600 font-medium">⏳ Onay Bekleniyor</span>}
+                    {user.storeInfo && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Mağaza: {user.storeInfo.name}
+                      </p>
+                    )}
+                    {!user.storeInfo?.is_approved && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Admin onayından sonra mağaza paneline erişebilirsiniz.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className={`text-xs px-2 py-1 rounded text-gray-600 ${
+                      refreshing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200'
+                    }`}
+                    title="Onay durumunu yenile"
+                  >
+                    {refreshing ? '⏳' : '🔄'}
+                  </button>
+                </div>
               </div>
             )}
           </div>

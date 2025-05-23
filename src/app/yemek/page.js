@@ -55,13 +55,12 @@ function YemekPageContent() {
 
         // 2. Yemek kategorisindeki mağazaları getir
         const storesData = await api.getStores({ 
-          category_id: yemekCategory.id,  // Kategori ID'si ile filtreleme
-          status: 'active'
+          category_id: yemekCategory.id  // Kategori ID'si ile filtreleme, status filtresi kaldırıldı
         });
         
-        // Sadece aktif ve onaylanmış mağazaları filtrele
+        // Sadece onaylanmış mağazaları filtrele (kapalı olanlar da dahil)
         const yemekStores = storesData.filter(store => 
-          store.status === 'active' && store.is_approved
+          store.is_approved
         );
         
         setRestaurants(yemekStores);
@@ -247,21 +246,40 @@ function YemekPageContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredRestaurants.map(restaurant => (
               <Link href={`/yemek/store/${restaurant.id}`} key={restaurant.id}>
-                <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full">
+                <div className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full relative ${
+                  restaurant.status !== 'active' ? 'opacity-75' : ''
+                }`}>
+                  {/* Kapalı mağaza etiketi */}
+                  {restaurant.status !== 'active' && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                        Kapalı
+                      </span>
+                    </div>
+                  )}
+                  
                   {restaurant.logo ? (
                     <img 
                       src={restaurant.logo} 
                       alt={restaurant.name} 
-                      className="w-full h-40 object-cover"
+                      className={`w-full h-40 object-cover ${
+                        restaurant.status !== 'active' ? 'filter grayscale' : ''
+                      }`}
                     />
                   ) : (
-                    <div className="w-full h-40 bg-gray-200 flex items-center justify-center">
+                    <div className={`w-full h-40 bg-gray-200 flex items-center justify-center ${
+                      restaurant.status !== 'active' ? 'bg-gray-300' : ''
+                    }`}>
                       <span className="text-gray-500 text-sm">Resim Yok</span>
                     </div>
                   )}
                   <div className="p-4">
-                    <h3 className="font-bold text-lg">{restaurant.name}</h3>
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-2">{restaurant.description || 'Bu restoran hakkında açıklama bulunmuyor.'}</p>
+                    <h3 className={`font-bold text-lg ${
+                      restaurant.status !== 'active' ? 'text-gray-600' : ''
+                    }`}>{restaurant.name}</h3>
+                    <p className={`text-gray-600 text-sm line-clamp-2 mb-2 ${
+                      restaurant.status !== 'active' ? 'text-gray-500' : ''
+                    }`}>{restaurant.description || 'Bu restoran hakkında açıklama bulunmuyor.'}</p>
                     
                     <div className="flex items-center text-sm text-gray-500 mt-2">
                       <div className="flex items-center">
@@ -271,7 +289,11 @@ function YemekPageContent() {
                         <span>{restaurant.rating || '0'}/5</span>
                       </div>
                       <span className="mx-2">•</span>
-                      <span>{restaurant.is_open ? 'Açık' : 'Kapalı'}</span>
+                      <span className={`font-medium ${
+                        restaurant.status === 'active' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {restaurant.status === 'active' ? 'Açık' : 'Kapalı'}
+                      </span>
                       
                       {/* Restoran için etiketler varsa göster */}
                       {restaurant.tags && restaurant.tags.length > 0 && (

@@ -6,19 +6,22 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api'; // API servisini import et
+import AdminLayout from '@/components/AdminLayout';
 
-export default function EditStore() {
+export default function EditStorePage() {
   return (
-    <AuthGuard requiredRole="admin">
-      <EditStoreContent />
-    </AuthGuard>
+    <AdminLayout>
+      <AuthGuard requiredRole="admin">
+        <EditStoreContent />
+      </AuthGuard>
+    </AdminLayout>
   );
 }
 
 function EditStoreContent() {
   const router = useRouter();
   const params = useParams();
-  // storeId string olarak kalmalı, Supabase UUID kullanıyor
+  // Next.js 15'te params artık senkron - useParams kullanıyoruz
   const storeId = params?.id; 
   
   const [formData, setFormData] = useState({
@@ -96,20 +99,20 @@ function EditStoreContent() {
                 su: storeData.module_permissions?.enable_su || false,
                 aktuel: storeData.module_permissions?.enable_aktuel || false
               },
-              working_hours: storeData.working_hours || { // Varsayılan çalışma saatleri
-                monday: { open: '09:00', close: '18:00', is_open: true },
-                tuesday: { open: '09:00', close: '18:00', is_open: true },
-                wednesday: { open: '09:00', close: '18:00', is_open: true },
-                thursday: { open: '09:00', close: '18:00', is_open: true },
-                friday: { open: '09:00', close: '18:00', is_open: true },
-                saturday: { open: '10:00', close: '17:00', is_open: false },
-                sunday: { open: '', close: '', is_open: false },
+              working_hours: { // Çalışma saatleri düzenle
+                monday: storeData.working_hours?.monday || { open: '', close: '', is_open: false },
+                tuesday: storeData.working_hours?.tuesday || { open: '', close: '', is_open: false },
+                wednesday: storeData.working_hours?.wednesday || { open: '', close: '', is_open: false },
+                thursday: storeData.working_hours?.thursday || { open: '', close: '', is_open: false },
+                friday: storeData.working_hours?.friday || { open: '', close: '', is_open: false },
+                saturday: storeData.working_hours?.saturday || { open: '', close: '', is_open: false },
+                sunday: storeData.working_hours?.sunday || { open: '', close: '', is_open: false },
               },
-              delivery_settings: storeData.delivery_settings || {
-                min_order_amount: 0,
-                delivery_fee: 0,
-                free_delivery_threshold: 0,
-                delivery_time_estimation: '',
+              delivery_settings: { // Teslimat ayarları düzenle
+                min_order_amount: storeData.delivery_settings?.min_order_amount || 0,
+                delivery_fee: storeData.delivery_settings?.delivery_fee || 0,
+                free_delivery_threshold: storeData.delivery_settings?.free_delivery_threshold || 0,
+                delivery_time_estimation: storeData.delivery_settings?.delivery_time_estimation || '',
               },
               logo_url: storeData.logo_url || '',
               banner_url: storeData.banner_url || '',
@@ -120,14 +123,14 @@ function EditStoreContent() {
           } else {
             setNotFound(true);
           }
-        } catch (err) {
-          console.error("Veri yüklenirken hata:", err);
-          setError("Veriler yüklenirken bir sorun oluştu.");
-          setNotFound(true);
+        } catch (error) {
+          console.error('Mağaza bilgileri yüklenirken hata:', error);
+          setError('Mağaza bilgileri yüklenirken bir hata oluştu.');
         } finally {
           setLoading(false);
         }
       };
+
       fetchData();
     } else {
       setLoading(false); // storeId yoksa yüklemeyi bitir

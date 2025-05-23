@@ -16,6 +16,8 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     address: '',
+    city: '',
+    district: '',
     phone: '',
     role: 'customer', // Varsayılan olarak müşteri
     // İş ortağı için ek alanlar
@@ -74,6 +76,24 @@ export default function Register() {
       ...formData,
       [name]: value,
     });
+
+    // E-posta senkronizasyonu - İşletme e-postası değiştiğinde yetkili e-postasını da güncelle
+    if (name === 'businessEmail' && formData.role === 'business') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        email: value // İşletme e-postasını yetkili e-postası olarak da ayarla
+      }));
+    }
+
+    // Rol değiştiğinde e-posta senkronizasyonu
+    if (name === 'role' && value === 'business' && formData.businessEmail) {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        email: prev.businessEmail // Mevcut işletme e-postasını yetkili e-postası olarak ayarla
+      }));
+    }
 
     // Eğer kategori değiştiyse, alt kategori seçimlerini sıfırla
     if (name === 'categoryId') {
@@ -145,6 +165,16 @@ export default function Register() {
         formErrors.address = 'Adres gereklidir';
       }
       
+      // Şehir kontrolü
+      if (!formData.city.trim()) {
+        formErrors.city = 'Şehir gereklidir';
+      }
+      
+      // İlçe kontrolü
+      if (!formData.district.trim()) {
+        formErrors.district = 'İlçe gereklidir';
+      }
+      
       // Telefon kontrolü
       if (!formData.phone) {
         formErrors.phone = 'Telefon numarası gereklidir';
@@ -163,10 +193,10 @@ export default function Register() {
         formErrors.categoryId = 'Kategori seçimi gereklidir';
       }
       
-      // Alt kategori kontrolü
-      if (!formData.subcategories.length) {
-        formErrors.subcategories = 'En az bir alt kategori seçimi gereklidir';
-      }
+      // Alt kategori kontrolü - artık zorunlu değil
+      // if (!formData.subcategories.length) {
+      //   formErrors.subcategories = 'En az bir alt kategori seçimi gereklidir';
+      // }
       
       // İşletme adresi kontrolü
       if (!formData.businessAddress.trim()) {
@@ -265,8 +295,10 @@ export default function Register() {
       } else {
         // Normal kullanıcı kaydı
         const userData = {
+          phone: formData.phone,
           address: formData.address,
-          phone: formData.phone
+          city: formData.city,
+          district: formData.district
         };
         
         result = await register(fullName, formData.email, formData.password, userRole, userData);
@@ -274,10 +306,24 @@ export default function Register() {
       
       if (result.success) {
         // Başarılı kayıt
-        if (userRole === 'store') {
-          alert('Mağaza başvurunuz alınmıştır. Onay sonrası bilgilendirileceksiniz.');
+        if (result.needsConfirmation) {
+          alert(result.message || 'Kayıt işleminiz tamamlandı. Lütfen e-posta adresinizi kontrol ederek hesabınızı onaylayın.');
+          router.push('/login');
+        } else if (userRole === 'store') {
+          alert(`İş ortağı başvurunuz başarıyla alınmıştır! 
+
+📧 Giriş E-postası: ${formData.email}
+🏪 İşletme Adı: ${formData.businessName}
+
+✅ Başvurunuz admin onayına gönderilmiştir.
+⏳ Onay sonrası ${formData.email} e-postası ile giriş yapabilirsiniz.
+
+Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
+          router.push('/login');
+        } else {
+          alert('Kayıt işleminiz başarıyla tamamlanmıştır.');
+          router.push('/login');
         }
-        router.push('/');
       } else {
         // Başarısız kayıt
         setErrors({ form: result.error || 'Kayıt oluşturulurken bir hata oluştu' });
@@ -414,7 +460,7 @@ export default function Register() {
                   {formData.categoryId && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
-                        Alt Kategoriler <span className="text-red-500">*</span>
+                        Alt Kategoriler
                       </label>
                       <div className="mt-1">
                         <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded-md">
@@ -511,10 +557,15 @@ export default function Register() {
                         className={`appearance-none block w-full px-3 py-2 border ${
                           errors.businessEmail ? 'border-red-300' : 'border-gray-300'
                         } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                        placeholder="magaza@example.com"
                       />
                       {errors.businessEmail && (
                         <p className="mt-2 text-sm text-red-600">{errors.businessEmail}</p>
                       )}
+                      <p className="mt-1 text-xs text-gray-500">Bu e-posta müşteri iletişimi için kullanılacak</p>
+                      <p className="mt-1 text-xs text-blue-600 font-medium">
+                        ℹ️ Bu e-posta otomatik olarak giriş e-postanız olarak da ayarlanacak
+                      </p>
                     </div>
                   </div>
                   
@@ -574,7 +625,7 @@ export default function Register() {
               {/* E-posta */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  {formData.role === 'business' ? 'Yetkili E-postası' : 'E-posta'} <span className="text-red-500">*</span>
+                  {formData.role === 'business' ? 'Yetkili E-postası (Giriş E-postası)' : 'E-posta'} <span className="text-red-500">*</span>
                 </label>
                 <div className="mt-1">
                   <input
@@ -585,12 +636,21 @@ export default function Register() {
                     required
                     value={formData.email}
                     onChange={handleChange}
+                    readOnly={formData.role === 'business'}
                     className={`appearance-none block w-full px-3 py-2 border ${
                       errors.email ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                    } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                      formData.role === 'business' ? 'bg-gray-50 text-gray-600' : ''
+                    }`}
+                    placeholder={formData.role === 'business' ? 'yetkili@example.com' : 'ornek@example.com'}
                   />
                   {errors.email && (
                     <p className="mt-2 text-sm text-red-600">{errors.email}</p>
+                  )}
+                  {formData.role === 'business' && (
+                    <p className="mt-1 text-xs text-blue-600 font-medium">
+                      ⚠️ Bu alan yukarıdaki işletme e-postası ile otomatik senkronize ediliyor
+                    </p>
                   )}
                 </div>
               </div>
@@ -622,27 +682,80 @@ export default function Register() {
 
               {/* Adres (sadece normal kullanıcılar için) */}
               {formData.role === 'customer' && (
-                <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                    Adres <span className="text-red-500">*</span>
-                  </label>
-                  <div className="mt-1">
-                    <textarea
-                      id="address"
-                      name="address"
-                      rows="3"
-                      required
-                      value={formData.address}
-                      onChange={handleChange}
-                      className={`appearance-none block w-full px-3 py-2 border ${
-                        errors.address ? 'border-red-300' : 'border-gray-300'
-                      } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                    />
-                    {errors.address && (
-                      <p className="mt-2 text-sm text-red-600">{errors.address}</p>
-                    )}
+                <>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {/* Şehir */}
+                    <div>
+                      <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                        Şehir <span className="text-red-500">*</span>
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          id="city"
+                          name="city"
+                          type="text"
+                          required
+                          value={formData.city}
+                          onChange={handleChange}
+                          className={`appearance-none block w-full px-3 py-2 border ${
+                            errors.city ? 'border-red-300' : 'border-gray-300'
+                          } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                          placeholder="İstanbul"
+                        />
+                        {errors.city && (
+                          <p className="mt-2 text-sm text-red-600">{errors.city}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* İlçe */}
+                    <div>
+                      <label htmlFor="district" className="block text-sm font-medium text-gray-700">
+                        İlçe <span className="text-red-500">*</span>
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          id="district"
+                          name="district"
+                          type="text"
+                          required
+                          value={formData.district}
+                          onChange={handleChange}
+                          className={`appearance-none block w-full px-3 py-2 border ${
+                            errors.district ? 'border-red-300' : 'border-gray-300'
+                          } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                          placeholder="Kadıköy"
+                        />
+                        {errors.district && (
+                          <p className="mt-2 text-sm text-red-600">{errors.district}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+
+                  <div>
+                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                      Detay Adres <span className="text-red-500">*</span>
+                    </label>
+                    <div className="mt-1">
+                      <textarea
+                        id="address"
+                        name="address"
+                        rows="3"
+                        required
+                        value={formData.address}
+                        onChange={handleChange}
+                        className={`appearance-none block w-full px-3 py-2 border ${
+                          errors.address ? 'border-red-300' : 'border-gray-300'
+                        } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                        placeholder="Mahalle, sokak, apartman no, daire no gibi detayları yazınız"
+                      />
+                      {errors.address && (
+                        <p className="mt-2 text-sm text-red-600">{errors.address}</p>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* Şifre */}
