@@ -1,6 +1,6 @@
-# SiparişApp - Real-time Özellikler Kurulum Rehberi
+# easysiparis - Real-time Özellikler Kurulum Rehberi
 
-Bu dosya, SiparişApp'te real-time özelliklerinin nasıl kurulacağını ve etkinleştirileceğini açıklamaktadır.
+Bu dosya, easysiparis'te real-time özelliklerinin nasıl kurulacağını ve etkinleştirileceğini açıklamaktadır.
 
 ## 🚀 Tamamlanan Özellikler
 

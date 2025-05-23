@@ -25,7 +25,7 @@ export default function Footer() {
             <div className="md:col-span-1">
               <Link href="/" className="text-2xl font-bold">
                 <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                  SiparişApp
+                  easysiparis
                 </span>
               </Link>
               <p className="text-gray-600 mt-3 text-sm">Yemekten markete, sudan aktüel ürünlere kadar tüm ihtiyaçlarınız için tek adres.</p>
@@ -96,7 +96,7 @@ export default function Footer() {
             </div>
           </div>
           <div className="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-500 text-sm">&copy; 2025 SiparişApp. Tüm hakları saklıdır.</p>
+            <p className="text-gray-500 text-sm">&copy; 2025 easysiparis. Tüm hakları saklıdır.</p>
             <div className="mt-4 md:mt-0 flex space-x-4">
               <Link href="/gizlilik-politikasi" className="text-gray-500 hover:text-orange-500 text-sm">Gizlilik Politikası</Link>
               <Link href="/cerez-politikasi" className="text-gray-500 hover:text-orange-500 text-sm">Çerez Politikası</Link>

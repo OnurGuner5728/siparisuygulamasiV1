@@ -211,7 +211,7 @@ function CallPageContent() {
       </div>
       
       <div className="absolute bottom-4 inset-x-0 text-center text-gray-400 text-xs px-4">
-        <p>Bu görüşme SiparişApp güvencesiyle yapılmaktadır.</p>
+        <p>Bu görüşme easysiparis güvencesiyle yapılmaktadır.</p>
       </div>
     </div>
   );

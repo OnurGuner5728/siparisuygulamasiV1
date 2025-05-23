@@ -224,8 +224,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">E-posta</h3>
-                    <p className="text-gray-600">info@siparisapp.com</p>
-                    <p className="text-gray-600">destek@siparisapp.com</p>
+                    <p className="text-gray-600">info@easysiparis.com</p>
+                    <p className="text-gray-600">destek@easysiparis.com</p>
                   </div>
                 </div>
 

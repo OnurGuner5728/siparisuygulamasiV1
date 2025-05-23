@@ -11,7 +11,7 @@ export default function TermsPage() {
               Kullanım Koşulları
             </h1>
             <p className="text-xl md:text-2xl text-orange-100 mb-4">
-              SiparişApp Hizmet Kullanım Şartları
+              easysiparis Hizmet Kullanım Şartları
             </p>
             <p className="text-lg text-orange-100">
               Son güncellenme: 20 Ocak 2025
@@ -26,12 +26,12 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Genel Hükümler</h2>
               <p className="text-gray-700 mb-4">
-                Bu kullanım koşulları ("Koşullar"), SiparişApp mobil uygulaması ve web sitesi ("Platform") 
+                Bu kullanım koşulları ("Koşullar"), easysiparis mobil uygulaması ve web sitesi ("Platform") 
                 üzerinden sunulan hizmetlerin kullanımını düzenler. Platformu kullanarak bu koşulları 
                 kabul etmiş sayılırsınız.
               </p>
               <p className="text-gray-700 mb-4">
-                SiparişApp, yemek siparişi, market alışverişi, su teslimatı ve aktüel ürün satışı 
+                easysiparis, yemek siparişi, market alışverişi, su teslimatı ve aktüel ürün satışı 
                 hizmetlerini sunan bir platformdur. Hizmetlerimiz, kullanıcılarımıza çeşitli 
                 satıcılardan ürün sipariş etme imkanı sağlar.
               </p>
@@ -68,7 +68,7 @@ export default function TermsPage() {
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">3.1 Sipariş Süreci</h3>
                   <p className="text-gray-700 mb-4">
                     Sipariş verdiğinizde, satıcı ile aranızda bir satış sözleşmesi oluşur. 
-                    SiparişApp, bu işlemde aracı konumundadır.
+                    easysiparis, bu işlemde aracı konumundadır.
                   </p>
                   <ul className="list-disc pl-6 text-gray-700 space-y-2">
                     <li>Tüm siparişler onay sürecinden geçer</li>
@@ -153,7 +153,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Fikri Mülkiyet</h2>
               <p className="text-gray-700 mb-4">
-                Platform üzerindeki tüm içerik, tasarım, logo ve markalar SiparişApp'in 
+                Platform üzerindeki tüm içerik, tasarım, logo ve markalar easysiparis'in 
                 fikri mülkiyetidir. İzinsiz kullanım yasaktır.
               </p>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
@@ -167,7 +167,7 @@ export default function TermsPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Sorumluluk Sınırları</h2>
               <div className="space-y-4">
                 <p className="text-gray-700 mb-4">
-                  SiparişApp, platform üzerinde sunulan hizmetlerin kullanımından doğabilecek 
+                  easysiparis, platform üzerinde sunulan hizmetlerin kullanımından doğabilecek 
                   zararlardan sorumlu değildir.
                 </p>
                 <ul className="list-disc pl-6 text-gray-700 space-y-2">
@@ -182,7 +182,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Hesap Feshi</h2>
               <p className="text-gray-700 mb-4">
-                SiparişApp, kullanım koşullarını ihlal eden hesapları önceden bildirimde bulunmaksızın 
+                easysiparis, kullanım koşullarını ihlal eden hesapları önceden bildirimde bulunmaksızın 
                 feshetme hakkını saklı tutar.
               </p>
               <div>
@@ -199,7 +199,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Değişiklikler</h2>
               <p className="text-gray-700 mb-4">
-                SiparişApp, bu kullanım koşullarını istediği zaman güncelleyebilir. 
+                easysiparis, bu kullanım koşullarını istediği zaman güncelleyebilir. 
                 Önemli değişiklikler için kullanıcılar bilgilendirilir.
               </p>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
@@ -223,7 +223,7 @@ export default function TermsPage() {
                 Bu kullanım koşulları hakkında sorularınız için bizimle iletişime geçebilirsiniz:
               </p>
               <div className="bg-gray-100 p-6 rounded-lg">
-                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> hukuk@siparisapp.com</p>
+                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> hukuk@easysiparis.com</p>
                 <p className="text-gray-700 mb-2"><strong>Telefon:</strong> +90 (212) 123 45 67</p>
                 <p className="text-gray-700">
                   <strong>Adres:</strong> Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul

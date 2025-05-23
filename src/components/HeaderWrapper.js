@@ -34,7 +34,7 @@ function Header({ onCartClick }) {
         <div className="flex items-center">
           <Link href="/" className="text-2xl font-bold text-orange-500">
             <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-              SiparişApp
+              easysiparis
             </span>
           </Link>
         </div>

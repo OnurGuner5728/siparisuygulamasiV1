@@ -17,7 +17,7 @@ const getSupabase = () => {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      storageKey: 'siparisapp-auth-storage'
+      storageKey: 'easysiparis-auth-storage'
     }
   });
   

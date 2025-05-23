@@ -1,4 +1,4 @@
-# SiparişApp Tasarım Planı
+# easysiparis Tasarım Planı
 
 Bu dosya, uygulamanın tasarım durumunu takip etmek için oluşturulmuştur. Tasarım klasöründeki PNG dosyaları referans alınarak her bir sayfa ve bileşenin tasarım durumu güncellenecektir.
 

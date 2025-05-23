@@ -10,13 +10,13 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              SiparişApp Hakkında
+              easysiparis Hakkında
             </h1>
             <p className="text-xl md:text-2xl text-orange-100 mb-8">
               Türkiye'nin en yenilikçi sipariş ve teslimat platformu
             </p>
             <p className="text-lg text-orange-100 max-w-3xl mx-auto">
-              2025 yılında kurulan SiparişApp, yemekten markete, sudan aktüel ürünlere kadar 
+              2025 yılında kurulan easysiparis, yemekten markete, sudan aktüel ürünlere kadar 
               tüm ihtiyaçlarınızı kapınıza kadar getiren modern bir platform olarak hizmet veriyor.
             </p>
           </div>
@@ -175,7 +175,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Ahmet Yılmaz</h3>
               <p className="text-orange-500 font-medium mb-2">Kurucu & CEO</p>
               <p className="text-gray-600 text-sm">
-                15 yıllık teknoloji deneyimi ile SiparişApp'i hayata geçiren vizyoner lider
+                15 yıllık teknoloji deneyimi ile easysiparis'i hayata geçiren vizyoner lider
               </p>
             </div>
 

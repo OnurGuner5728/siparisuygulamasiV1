@@ -76,7 +76,7 @@ export default function HelpPage() {
       id: 10,
       category: 'teknik',
       question: 'Bildirimler gelmiyor, nasıl düzeltebilirim?',
-      answer: 'Cihazınızın ayarlarından SiparişApp için bildirimlerin açık olduğundan emin olun. Android: Ayarlar > Uygulamalar > SiparişApp > Bildirimler. iOS: Ayarlar > Bildirimler > SiparişApp'
+      answer: 'Cihazınızın ayarlarından easysiparis için bildirimlerin açık olduğundan emin olun. Android: Ayarlar > Uygulamalar > easysiparis > Bildirimler. iOS: Ayarlar > Bildirimler > easysiparis'
     }
   ];
 
@@ -144,7 +144,7 @@ export default function HelpPage() {
               <h3 className="text-xl font-semibold text-gray-900 mb-2">E-posta Desteği</h3>
               <p className="text-gray-600 mb-4">24 saat içinde yanıt</p>
               <a 
-                href="mailto:destek@siparisapp.com"
+                href="mailto:destek@easysiparis.com"
                 className="bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-200"
               >
                 E-posta Gönder

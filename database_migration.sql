@@ -1,4 +1,4 @@
--- SiparişApp - Eksik Tabloları Oluşturma SQL Komutları
+-- easysiparis - Eksik Tabloları Oluşturma SQL Komutları
 -- Bu dosya Supabase SQL Editor'de çalıştırılacak
 
 -- 1. NOTIFICATIONS TABLOSU

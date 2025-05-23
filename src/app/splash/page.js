@@ -63,7 +63,7 @@ export default function SplashScreen() {
             showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <h1 className="text-3xl font-bold text-white mb-2">SiparişApp</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">easysiparis</h1>
           <p className="text-white opacity-90 text-sm">Lezzetler Kapınızda</p>
         </div>
       </div>

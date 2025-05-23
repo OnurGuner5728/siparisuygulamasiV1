@@ -26,7 +26,7 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Giriş</h2>
               <p className="text-gray-700 mb-4">
-                SiparişApp olarak, kişisel verilerinizin gizliliği ve güvenliği bizim için son derece önemlidir. 
+                easysiparis olarak, kişisel verilerinizin gizliliği ve güvenliği bizim için son derece önemlidir. 
                 Bu gizlilik politikası, kişisel verilerinizin nasıl toplandığı, kullanıldığı, saklandığı ve 
                 korunduğu hakkında bilgi vermektedir.
               </p>
@@ -39,9 +39,9 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Veri Sorumlusu</h2>
               <div className="bg-gray-100 p-6 rounded-lg mb-4">
-                <p className="text-gray-700 mb-2"><strong>Şirket Unvanı:</strong> SiparişApp Teknoloji A.Ş.</p>
+                <p className="text-gray-700 mb-2"><strong>Şirket Unvanı:</strong> easysiparis Teknoloji A.Ş.</p>
                 <p className="text-gray-700 mb-2"><strong>Adres:</strong> Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul</p>
-                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> kvkk@siparisapp.com</p>
+                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> kvkk@easysiparis.com</p>
                 <p className="text-gray-700"><strong>Telefon:</strong> +90 (212) 123 45 67</p>
               </div>
             </section>
@@ -287,8 +287,8 @@ export default function PrivacyPage() {
               </p>
               <div className="bg-gray-100 p-6 rounded-lg">
                 <div className="space-y-3">
-                  <p className="text-gray-700"><strong>E-posta:</strong> kvkk@siparisapp.com</p>
-                  <p className="text-gray-700"><strong>Posta:</strong> SiparişApp Teknoloji A.Ş. - KVKK Sorumlusu, Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul</p>
+                  <p className="text-gray-700"><strong>E-posta:</strong> kvkk@easysiparis.com</p>
+                  <p className="text-gray-700"><strong>Posta:</strong> easysiparis Teknoloji A.Ş. - KVKK Sorumlusu, Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul</p>
                   <p className="text-gray-700"><strong>Başvuru Formu:</strong> Web sitemizdeki KVKK başvuru formu</p>
                 </div>
               </div>
@@ -317,7 +317,7 @@ export default function PrivacyPage() {
               </p>
               <div className="bg-gray-100 p-6 rounded-lg">
                 <p className="text-gray-700 mb-2"><strong>KVKK Sorumlusu:</strong> Ahmet Yılmaz</p>
-                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> kvkk@siparisapp.com</p>
+                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> kvkk@easysiparis.com</p>
                 <p className="text-gray-700 mb-2"><strong>Telefon:</strong> +90 (212) 123 45 67</p>
                 <p className="text-gray-700">
                   <strong>Adres:</strong> Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul
