@@ -22,7 +22,7 @@ export default function AuthGuard({ children, requiredRole, permissionType = 'vi
     if (!isAuthenticated && requiredRole) {
       // Login yapılmadan önce gidilecek sayfayı localStorage'a kaydet
       localStorage.setItem('redirectAfterLogin', pathname);
-      router.push('/login');
+      window.location.href = '/login'; // Hard navigation
       return;
     }
 
@@ -36,10 +36,10 @@ export default function AuthGuard({ children, requiredRole, permissionType = 'vi
     // Bunu hasPermission fonksiyonu ile kontrol ediyoruz
     if (requiredRole && !hasPermission(requiredRole, permissionType)) {
       alert('Bu sayfaya erişim için gerekli yetkiye sahip değilsiniz.');
-      router.push('/');
+      window.location.href = '/'; // Hard navigation
       return;
     }
-  }, [loading, isAuthenticated, requiredRole, permissionType, router, pathname, hasPermission]);
+  }, [loading, isAuthenticated, requiredRole, permissionType, pathname, hasPermission]);
 
   // Yükleme sırasında bir şey gösterme
   if (loading) {

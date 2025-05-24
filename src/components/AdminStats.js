@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiUsers, FiShoppingBag, FiStore, FiClock, FiTrendingUp, FiDollarSign, FiActivity, FiEye, FiAlertCircle } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiStore, FiClock, FiTrendingUp, FiDollarSign, FiActivity, FiEye, FiAlertCircle} from 'react-icons/fi';
 import * as api from '@/lib/api';
 
 const AdminStats = () => {

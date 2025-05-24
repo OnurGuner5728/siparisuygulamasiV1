@@ -1,22 +1,17 @@
-'use client';
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import supabase from '@/lib/supabase';
-import { signUp, signIn, signOut, getUserProfile, updateUserProfile } from '@/lib/supabaseApi';
-import api from '@/lib/api';
+'use client'; import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'; import supabase from '@/lib/supabase'; import { signUp, signIn, signOut, getUserProfile, updateUserProfile } from '@/lib/supabaseApi'; import api from '@/lib/api'; import { useLocalStorageWithExpiry } from '@/hooks/useLocalStorage';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null); const [loading, setLoading] = useState(true);      const [userBackup, setUserBackup] = useLocalStorageWithExpiry('auth_user_backup', null, 24 * 60);
 
   // Kullanıcı profili yükle - STABİL REFERANS
   const loadUserProfile = useCallback(async (authUser) => {
     try {
       const { data: profile } = await getUserProfile(authUser.id);
-      
+
       const userRole = authUser?.user_metadata?.role || profile?.role || 'user';
-      
+
       // Store bilgilerini al (sadece store rolü için)
       let storeInfo = null;
       if (userRole === 'store') {
@@ -26,7 +21,7 @@ export function AuthProvider({ children }) {
           console.warn('Store bilgileri alınamadı:', error);
         }
       }
-      
+
       return {
         ...authUser,
         ...profile,
@@ -48,12 +43,13 @@ export function AuthProvider({ children }) {
   const checkSession = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session?.user) {
-        const fullUser = await loadUserProfile(session.user);
-        setUser(fullUser);
+        const fullUser = await loadUserProfile(session.user); setUser(fullUser); setUserBackup(fullUser);
+
       } else {
-        setUser(null);
+        setUser(null); setUserBackup(null);
+
       }
     } catch (error) {
       console.error('Session kontrol hatası:', error);
@@ -68,10 +64,10 @@ export function AuthProvider({ children }) {
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user && mounted) {
-          const fullUser = await loadUserProfile(session.user);
-          setUser(fullUser);
+
+        if (session?.user && mounted) { const fullUser = await loadUserProfile(session.user); setUser(fullUser); setUserBackup(fullUser); } else if (!session?.user && userBackup && mounted) {
+          setUser(userBackup);
+
         }
       } catch (error) {
         console.error('Auth başlatma hatası:', error);
@@ -88,13 +84,8 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      if (event === 'SIGNED_OUT' || !session?.user) {
-        setUser(null);
-      } else if (session?.user) {
-        const fullUser = await loadUserProfile(session.user);
-        setUser(fullUser);
-      }
-      
+      if (event === 'SIGNED_OUT' || !session?.user) { setUser(null); setUserBackup(null); } else if (session?.user) { const fullUser = await loadUserProfile(session.user); setUser(fullUser); setUserBackup(fullUser); }
+
       setLoading(false);
     });
 
@@ -107,13 +98,13 @@ export function AuthProvider({ children }) {
   // Page visibility kontrolü - AYRI useEffect
   useEffect(() => {
     let lastVisibilityChange = Date.now();
-    
+
     const handleVisibilityChange = () => {
       // En az 5 dakika geçtiyse ve user varsa kontrol et
       const now = Date.now();
-      if (document.visibilityState === 'visible' && 
-          user?.id && 
-          (now - lastVisibilityChange) > 5 * 60 * 1000) {
+      if (document.visibilityState === 'visible' &&
+        user?.id &&
+        (now - lastVisibilityChange) > 5 * 60 * 1000) {
         lastVisibilityChange = now;
         setTimeout(checkSession, 2000);
       }
@@ -171,15 +162,13 @@ export function AuthProvider({ children }) {
   // Update profile
   const updateProfile = useCallback(async (updates) => {
     if (!user?.id) throw new Error('Kullanıcı oturumu bulunamadı');
-    
+
     setLoading(true);
     try {
       const { data, error } = await updateUserProfile(user.id, updates);
       if (error) throw error;
-      
-      const fullUser = await loadUserProfile(user);
-      setUser(fullUser);
-      return { success: true, user: fullUser };
+
+      const fullUser = await loadUserProfile(user); setUser(fullUser); setUserBackup(fullUser); return { success: true, user: fullUser };
     } catch (error) {
       throw error;
     } finally {
@@ -192,7 +181,7 @@ export function AuthProvider({ children }) {
     if (!user) return false;
     if (module === 'any_auth') return true;
     if (user.role === 'admin') return true;
-    
+
     switch (module) {
       case 'admin': return user.role === 'admin';
       case 'store': return user.role === 'store';

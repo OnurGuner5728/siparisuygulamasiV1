@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api from '@/lib/api';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const CartContext = createContext();
 
@@ -9,6 +10,12 @@ export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // localStorage backup for offline capability
+  const [cartBackup, setCartBackup] = useLocalStorage('cart_backup', [], {
+    validateData: (data) => Array.isArray(data),
+    syncAcrossTabs: true
+  });
 
   // Sepet yükle - STABİL REFERANS
   const loadCart = useCallback(async (userId) => {
@@ -21,13 +28,19 @@ export function CartProvider({ children }) {
     try {
       const items = await api.getUserCartItems(userId);
       setCartItems(items || []);
+      setCartBackup(items || []); // Backup to localStorage
     } catch (error) {
       console.error('Sepet yüklenirken hata:', error);
-      setCartItems([]);
+      // If network fails, try to load from backup
+      if (cartBackup && cartBackup.length > 0) {
+        setCartItems(cartBackup);
+      } else {
+        setCartItems([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, []); // Boş dependency - external API kullanıyor
+  }, [cartBackup, setCartBackup]); // Dependencies
 
   // User değiştiğinde sepeti yükle
   useEffect(() => {
@@ -185,16 +198,11 @@ export function CartProvider({ children }) {
     }
   }, [user?.id, cartItems, loadCart]);
 
-  // Sepeti temizle
-  const clearCart = useCallback(async () => {
-    try {
-      const promises = cartItems.map(item => api.removeFromCart(item.id));
-      await Promise.all(promises);
-      setCartItems([]);
-    } catch (error) {
-      console.error('Sepet temizleme hatası:', error);
-    }
-  }, [cartItems]);
+  // Sepeti temizle  
+  const clearCart = useCallback(async () => {    try {      const promises = cartItems.map(item => api.removeFromCart(item.id));      await Promise.all(promises);      setCartItems([]);      setCartBackup([]);
+
+    
+      } catch (error) {      console.error('Sepet temizleme hatası:', error);    }  }, [cartItems, setCartBackup]);
 
   // Sepet hesaplama fonksiyonları
   const calculateSubtotal = useCallback(() => {

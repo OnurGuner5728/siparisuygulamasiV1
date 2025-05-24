@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@tailwind base;
 
 /* Google Fonts import */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Nunito+Sans:wght@300;400;600;700&display=swap');
@@ -143,4 +144,24 @@
   .slide-up {
     animation: slideUp 0.5s ease-out forwards;
   }
+}
+
+/* Prevent auth button flash during hydration */
+.auth-buttons-hidden {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.auth-buttons-visible {
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Hide auth buttons by default until JS takes over */
+.auth-buttons {
+  opacity: 0;
+}
+
+body.hydrated .auth-buttons {
+  opacity: 1;
 }
