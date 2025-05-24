@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiUsers, FiShoppingBag, FiStore, FiClock, FiTrendingUp, FiDollarSign, FiActivity, FiEye, FiAlertCircle} from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiClock, FiTrendingUp, FiDollarSign, FiActivity, FiEye, FiAlertCircle} from 'react-icons/fi';
 import * as api from '@/lib/api';
 
 const AdminStats = () => {
@@ -196,7 +196,7 @@ const AdminStats = () => {
         <StatCard
           title="Toplam Mağaza"
           value={stats.totalStores.toLocaleString('tr-TR')}
-          icon={FiStore}
+          icon={FiShoppingBag}
           color="bg-green-500"
           subtitle="Aktif mağaza sayısı"
         />
