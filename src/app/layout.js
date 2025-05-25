@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
                 <ModuleProvider>
                   <FileProvider>
                     <CartProvider>
-                      <div className="min-h-screen bg-gray-50 flex flex-col">
+                      <div className="enhanced-gradient min-h-screen bg-gray-50 flex flex-col">
                         <HeaderWrapper onCartClick={handleCartOpen} />
                         <main className="flex-1">
                           {children}

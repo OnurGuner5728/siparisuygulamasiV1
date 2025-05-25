@@ -337,48 +337,59 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {formData.role === 'customer' ? 'Kullanıcı Kaydı' : 'İş Ortağı Kaydı'}
+    <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-4 flex items-center justify-center relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 left-0 w-72 h-72 bg-white/10 rounded-full -translate-x-36 -translate-y-36"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full translate-x-48 translate-y-48"></div>
+      <div className="absolute top-1/2 left-1/4 w-4 h-4 bg-white/20 rounded-full animate-pulse"></div>
+      <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-white/30 rounded-full animate-bounce"></div>
+      
+      <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full mx-auto shadow-2xl backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+        <div className="px-8 pt-12 pb-8">
+          {/* Logo/Brand Section */}
+          <div className="text-center mb-10">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">
+              {formData.role === 'customer' ? 'Hesap Oluşturun' : 'İş Ortağı Olun'}
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Zaten hesabınız var mı?{' '}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            Giriş yapın
-          </Link>
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {/* Hesap Türü Seçimi */}
-          <div className="mb-6">
-            <div className="flex items-center justify-center space-x-4">
+            <p className="text-gray-500 text-base mb-6">
+              {formData.role === 'customer' 
+                ? 'Lezzetli deneyimler sizi bekliyor' 
+                : 'İşletmenizi büyütmek için bize katılın'
+              }
+            </p>
+            
+            {/* Account Type Selector */}
+            <div className="flex bg-gray-100 rounded-2xl p-1 max-w-sm mx-auto">
               <button
                 type="button"
                 onClick={() => setFormData({...formData, role: 'customer'})}
-                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                className={`flex-1 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
                   formData.role === 'customer'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-white text-orange-500 shadow-md'
+                    : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                Müşteri Kaydı
+                Müşteri
               </button>
               <button
                 type="button"
                 onClick={() => setFormData({...formData, role: 'business'})}
-                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                className={`flex-1 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
                   formData.role === 'business'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-white text-orange-500 shadow-md'
+                    : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                İş Ortağı Kaydı
+                İş Ortağı
               </button>
             </div>
           </div>
+
 
           {errors.form && (
             <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
@@ -810,18 +821,16 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 ${
-                    isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 ease-in-out disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isSubmitting ? (
-                    <>
+                    <div className="flex items-center justify-center">
                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Kaydediliyor...
-                    </>
+                    </div>
                   ) : (
                     'Kayıt Ol'
                   )}
@@ -829,6 +838,15 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
               </div>
             </form>
           )}
+          
+          <div className="text-center mt-8">
+            <p className="text-gray-600 text-base">
+              Zaten hesabınız var mı?{' '}
+              <Link href="/login" className="text-orange-500 font-semibold hover:text-orange-600 transition-colors">
+                Giriş Yap
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
