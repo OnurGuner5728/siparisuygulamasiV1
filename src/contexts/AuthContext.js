@@ -5,28 +5,37 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); const [loading, setLoading] = useState(true);      const [userBackup, setUserBackup] = useLocalStorageWithExpiry('auth_user_backup', null, 24 * 60);
 
-  // Kullanıcı profili yükle - STABİL REFERANS
+  // Kullanıcı profili yükle - Cache ile optimize edilmiş
   const loadUserProfile = useCallback(async (authUser) => {
     try {
-      const { data: profile } = await getUserProfile(authUser.id);
+      // Eğer kullanıcı bilgileri zaten yeterliyse, API çağrısı yapma
+      const userRole = authUser?.user_metadata?.role || 'user';
+      const userName = authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'Kullanıcı';
 
-      const userRole = authUser?.user_metadata?.role || profile?.role || 'user';
-
-      // Store bilgilerini al (sadece store rolü için)
+      // Sadece eksik bilgiler varsa veya store kullanıcısıysa API çağrısı yap
+      let profile = null;
       let storeInfo = null;
+      
+      if (userRole === 'store' || !authUser?.user_metadata?.name) {
+        profile = await getUserProfile(authUser.id).catch(error => {
+          console.warn('Profil yüklenirken hata:', error);
+          return { data: null };
+        });
+        
+        // Store bilgilerini al (sadece store rolü için ve sadece bir kez)
       if (userRole === 'store') {
-        try {
-          storeInfo = await api.getStoreByOwnerId(authUser.id);
-        } catch (error) {
+          storeInfo = await api.getStoreByOwnerId(authUser.id).catch(error => {
           console.warn('Store bilgileri alınamadı:', error);
+            return null;
+          });
         }
       }
 
       return {
         ...authUser,
-        ...profile,
+        ...profile?.data,
         role: userRole,
-        name: profile?.name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'Kullanıcı',
+        name: profile?.data?.name || userName,
         storeInfo
       };
     } catch (error) {
@@ -133,12 +142,56 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Register
-  const register = useCallback(async (email, password, userData) => {
+  const register = useCallback(async (fullName, email, password, userRole, additionalData) => {
     setLoading(true);
     try {
+      // userData formatını düzgün şekilde oluştur
+      const userData = {
+        name: fullName,
+        firstName: additionalData.firstName,
+        lastName: additionalData.lastName,
+        role: userRole,
+        // Store rolü için sadece kullanıcı bilgilerini auth'a gönder
+        ...(userRole === 'store' ? {
+          phone: additionalData.owner_phone
+        } : {
+          phone: additionalData.phone,
+          address: additionalData.address,
+          city: additionalData.city,
+          district: additionalData.district
+        })
+      };
+      
       const { data, error } = await signUp(email, password, userData);
       if (error) throw error;
-      return { success: true, user: data.user };
+      
+      // Eğer store rolü ise, kullanıcı oluşturulduktan sonra mağaza kaydını da oluştur
+      if (userRole === 'store' && data.user) {
+        try {
+          const storeData = {
+            name: additionalData.name,
+            phone: additionalData.phone,
+            email: additionalData.email,
+            address: additionalData.address,
+            category_id: additionalData.category_id,
+            subcategories: additionalData.subcategories,
+            owner_id: data.user.id,
+            owner_phone: additionalData.owner_phone,
+            is_approved: false,
+            status: 'pending',
+            logo: additionalData.logo,
+            type: additionalData.type
+          };
+          
+          const storeResult = await api.createStore(storeData);
+          console.log('Mağaza kaydı oluşturuldu:', storeResult);
+        } catch (storeError) {
+          console.error('Mağaza kaydı oluşturulurken hata:', storeError);
+          // Kullanıcı kaydı başarılı olduğu için hatayı sadece logla
+        }
+      }
+      
+      return { success: true, user: data.user, data };
     } catch (error) {
       throw error;
     } finally {

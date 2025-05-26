@@ -164,9 +164,22 @@ function AktuelPageContent() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Aktüel Ürünler</h1>
-      <p className="text-gray-600 mb-8">Özel indirimli ve sınırlı stoklarla sunulan ürünleri kaçırmayın!</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Special Offers</h1>
+            </div>
+            <button className="p-2 text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
       
       {/* Kampanya Banner */}
       <CategoryCampaignBanner 
@@ -174,53 +187,62 @@ function AktuelPageContent() {
         categoryName="aktuel" 
       />
       
-      {/* Arama ve Filtreler */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-8">
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ürün Ara</label>
+      {/* Filter Tabs */}
+      <div className="bg-white px-4 py-3 border-b">
+        <div className="flex items-center space-x-1 overflow-x-auto">
+          <button
+            onClick={() => handleFilterChange('category', '')}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.category === '' 
+                ? 'bg-purple-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Tümü
+          </button>
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => handleFilterChange('category', category === filters.category ? '' : category)}
+              className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+                filters.category === category 
+                  ? 'bg-purple-500 text-white' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+          <button
+            onClick={() => handleFilterChange('inStock', !filters.inStock)}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.inStock 
+                ? 'bg-purple-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Stoktakiler
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white px-4 py-4 border-b">
+        <div className="max-w-md">
           <input
             type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-            placeholder="Ürün adı veya kategori..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            placeholder="Ürün adı veya kategori ara..."
             value={filters.searchQuery}
             onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
           />
         </div>
-        
-        <div className="flex flex-wrap gap-4">
-          {/* Kategori filtresi */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-            <select 
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-              value={filters.category}
-              onChange={(e) => handleFilterChange('category', e.target.value)}
-            >
-              <option value="">Tüm Kategoriler</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Stok durumu filtresi */}
-          <div className="flex items-center pt-5">
-            <input
-              id="inStock"
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              checked={filters.inStock}
-              onChange={(e) => handleFilterChange('inStock', e.target.checked)}
-            />
-            <label htmlFor="inStock" className="ml-2 block text-sm text-gray-900">
-              Sadece stoktaki ürünler
-            </label>
-          </div>
-        </div>
       </div>
       
-      {/* Ürünler */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {/* Products List */}
+      <div className="container mx-auto px-4 py-6">
+        {filteredProducts.length > 0 ? (
+          <div className="space-y-4">
         {filteredProducts.map(product => {
           const stockStatus = getStockIndicator(product.stock);
           const daysLeft = calculateDaysLeft(product.endDate);
@@ -230,61 +252,75 @@ function AktuelPageContent() {
             <Link 
               key={product.id} 
               href={`/aktuel/${product.id}`}
-              className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:shadow-lg hover:-translate-y-1"
+                  className="block"
             >
-              <div className="relative">
+                  <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    {/* Product Image */}
                 <div className="h-48 bg-gray-200 relative">
-                  <img src={product.image || '/placeholder.jpg'} alt={product.name} className="w-full h-full object-cover" />
+                      <img 
+                        src={product.image || '/placeholder.jpg'} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI0MCIgdmlld0JveD0iMCAwIDQwMCAyNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzYgMTIwTDIwNCA5Mkg0OFY5MkwyMDQgMTIwVjkySDQ4VjkyTDIwNCAxMjBIMTc2WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                        }}
+                      />
                   
                   {/* İndirim etiketi */}
-                  <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                      <div className="absolute top-4 left-4">
+                        <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm font-medium">
                     %{discountPercent} İndirim
+                        </span>
                   </div>
                   
-                  {/* Stok durumu */}
-                  <div className={`absolute top-2 right-2 ${stockStatus.color} text-white text-xs font-bold px-2 py-1 rounded`}>
+                      {/* Süre ve stok */}
+                      <div className="absolute top-4 right-4">
+                        <div className="flex flex-col space-y-1">
+                          {daysLeft > 0 && (
+                            <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
+                              {daysLeft} gün kaldı
+                            </span>
+                          )}
+                          <span className={`${stockStatus.color} text-white px-2 py-1 rounded-full text-sm`}>
                     {stockStatus.text}
+                          </span>
+                        </div>
                   </div>
                 </div>
                 
-                {/* Kalan gün */}
-                {daysLeft > 0 && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-center text-sm py-1">
-                    Son {daysLeft} gün
-                  </div>
-                )}
+                    {/* Product Info */}
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{product.name}</h3>
+                      <p className="text-gray-600 mb-4">{product.category} kategorisinde özel fırsat</p>
+                      
+                      {/* Price */}
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-gray-500 line-through text-lg">{product.originalPrice.toFixed(2)} TL</span>
+                        <span className="text-red-600 font-bold text-2xl">{product.discountPrice.toFixed(2)} TL</span>
               </div>
               
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2 h-12">{product.name}</h3>
-                <div className="flex items-center text-sm">
-                  <span className="text-gray-500 line-through mr-2">{product.originalPrice.toFixed(2)} TL</span>
-                  <span className="text-red-600 font-bold">{product.discountPrice.toFixed(2)} TL</span>
+                      {/* Product Stats */}
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>{product.stock > 0 ? `${product.stock} adet stokta` : 'Stokta yok'}</span>
+                        <span className="font-medium text-purple-600">{product.category}</span>
                 </div>
-                
-                <div className="mt-3 text-xs text-gray-500">
-                  {product.stock > 0 ? `${product.stock} adet stokta` : 'Stokta yok'}
                 </div>
               </div>
             </Link>
           );
         })}
-        
-        {filteredProducts.length === 0 && (
-          <div className="col-span-full py-12 text-center">
-            <svg className="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Ürün Bulunamadı</h3>
-            <p className="mt-1 text-sm text-gray-500">Arama kriterlerinize uygun ürün bulunamadı.</p>
-            <div className="mt-6">
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-lg mb-4">🔥</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Ürün Bulunamadı</h3>
+            <p className="text-gray-500">Arama kriterlerinize uygun ürün bulunamadı.</p>
               <button
                 onClick={() => setFilters({ category: '', inStock: false, searchQuery: '' })}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              className="mt-4 px-6 py-2 bg-purple-500 text-white rounded-lg"
               >
                 Filtreleri Temizle
               </button>
-            </div>
           </div>
         )}
       </div>

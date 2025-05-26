@@ -12,7 +12,7 @@ export const signUp = async (email, password, userData) => {
   })
   
   // Supabase v2'de user data.user içinde geliyor
-  return { user: data?.user || null, error }
+  return { data, error }
 }
 
 export const signIn = async (email, password) => {
@@ -71,9 +71,13 @@ export const getUserProfile = async (userId) => {
                 .insert([{
                   id: userId,
                   name: authUser.user.user_metadata?.name || authUser.user.email.split('@')[0],
-                  first_name: authUser.user.user_metadata?.firstName || '',
-                  last_name: authUser.user.user_metadata?.lastName || '',
+                  first_name: authUser.user.user_metadata?.firstName || authUser.user.user_metadata?.first_name || '',
+                  last_name: authUser.user.user_metadata?.lastName || authUser.user.user_metadata?.last_name || '',
                   email: authUser.user.email,
+                  phone: authUser.user.user_metadata?.phone || '',
+                  address: authUser.user.user_metadata?.address || '',
+                  city: authUser.user.user_metadata?.city || '',
+                  district: authUser.user.user_metadata?.district || '',
                   role: authUser.user.user_metadata?.role || 'user',
                   updated_at: new Date()
                 }])
@@ -309,12 +313,51 @@ export const getStoreReviews = async (storeId) => {
   return { data, error }
 }
 
-// Admin işlemleri (Sadece sunucu tarafında veya güvenli bir şekilde çağrılmalı)
+// Admin işlemleri (API route üzerinden yapılır)
 export const deleteAuthUser = async (userId) => {
-  const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-  // public.users tablosundan silme işini handle_user_delete trigger'ı yapar.
-  if (error) {
-    console.error(`Auth kullanıcısı silinirken hata (ID: ${userId}):`, error);
+  try {
+    console.log(`API çağrısı başlatılıyor: DELETE /api/admin/users/${userId}`);
+    
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log(`API yanıtı alındı. Status: ${response.status}`);
+
+    let result;
+    try {
+      result = await response.json();
+      console.log('API yanıt içeriği:', result);
+    } catch (parseError) {
+      console.error('JSON parse hatası:', parseError);
+      return { 
+        data: null, 
+        error: { 
+          message: `API yanıtı parse edilemedi: ${response.status} ${response.statusText}` 
+        } 
+      };
+    }
+
+    if (!response.ok) {
+      const errorMessage = result?.error || `API hatası: ${response.status} ${response.statusText}`;
+      console.error('API hatası:', errorMessage);
+      return { data: null, error: { message: errorMessage } };
+    }
+
+    console.log('Kullanıcı başarıyla silindi:', result);
+    // public.users tablosundan silme işini handle_user_delete trigger'ı yapar.
+    return { data: result.data, error: null };
+  } catch (error) {
+    console.error(`Auth kullanıcısı silinirken beklenmeyen hata (ID: ${userId}):`, error);
+    return { 
+      data: null, 
+      error: { 
+        message: error.message || 'Beklenmeyen hata oluştu',
+        stack: error.stack 
+      } 
+    };
   }
-  return { data, error };
 }; 

@@ -18,12 +18,17 @@ import NotificationContainer from '../components/NotificationContainer';
 import { SWRConfig } from 'swr';
 import swrConfig from '../lib/swrConfig';
 import ServiceWorkerManager from '../components/ServiceWorkerManager';
+import useCacheManager from '../hooks/useCacheManager';
+import DebugPanel from '../components/DebugPanel';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const pathname = usePathname();
+  
+  // Cache yönetimi
+  useCacheManager();
 
   const handleCartOpen = () => setIsCartOpen(true);
   const handleCartClose = () => setIsCartOpen(false);
@@ -56,6 +61,7 @@ export default function RootLayout({ children }) {
                         />
                         <NotificationContainer />
                         <ServiceWorkerManager />
+                        <DebugPanel />
                       </div>
                     </CartProvider>
                   </FileProvider>

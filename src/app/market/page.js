@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import api from '@/lib/api'; // Mock importları kaldırıldı, api eklendi
+import api from '@/lib/api';
 import ModuleGuard from '@/components/ModuleGuard';
 import CategoryCampaignBanner from '@/components/CategoryCampaignBanner';
 
@@ -21,32 +21,57 @@ function MarketPageContent() {
   const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
   const [marketCategoryId, setMarketCategoryId] = useState(null);
-  const [subCategories, setSubCategories] = useState([]); // Market ana kategorisine ait alt kategoriler
-  const [marketTypes, setMarketTypes] = useState([]); // Mağaza türleri (stores.type)
+  const [subCategories, setSubCategories] = useState([]);
+  const [marketTypes, setMarketTypes] = useState([]);
 
   const [filters, setFilters] = useState({
-    storeType: '', // stores.type için (önceki filters.type idi)
+    storeType: '',
     minOrder: 0,
     isOpen: false,
-    subCategory: '' // Alt kategori filtresi (önceki filters.category idi ve productCategories kullanıyordu)
+    subCategory: ''
   });
 
   useEffect(() => {
+    let isCancelled = false;
+    
     async function fetchData() {
       try {
         setLoading(true);
+
+        const cacheKey = `market_data_${MARKET_CATEGORY_NAME}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
+        const CACHE_DURATION = 2 * 60 * 1000;
+        
+        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
+          const parsed = JSON.parse(cachedData);
+          if (!isCancelled) {
+            setMarkets(parsed.markets);
+            setFilteredMarkets(parsed.markets);
+            setMarketCategoryId(parsed.categoryId);
+            setSubCategories(parsed.subCategories);
+            setMarketTypes(parsed.marketTypes);
+            setCampaigns(parsed.campaigns);
+            setLoading(false);
+          }
+          return;
+        }
 
         const mainCategories = await api.getMainCategories();
         const marketCategory = mainCategories.find(cat => cat.name === MARKET_CATEGORY_NAME);
 
         if (!marketCategory) {
           console.error(`'${MARKET_CATEGORY_NAME}' kategorisi bulunamadı.`);
+          if (!isCancelled) {
           setMarkets([]);
           setFilteredMarkets([]);
           setCampaigns([]);
           setLoading(false);
+          }
           return;
         }
+
+        if (isCancelled) return;
         setMarketCategoryId(marketCategory.id);
 
         const [storesData, allCampaignsData, subCategoriesData] = await Promise.all([
@@ -58,29 +83,48 @@ function MarketPageContent() {
           api.getCategories({ parent_category_id: marketCategory.id })
         ]);
         
-        // Sadece onaylanmış marketleri göster
+        if (isCancelled) return;
+        
         const approvedMarkets = (storesData || []).filter(store => store.is_approved);
-        setMarkets(approvedMarkets);
-        setFilteredMarkets(approvedMarkets);
-        setSubCategories(subCategoriesData || []);
-
         const uniqueMarketTypes = [...new Set(approvedMarkets.map(store => store.type).filter(Boolean))];
-        setMarketTypes(uniqueMarketTypes);
-
         const marketCampaigns = (allCampaignsData || []).filter(campaign => {
           if (campaign.category_id === marketCategory.id || campaign.main_category_id === marketCategory.id) return true;
           if (campaign.store_id && approvedMarkets.some(store => store.id === campaign.store_id)) return true;
           return false;
         });
+
+        setMarkets(approvedMarkets);
+        setFilteredMarkets(approvedMarkets);
+        setSubCategories(subCategoriesData || []);
+        setMarketTypes(uniqueMarketTypes);
         setCampaigns(marketCampaigns);
 
+        const dataToCache = {
+          markets: approvedMarkets,
+          categoryId: marketCategory.id,
+          subCategories: subCategoriesData || [],
+          marketTypes: uniqueMarketTypes,
+          campaigns: marketCampaigns
+        };
+        sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+        sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+
       } catch (error) {
+        if (!isCancelled) {
         console.error('Market verileri yüklenirken bir hata oluştu:', error);
+        }
       } finally {
+        if (!isCancelled) {
         setLoading(false);
+        }
       }
     }
+    
     fetchData();
+    
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -93,8 +137,6 @@ function MarketPageContent() {
     }
 
     if (filters.minOrder > 0) {
-      // min_order_amount stores tablosunda var, filtreyi ona göre ayarlayalım.
-      // Kullanıcı "50 TL ve altı" seçtiğinde, min_order_amount <= 50 olanları göstermeliyiz.
       result = result.filter(market => (market.min_order_amount || 0) <= filters.minOrder);
     }
 
@@ -103,10 +145,6 @@ function MarketPageContent() {
     }
 
     if (filters.subCategory) {
-      // Bu filtreleme, marketin ürünlerinin o alt kategoride olup olmadığına göre yapılmalı.
-      // Şimdilik, marketin `tags` alanı bu alt kategori adını içeriyorsa filtreleyelim.
-      // Veya `stores` tablosuna `sub_category_ids` gibi bir alan eklenip direkt onunla filtrelenebilir.
-      // Mevcut durumda `stores.tags` (JSONB) kullanalım varsayalım.
       result = result.filter(market => 
         market.tags && market.tags.map(tag => tag.toLowerCase()).includes(filters.subCategory.toLowerCase())
       );
@@ -124,16 +162,29 @@ function MarketPageContent() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 flex justify-center">
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">{MARKET_CATEGORY_NAME} Alışverişi</h1>
-      <p className="text-gray-600 mb-8">Marketlerden ihtiyacınız olan her şeyi sipariş edin!</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Market View</h1>
+            </div>
+            <button className="p-2 text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
       
       {/* Kampanya Banner */}
       {marketCategoryId && (
@@ -143,17 +194,58 @@ function MarketPageContent() {
         />
       )}
 
+      {/* Filter Tabs */}
+      <div className="bg-white px-4 py-3 border-b">
+        <div className="flex items-center space-x-1 overflow-x-auto">
+          <button
+            onClick={() => handleFilterChange('storeType', '')}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.storeType === '' 
+                ? 'bg-green-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Tümü
+          </button>
+          {marketTypes.map((type) => (
+            <button
+              key={type}
+              onClick={() => handleFilterChange('storeType', type === filters.storeType ? '' : type)}
+              className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+                filters.storeType === type 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+          <button
+            onClick={() => handleFilterChange('isOpen', !filters.isOpen)}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.isOpen 
+                ? 'bg-green-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Açık Olanlar
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Categories */}
       {subCategories.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Hızlı Kategori Erişimi</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="bg-white px-4 py-4 border-b">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Hızlı Kategori Erişimi</h3>
+          <div className="flex space-x-2 overflow-x-auto">
             {subCategories.map((category) => (
               <button
                 key={category.id}
-                className={`p-3 text-center text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-green-400
-                ${filters.subCategory === category.name 
-                  ? 'bg-green-100 border-green-300 text-green-800 font-medium' 
-                  : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`}
+                className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+                  filters.subCategory === category.name 
+                    ? 'bg-green-100 border-green-300 text-green-800' 
+                    : 'bg-white border-gray-200 text-gray-600'
+                } border`}
                 onClick={() => handleFilterChange('subCategory', category.name === filters.subCategory ? '' : category.name)}
               >
                 {category.name}
@@ -163,106 +255,110 @@ function MarketPageContent() {
         </div>
       )}
       
-      <div className="bg-gray-50 p-4 rounded-lg mb-8 shadow">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-          <div>
-            <label htmlFor="marketTypeFilter" className="block text-sm font-medium text-gray-700 mb-1">Market Türü</label>
-            <select 
-              id="marketTypeFilter"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-              value={filters.storeType}
-              onChange={(e) => handleFilterChange('storeType', e.target.value)}
-            >
-              <option value="">Tümü</option>
-              {marketTypes.map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="minOrderFilter" className="block text-sm font-medium text-gray-700 mb-1">Maks. Min. Sepet Tutarı</label>
-            <select 
-              id="minOrderFilter"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-              value={filters.minOrder} // Bu değerin 0, 50, 75, 100, 150 olması bekleniyor
-              onChange={(e) => handleFilterChange('minOrder', Number(e.target.value))}
-            >
-              <option value="0">Fark etmez</option>
-              <option value="50">50 TL</option>
-              <option value="75">75 TL</option>
-              <option value="100">100 TL</option>
-              <option value="150">150 TL</option>
-              {/* Daha yüksek veya dinamik seçenekler eklenebilir */}
-            </select>
-          </div>
-          
-          <div className="flex items-center pt-2 sm:pt-0 md:pt-5">
-            <input
-              id="isOpenMarket"
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-              checked={filters.isOpen}
-              onChange={(e) => handleFilterChange('isOpen', e.target.checked)}
-            />
-            <label htmlFor="isOpenMarket" className="ml-2 block text-sm text-gray-900">
-              Sadece açık marketler
-            </label>
-          </div>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-8">
+      {/* Markets List */}
+      <div className="container mx-auto px-4 py-6">
         {filteredMarkets.length > 0 ? (
-          filteredMarkets.map(market => (
-                        <Link               key={market.id}               href={`/market/store/${market.id}`}              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col"            >
+          <div className="space-y-4">
+            {filteredMarkets.map(market => (
+              <Link 
+                key={market.id}
+                href={`/market/store/${market.id}`}
+                className="block"
+              >
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  {/* Market Image */}
               <div className="h-48 bg-gray-200 relative">
-                {market.is_open !== undefined && (
-                    <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${market.is_open ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {market.is_open ? 'Açık' : 'Kapalı'}
-                    </div>
-                )}
                 {market.cover_image_url ? (
                   <img 
                     src={market.cover_image_url} 
                     alt={market.name} 
-                    className="h-full w-full object-cover"
+                        className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-gray-100">
-                    <svg className="w-12 h-12 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                      <div className="w-full h-full bg-gradient-to-br from-green-100 to-teal-100 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🏪</div>
+                          <div className="text-gray-500 font-medium">{market.name}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Market Status */}
+                    <div className="absolute top-4 left-4">
+                      <span className={`flex items-center bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-sm ${
+                        market.is_open ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          market.is_open ? 'bg-green-500' : 'bg-red-500'
+                        }`}></div>
+                        {market.is_open ? 'Açık' : 'Kapalı'}
+                      </span>
+                    </div>
+
+                    <div className="absolute top-4 right-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="bg-green-500 text-white px-2 py-1 rounded-full text-sm">
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                          Free
+                        </span>
+                        <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
+                          {market.delivery_time || '15-30 dk'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Market Info */}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{market.name}</h3>
+                    <p className="text-gray-600 mb-4">{market.description || 'İhtiyacınız olan her şey burada'}</p>
+                    
+                    {/* Market Type & Tags */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {market.type && (
+                        <span className="bg-green-500 text-white px-4 py-2 text-sm font-medium rounded-full">
+                          {market.type}
+                        </span>
+                      )}
+                      {market.tags && market.tags.slice(0, 3).map((tag, index) => (
+                        <span 
+                          key={index}
+                          className="bg-gray-100 text-gray-600 px-4 py-2 text-sm font-medium rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Market Stats */}
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>Min. sipariş: {market.min_order_amount || 0} TL</span>
+                      {market.rating && (
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                          </svg>
+                          <span>{market.rating.toFixed(1)}</span>
                   </div>
                 )}
               </div>
-              <div className="p-4 flex flex-col flex-grow">
-                <h3 className="text-lg font-semibold text-gray-800 truncate" title={market.name}>{market.name}</h3>
-                <div className="flex items-center text-sm text-gray-600 mt-1">
-                  {market.type && <span className="mr-2 capitalize">{market.type}</span>}
-                  {market.rating !== null && market.rating !== undefined && 
-                    <span className="flex items-center">
-                        <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                        {market.rating.toFixed(1)}
-                    </span>
-                  }
                 </div>
-                <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
-                  <span>Min. {market.min_order_amount || 0} TL</span>
-                  <span>{market.delivery_time || '15-30 dk'}</span>
                 </div>
+              </Link>
+            ))}
               </div>
-            </Link>
-          ))
         ) : (
-          <div className="col-span-full text-center py-10">
-            <svg className="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.362-3.797A8.333 8.333 0 0112 5.85c1.267 0 2.453-.331 3.362-.886zM12 15a3 3 0 100-6 3 3 0 000 6z" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Market Bulunamadı</h3>
-            <p className="mt-1 text-sm text-gray-500">Bu kriterlere uygun market bulunamadı.</p>
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-lg mb-4">🏪</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Market Bulunamadı</h3>
+            <p className="text-gray-500">Bu kriterlere uygun market bulunamadı.</p>
             <button 
-              className="mt-2 text-sm font-medium text-green-600 hover:text-green-500"
+              className="mt-4 px-6 py-2 bg-green-500 text-white rounded-lg"
               onClick={() => setFilters({ storeType: '', minOrder: 0, isOpen: false, subCategory: '' })}
             >
               Filtreleri Temizle

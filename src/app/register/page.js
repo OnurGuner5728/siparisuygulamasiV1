@@ -288,7 +288,10 @@ export default function Register() {
           owner_phone: formData.phone,
           is_approved: false, // Yeni mağazalar onay bekleyecek
           logo: null,
-          type: categories.find(c => c.id === parseInt(formData.categoryId))?.name || ''
+          type: categories.find(c => c.id === parseInt(formData.categoryId))?.name || '',
+          // Kullanıcı profili için gerekli alanlar
+          firstName: formData.firstName,
+          lastName: formData.lastName
         };
         
         result = await register(fullName, formData.email, formData.password, userRole, businessData);
@@ -298,7 +301,10 @@ export default function Register() {
           phone: formData.phone,
           address: formData.address,
           city: formData.city,
-          district: formData.district
+          district: formData.district,
+          // Kullanıcı profili için gerekli alanlar
+          firstName: formData.firstName,
+          lastName: formData.lastName
         };
         
         result = await register(fullName, formData.email, formData.password, userRole, userData);

@@ -1,28 +1,31 @@
 import { useError } from '@/contexts/ErrorContext';
 
-// Default SWR configuration
+// Default SWR configuration - Optimized for reduced fetch requests
 export const swrConfig = {
-  // Revalidation settings
-  revalidateOnFocus: true,
+  // Revalidation settings - Daha az agresif revalidation
+  revalidateOnFocus: false, // Focus'ta yeniden yüklemeyi kapat
   revalidateOnReconnect: true,
-  revalidateIfStale: true,
+  revalidateIfStale: false, // Stale veri üzerinde yeniden yüklemeyi kapat
   
-  // Cache settings
-  dedupingInterval: 2000,
-  focusThrottleInterval: 5000,
+  // Cache settings - Daha uzun cache süreleri
+  dedupingInterval: 10000, // 10 saniye (arttırıldı)
+  focusThrottleInterval: 30000, // 30 saniye (arttırıldı)
   
   // Error retry settings
-  errorRetryCount: 3,
-  errorRetryInterval: 5000,
+  errorRetryCount: 2, // Azaltıldı
+  errorRetryInterval: 8000, // Arttırıldı
   
   // Loading settings
-  loadingTimeout: 3000,
+  loadingTimeout: 5000, // Arttırıldı
   
   // Fallback data
   fallbackData: null,
   
   // Keep previous data while loading new data
   keepPreviousData: true,
+  
+  // Cache refresh interval - Sadece kritik verileri belirli aralıklarla yenile
+  refreshInterval: 0, // Otomatik yenilemeyi kapat
   
   // Custom fetcher function
   fetcher: async (url, options = {}) => {

@@ -101,26 +101,27 @@ export const createStore = async (storeData) => {
 export const updateStore = async (storeId, updates) => {
   console.log('updateStore called with:', { storeId, updates });
   
-  const { data, error } = await supabase
-    .from('stores')
-    .update(updates)
-    .eq('id', storeId)
-    .select()
-    .single();
-    
-  if (error) {
-    console.error(`Mağaza güncellenirken hata (ID: ${storeId}):`, error);
-    console.error('Error details:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
+  try {
+    const response = await fetch(`/api/admin/stores/${storeId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
     });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Mağaza güncellenemedi');
+    }
+
+    console.log('updateStore successful, returned data:', result.data);
+    return result.data;
+  } catch (error) {
+    console.error(`Mağaza güncellenirken hata (ID: ${storeId}):`, error);
     throw error;
   }
-  
-  console.log('updateStore successful, returned data:', data);
-  return data;
 };
 
 export const updateStoreStatus = async (storeId, status) => {
@@ -139,16 +140,25 @@ export const updateStoreStatus = async (storeId, status) => {
 };
 
 export const deleteStore = async (storeId) => {
-  const { error } = await supabase
-    .from('stores')
-    .delete()
-    .eq('id', storeId);
-    
-  if (error) {
+  try {
+    const response = await fetch(`/api/admin/stores/${storeId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Mağaza silinemedi');
+    }
+
+    return { success: true };
+  } catch (error) {
     console.error(`Mağaza silinirken hata (ID: ${storeId}):`, error);
     throw error;
   }
-  return { success: true };
 };
 
 // Products (Ürünler)
@@ -760,16 +770,28 @@ export const getUserCartItems = async (userId) => {
 };
 
 export const addToCart = async (cartItem) => {
+  try {
+    // cartItem validasyonu
+    if (!cartItem.user_id || !cartItem.product_id || !cartItem.store_id) {
+      console.error('Sepete ekleme hatası: Gerekli alanlar eksik', cartItem);
+      return { success: false, error: 'Gerekli alanlar eksik' };
+    }
+
   const { data, error } = await supabase
     .from('cart_items')
     .insert(cartItem)
     .select();
     
   if (error) {
-    console.error('Sepete ürün eklerken hata:', error);
-    return { success: false, error };
+      console.error('Sepete ürün eklerken hata:', error.message || error);
+      return { success: false, error: error.message || 'Sepete ekleme hatası' };
   }
+    
   return { success: true, data: data[0] };
+  } catch (err) {
+    console.error('Sepete ekleme sırasında beklenmedik hata:', err);
+    return { success: false, error: 'Beklenmedik hata oluştu' };
+  }
 };
 
 export const updateCartItem = async (itemId, updates) => {
@@ -1069,16 +1091,25 @@ export const updateUser = async (userId, updates) => {
 };
 
 export const deleteUser = async (userId) => {
-  // Bu fonksiyon, kullanıcıyı hem supabase.auth'dan hem de public.users'dan (trigger aracılığıyla) siler.
-  // supabaseApi.deleteAuthUser fonksiyonunu kullanır, o da supabaseAdmin client'ını kullanır.
-  const { error } = await supabaseApi.deleteAuthUser(userId);
+  try {
+    console.log(`Kullanıcı silme işlemi başlatılıyor (ID: ${userId})`);
+    
+    // Bu fonksiyon, kullanıcıyı hem supabase.auth'dan hem de public.users'dan (trigger aracılığıyla) siler.
+    // supabaseApi.deleteAuthUser fonksiyonunu kullanır, o da API route'u kullanır.
+    const { data, error } = await supabaseApi.deleteAuthUser(userId);
 
-  if (error) {
-    console.error(`Kullanıcı silinirken (Auth & DB) (ID: ${userId}):`, error);
-    return { success: false, error };
+    if (error) {
+      console.error(`Kullanıcı silinirken (Auth & DB) (ID: ${userId}):`, error);
+      return { success: false, error: error.message || error };
+    }
+    
+    console.log(`Kullanıcı başarıyla silindi (ID: ${userId})`);
+    // handle_user_delete trigger'ı public.users tablosundan silme işlemini gerçekleştirir.
+    return { success: true, data };
+  } catch (error) {
+    console.error(`Kullanıcı silme işleminde beklenmeyen hata (ID: ${userId}):`, error);
+    return { success: false, error: error.message || 'Beklenmeyen hata oluştu' };
   }
-  // handle_user_delete trigger'ı public.users tablosundan silme işlemini gerçekleştirir.
-  return { success: true, error: null };
 };
 
 // Ürün ID'sinden mağaza ID'sini bul

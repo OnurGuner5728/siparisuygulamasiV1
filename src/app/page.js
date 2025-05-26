@@ -70,38 +70,40 @@ export default function Home() {
     }
   };
 
+  // Sadece modül yükleme tamamlandığında veri çek
   useEffect(() => {
+    // Modül yüklenmesini bekle
+    if (moduleLoading) return;
+    
+    let isCancelled = false;
+    
     async function fetchData() {
       try {
         setLoading(true);
         
-        // Ana kategorileri yükle - Yönetici yetkisiyle
-        const mainCategoriesData = await api.getMainCategories(true);
+        // Paralel API çağrılarıyla performansı artır
+        const [mainCategoriesData, categoriesData, storesData] = await Promise.all([
+          api.getMainCategories(true),
+          api.getCategories(true),
+          api.getStores({}, true)
+        ]);
+        
+        // Component unmount olmuşsa işlemi durdur
+        if (isCancelled) return;
+        
         setMainCategories(mainCategoriesData);
         
-        // Kategorileri yükle - Yönetici yetkisiyle
-        const categoriesData = await api.getCategories(true);
-        
-        // Kullanıcı giriş yapmamışsa veya admin değilse, modül izinlerine göre kategorileri filtrele
-        let filteredCategories = categoriesData;
-        if (!moduleLoading) {
-          filteredCategories = categoriesData.filter(cat => {
+        // Modül izinlerine göre kategorileri filtrele
+        const filteredCategories = categoriesData.filter(cat => {
             const moduleName = getModuleNameFromCategory(cat);
-            // Modül adı yoksa veya modül aktifse göster
             return !moduleName || isModuleEnabled(moduleName);
           });
-        }
         
         setCategories(filteredCategories);
-        
-        // Mağazaları yükle - Yönetici yetkisiyle (tüm mağazalar, kapalı olanlar da dahil)
-        const storesData = await api.getStores({}, true);
         setStores(storesData);
         
-        // Her kategori için mağaza sayısını hesapla
+        // Mağaza sayılarını hesapla
         const storeCount = {};
-        
-        // Mağazaları kategorilere göre grupla (kapalı olanlar da dahil)
         categoriesData.forEach(category => {
           const categoryStores = storesData.filter(store => 
             store.category_id === category.id && store.is_approved
@@ -111,14 +113,23 @@ export default function Home() {
         
         setStoreCountByCategory(storeCount);
       } catch (error) {
+        if (!isCancelled) {
         console.error("Ana sayfa verileri yüklenirken hata:", error);
+        }
       } finally {
+        if (!isCancelled) {
         setLoading(false);
+        }
       }
     }
     
     fetchData();
-  }, [user, moduleLoading, isModuleEnabled]);
+    
+    // Cleanup function
+    return () => {
+      isCancelled = true;
+    };
+  }, [moduleLoading, isModuleEnabled]); // user dependency'si kaldırıldı
 
   if (loading || authLoading || moduleLoading) {
     return (

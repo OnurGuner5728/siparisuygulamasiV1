@@ -28,20 +28,21 @@ const getSupabase = () => {
 const getSupabaseAdmin = () => {
   if (supabaseAdminInstance) return supabaseAdminInstance;
   
-  // Tarayıcıda çalışıyorsa, sadece normal client'ı dön
-  if (typeof window !== 'undefined') {
-    return getSupabase();
+  // Sunucu tarafında çalışıyorsa admin client oluştur
+  if (typeof window === 'undefined') {
+    supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    return supabaseAdminInstance;
   }
   
-  // Sunucu tarafında çalışıyorsa admin client oluştur
-  supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-  
-  return supabaseAdminInstance;
+  // Tarayıcıda çalışıyorsa, admin işlemleri API routes üzerinden yapılmalı
+  // Bu durumda normal client döndürülür ama admin işlemler API'ye yönlendirilir
+  console.warn('Admin client tarayıcıda kullanılamaz. Admin işlemler API routes üzerinden yapılmalı.');
+  return getSupabase();
 };
 
 // İstemcileri oluştur

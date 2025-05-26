@@ -36,62 +36,99 @@ function YemekPageContent() {
   });
 
   useEffect(() => {
+    let isCancelled = false;
+    
     async function fetchData() {
       try {
         setLoading(true);
         
-        // 1. Ana kategorileri çek ve Yemek kategorisinin ID'sini bul
+        // Cache kontrolü
+        const cacheKey = `yemek_data_${YEMEK_CATEGORY_NAME}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
+        const CACHE_DURATION = 2 * 60 * 1000; // 2 dakika
+        
+        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
+          const parsed = JSON.parse(cachedData);
+          if (!isCancelled) {
+            setRestaurants(parsed.restaurants);
+            setFilteredRestaurants(parsed.restaurants);
+            setYemekCategoryId(parsed.categoryId);
+            setCampaigns(parsed.campaigns);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // Ana kategorileri çek ve Yemek kategorisinin ID'sini bul
         const mainCategories = await api.getMainCategories();
         const yemekCategory = mainCategories.find(cat => cat.name === YEMEK_CATEGORY_NAME);
         
         if (!yemekCategory) {
           console.error('\"Yemek\" kategorisi bulunamadı.');
+          if (!isCancelled) {
           setRestaurants([]);
           setFilteredRestaurants([]);
           setCampaigns([]);
           setLoading(false);
+          }
           return;
         }
+        
+        if (isCancelled) return;
         setYemekCategoryId(yemekCategory.id);
 
-        // 2. Yemek kategorisindeki mağazaları getir
-        const storesData = await api.getStores({ 
-          category_id: yemekCategory.id  // Kategori ID'si ile filtreleme, status filtresi kaldırıldı
-        });
+        // Paralel olarak mağazalar ve kampanyaları getir
+        const [storesData, allCampaigns] = await Promise.all([
+          api.getStores({ category_id: yemekCategory.id }),
+          api.getCampaigns()
+        ]);
         
-        // Sadece onaylanmış mağazaları filtrele (kapalı olanlar da dahil)
-        const yemekStores = storesData.filter(store => 
-          store.is_approved
-        );
+        if (isCancelled) return;
         
-        setRestaurants(yemekStores);
-        setFilteredRestaurants(yemekStores);
-        
-        // 3. Kampanyaları getir
-        const allCampaigns = await api.getCampaigns(); 
+        // Sadece onaylanmış mağazaları filtrele
+        const yemekStores = storesData.filter(store => store.is_approved);
 
-        // Yemek kategorisine ait veya Yemek kategorisindeki mağazalara ait kampanyaları filtrele
+        // Yemek kategorisine ait kampanyaları filtrele
         const yemekCampaigns = allCampaigns.filter(campaign => {
-          // Kampanya doğrudan yemek kategorisine bağlı ise
           if (campaign.main_category_id === yemekCategory.id || campaign.category_id === yemekCategory.id) {
             return true;
           }
-          // Kampanya bir mağazaya bağlıysa ve o mağaza yemek kategorisinde ise
           if (campaign.store_id && yemekStores.some(store => store.id === campaign.store_id)) {
             return true;
           }
           return false;
         });
         
+        setRestaurants(yemekStores);
+        setFilteredRestaurants(yemekStores);
         setCampaigns(yemekCampaigns);
+        
+        // Cache'e kaydet
+        const dataToCache = {
+          restaurants: yemekStores,
+          categoryId: yemekCategory.id,
+          campaigns: yemekCampaigns
+        };
+        sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+        sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+        
       } catch (error) {
+        if (!isCancelled) {
         console.error('Veri yüklenirken bir hata oluştu:', error);
+        }
       } finally {
+        if (!isCancelled) {
         setLoading(false);
+        }
       }
     }
     
     fetchData();
+    
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   // Filtre değiştiğinde restoranları filtrele
@@ -134,21 +171,28 @@ function YemekPageContent() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 flex justify-center">
-        {/* Gelişmiş bir yükleme göstergesi eklenebilir */}
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">{YEMEK_CATEGORY_NAME} Siparişi</h1>
-          <p className="text-gray-600 mb-8">Restoran ve yemek siparişi için aradığınız her şey burada!</p>
+              <h1 className="text-2xl font-bold text-gray-900">Restaurant View</h1>
+            </div>
+            <button className="p-2 text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+          </div>
         </div>
-        {/* İleride kullanıcı girişi varsa adres seçimi gibi özellikler eklenebilir */}
       </div>
       
       {/* Kampanya Banner */}
@@ -159,130 +203,137 @@ function YemekPageContent() {
         />
       )}
       
-      {/* Filtreler */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-8 shadow">
-        <div className="flex flex-wrap items-end gap-4">
-          {/* Mutfak türü filtresi kaldırıldı, ileride tags ile eklenebilir */}
-          {/* 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mutfak Türü</label>
-            <select 
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={filters.cuisine}
-              onChange={(e) => handleFilterChange('cuisine', e.target.value)}
-            >
-              <option value="">Tümü</option>
-              {cuisineTypes.map((cuisine) => (
-                <option key={cuisine} value={cuisine}>{cuisine}</option>
-              ))}
-            </select>
-          </div>
-          */}
-          
-          <div>
-            <label htmlFor="ratingFilter" className="block text-sm font-medium text-gray-700 mb-1">Minimum Puan</label>
-            <select 
-              id="ratingFilter"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              value={filters.rating}
-              onChange={(e) => handleFilterChange('rating', Number(e.target.value))}
-            >
-              <option value="0">Tümü</option>
-              <option value="3">3 ve üzeri</option>
-              <option value="4">4 ve üzeri</option>
-              <option value="4.5">4.5 ve üzeri</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <input
-              id="isOpenFilter"
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              checked={filters.isOpen}
-              onChange={(e) => handleFilterChange('isOpen', e.target.checked)}
-            />
-            <label htmlFor="isOpenFilter" className="text-sm font-medium text-gray-700">
-              Sadece açık restoranlar
-            </label>
-          </div>
+      {/* Filter Tabs */}
+      <div className="bg-white px-4 py-3 border-b">
+        <div className="flex items-center space-x-1 overflow-x-auto">
+          <button
+            onClick={() => handleFilterChange('rating', 0)}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.rating === 0 
+                ? 'bg-orange-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Tümü
+          </button>
+          <button
+            onClick={() => handleFilterChange('rating', 4)}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.rating === 4 
+                ? 'bg-orange-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            4+ Yıldız
+          </button>
+          <button
+            onClick={() => handleFilterChange('isOpen', !filters.isOpen)}
+            className={`px-6 py-2 text-sm font-medium rounded-full whitespace-nowrap ${
+              filters.isOpen 
+                ? 'bg-orange-500 text-white' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Açık Olanlar
+          </button>
         </div>
       </div>
 
-      {/* Restoranlar Listesi */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Restoranlar ({filteredRestaurants.length})</h2>
-        
+      {/* Restaurants List */}
+      <div className="container mx-auto px-4 py-6">
         {filteredRestaurants.length === 0 ? (
-          <div className="bg-gray-50 p-8 text-center rounded-lg border border-gray-200">
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-lg mb-4">🍽️</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Restoran Bulunamadı</h3>
             <p className="text-gray-500">Seçtiğiniz kriterlere uygun restoran bulunamadı.</p>
             <button 
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-              onClick={() => setFilters({ cuisine: '', rating: 0, isOpen: false })}
+              className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg"
+              onClick={() => setFilters({ rating: 0, isOpen: false })}
             >
               Filtreleri Temizle
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
             {filteredRestaurants.map(restaurant => (
               <Link href={`/yemek/store/${restaurant.id}`} key={restaurant.id}>
-                <div className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full relative ${
-                  restaurant.status !== 'active' ? 'opacity-75' : ''
-                }`}>
-                  {/* Kapalı mağaza etiketi */}
-                  {restaurant.status !== 'active' && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                        Kapalı
-                      </span>
-                    </div>
-                  )}
-                  
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  {/* Restaurant Image */}
+                  <div className="h-48 bg-gray-200 relative">
                   {restaurant.logo ? (
                     <img 
                       src={restaurant.logo} 
                       alt={restaurant.name} 
-                      className={`w-full h-40 object-cover ${
-                        restaurant.status !== 'active' ? 'filter grayscale' : ''
-                      }`}
+                        className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className={`w-full h-40 bg-gray-200 flex items-center justify-center ${
-                      restaurant.status !== 'active' ? 'bg-gray-300' : ''
-                    }`}>
-                      <span className="text-gray-500 text-sm">Resim Yok</span>
+                      <div className="w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🍽️</div>
+                          <div className="text-gray-500 font-medium">{restaurant.name}</div>
+                        </div>
                     </div>
                   )}
-                  <div className="p-4">
-                    <h3 className={`font-bold text-lg ${
-                      restaurant.status !== 'active' ? 'text-gray-600' : ''
-                    }`}>{restaurant.name}</h3>
-                    <p className={`text-gray-600 text-sm line-clamp-2 mb-2 ${
-                      restaurant.status !== 'active' ? 'text-gray-500' : ''
-                    }`}>{restaurant.description || 'Bu restoran hakkında açıklama bulunmuyor.'}</p>
                     
-                    <div className="flex items-center text-sm text-gray-500 mt-2">
-                      <div className="flex items-center">
+                    {/* Indicators */}
+                    <div className="absolute top-4 left-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="flex items-center bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-sm">
                         <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                         </svg>
-                        <span>{restaurant.rating || '0'}/5</span>
+                          {restaurant.rating || '4.7'}
+                        </span>
                       </div>
-                      <span className="mx-2">•</span>
-                      <span className={`font-medium ${
-                        restaurant.status === 'active' ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                    </div>
+
+                    <div className="absolute top-4 right-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="bg-green-500 text-white px-2 py-1 rounded-full text-sm">
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                          Free
+                        </span>
+                        <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
+                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {restaurant.delivery_time || '20 min'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Restaurant Info */}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{restaurant.name}</h3>
+                    <p className="text-gray-600 mb-4">{restaurant.description || 'Lezzetli yemekleri keşfedin'}</p>
+                    
+                    {/* Category Tags */}
+                    {restaurant.tags && restaurant.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {restaurant.tags.slice(0, 4).map((tag, index) => (
+                          <span 
+                            key={index}
+                            className={`px-4 py-2 text-sm font-medium rounded-full ${
+                              index === 0 
+                                ? 'bg-orange-500 text-white' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Restaurant Stats */}
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>Min. sipariş: {restaurant.min_order_amount || 0} ₺</span>
+                      <span className={`font-medium ${restaurant.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
                         {restaurant.status === 'active' ? 'Açık' : 'Kapalı'}
                       </span>
-                      
-                      {/* Restoran için etiketler varsa göster */}
-                      {restaurant.tags && restaurant.tags.length > 0 && (
-                        <>
-                          <span className="mx-2">•</span>
-                          <span>{restaurant.tags.join(', ')}</span>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>

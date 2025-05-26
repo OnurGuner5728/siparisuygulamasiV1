@@ -17,7 +17,7 @@ export function CartProvider({ children }) {
     syncAcrossTabs: true
   });
 
-  // Sepet yükle - STABİL REFERANS
+  // Sepet yükle - Her seferinde API'den güncel veriyi al
   const loadCart = useCallback(async (userId) => {
     if (!userId) {
       setCartItems([]);
@@ -32,7 +32,7 @@ export function CartProvider({ children }) {
     } catch (error) {
       console.error('Sepet yüklenirken hata:', error);
       // If network fails, try to load from backup
-      if (cartBackup && cartBackup.length > 0) {
+      if (cartBackup && cartBackup.length > 0 && cartBackup[0]?.user_id === userId) {
         setCartItems(cartBackup);
       } else {
         setCartItems([]);
@@ -40,11 +40,15 @@ export function CartProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [cartBackup, setCartBackup]); // Dependencies
+  }, [cartBackup, setCartBackup]);
 
   // User değiştiğinde sepeti yükle
   useEffect(() => {
-    loadCart(user?.id);
+    if (user?.id) {
+      loadCart(user.id);
+    } else {
+      setCartItems([]);
+    }
   }, [user?.id, loadCart]);
 
   // Sepete ekle
@@ -117,7 +121,7 @@ export function CartProvider({ children }) {
       }
 
       // Mevcut sepette aynı ürün var mı kontrol et
-      const existingItem = cartItems.find(item => item.product_id === product.id);
+      const existingItem = cartItems.find(item => item.product_id === (product.product_id || product.id));
       
       if (existingItem) {
         // Varsa miktarını güncelle
@@ -127,13 +131,25 @@ export function CartProvider({ children }) {
           total: product.price * newQuantity
         });
         if (result.success) {
-          await loadCart(user.id); // Sepeti yenile
+          // UI'ı hemen güncelle
+          setCartItems(prevItems => 
+            prevItems.map(item => 
+              item.id === existingItem.id 
+                ? { ...item, quantity: newQuantity, total: product.price * newQuantity }
+                : item
+            )
+          );
+          // Backup'ı güncelle
+          await loadCart(user.id);
+        } else {
+          console.error('Sepet güncellemesi başarısız:', result.error);
+          throw new Error(result.error || 'Sepet güncellemesi başarısız');
         }
       } else {
         // Yoksa yeni ekle
         const cartItem = {
           user_id: user.id,
-          product_id: product.id,
+          product_id: product.product_id || product.id,
           store_id: product.store_id,
           name: product.name,
           store_name: product.store_name || '',
@@ -146,7 +162,14 @@ export function CartProvider({ children }) {
 
         const result = await api.addToCart(cartItem);
         if (result.success) {
-          await loadCart(user.id); // Sepeti yenile
+          // UI'ı hemen güncelle
+          const newCartItem = { ...cartItem, id: result.data.id };
+          setCartItems(prevItems => [...prevItems, newCartItem]);
+          // Backup'ı güncelle
+          await loadCart(user.id);
+        } else {
+          console.error('Sepete ekleme başarısız:', result.error);
+          throw new Error(result.error || 'Sepete ekleme başarısız');
         }
       }
     } catch (error) {
@@ -169,13 +192,23 @@ export function CartProvider({ children }) {
           total: item.price * newQuantity
         });
         if (result.success) {
-          await loadCart(user?.id); // Sepeti yenile
+          // UI'ı hemen güncelle
+          setCartItems(prevItems => 
+            prevItems.map(cartItem => 
+              cartItem.id === item.id 
+                ? { ...cartItem, quantity: newQuantity, total: item.price * newQuantity }
+                : cartItem
+            )
+          );
+          await loadCart(user?.id); // Backup güncelle
         }
       } else {
         // Tamamen kaldır
         const result = await api.removeFromCart(item.id);
         if (result.success) {
-          await loadCart(user?.id); // Sepeti yenile
+          // UI'ı hemen güncelle
+          setCartItems(prevItems => prevItems.filter(cartItem => cartItem.id !== item.id));
+          await loadCart(user?.id); // Backup güncelle
         }
       }
     } catch (error) {
@@ -191,7 +224,9 @@ export function CartProvider({ children }) {
       
       const result = await api.removeFromCart(item.id);
       if (result.success) {
-        await loadCart(user?.id); // Sepeti yenile
+        // UI'ı hemen güncelle
+        setCartItems(prevItems => prevItems.filter(cartItem => cartItem.id !== item.id));
+        await loadCart(user?.id); // Backup güncelle
       }
     } catch (error) {
       console.error('Sepetten tamamen kaldırma hatası:', error);
@@ -199,10 +234,23 @@ export function CartProvider({ children }) {
   }, [user?.id, cartItems, loadCart]);
 
   // Sepeti temizle  
-  const clearCart = useCallback(async () => {    try {      const promises = cartItems.map(item => api.removeFromCart(item.id));      await Promise.all(promises);      setCartItems([]);      setCartBackup([]);
-
-    
-      } catch (error) {      console.error('Sepet temizleme hatası:', error);    }  }, [cartItems, setCartBackup]);
+  const clearCart = useCallback(async () => {
+    try {
+      // UI'ı hemen güncelle
+      setCartItems([]);
+      setCartBackup([]);
+      
+      // API'den de temizle
+      const promises = cartItems.map(item => api.removeFromCart(item.id));
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('Sepet temizleme hatası:', error);
+      // Hata durumunda sepeti yeniden yükle
+      if (user?.id) {
+        await loadCart(user.id);
+      }
+    }
+  }, [cartItems, setCartBackup, user?.id, loadCart]);
 
   // Sepet hesaplama fonksiyonları
   const calculateSubtotal = useCallback(() => {

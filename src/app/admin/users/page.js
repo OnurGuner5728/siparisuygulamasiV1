@@ -70,11 +70,19 @@ function AdminUsersContent() {
   const handleDeleteUser = async (userId) => {
     if (window.confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) {
       try {
-        await api.deleteUser(userId);
-        setUsers(users.filter(user => user.id !== userId));
+        console.log(`Admin UI: Kullanıcı silme işlemi başlatılıyor (ID: ${userId})`);
+        const result = await api.deleteUser(userId);
+        console.log('Admin UI: Silme işlemi sonucu:', result);
+        
+        if (result.success) {
+          setUsers(users.filter(user => user.id !== userId));
+          alert('Kullanıcı başarıyla silindi.');
+        } else {
+          throw new Error(result.error || 'Bilinmeyen hata');
+        }
       } catch (error) {
-        console.error('Kullanıcı silinirken hata oluştu:', error);
-        alert('Kullanıcı silinirken bir hata oluştu.');
+        console.error('Admin UI: Kullanıcı silinirken hata oluştu:', error);
+        alert(`Kullanıcı silinirken bir hata oluştu: ${error.message || error}`);
       }
     }
   };
