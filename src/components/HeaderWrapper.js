@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useModule } from '../contexts/ModuleContext';
@@ -79,9 +80,24 @@ function Header({ onCartClick }) {
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className="bg-white shadow-lg border-b border-gray-100 py-3 sticky top-0 z-40 backdrop-blur-sm bg-white/95">      <div className="container mx-auto px-4 flex justify-between items-center">        <div className="flex items-center">          <a href="/" className="flex items-center space-x-2 text-2xl font-bold" onClick={(e) => handleLinkClick(e, '/')}          >            <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-2">              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />              </svg>            </div>            <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">              easysiparis            </span>          </a>        </div>
+  return (<header className="bg-white shadow-lg border-b border-gray-100 py-3 sticky top-0 z-50 backdrop-blur-sm bg-white/95">      <div className="container mx-auto px-4 flex justify-between items-center">        <div className="flex items-center">          <a href="/" className="flex items-center space-x-2 text-2xl font-bold" onClick={(e) => handleLinkClick(e, '/')}          >            <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-2">              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />              </svg>            </div>            <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">              easysiparis            </span>          </a>        </div>
 
-    {/* Mobil Menü Butonu */}        <button className="md:hidden p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200" onClick={() => setIsMenuOpen(!isMenuOpen)}        >          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />          </svg>        </button>
+    {/* Mobil Sağ Butonlar */}
+        <div className="md:hidden flex items-center space-x-2">
+          {/* Bildirim ikonu - sadece giriş yapmış kullanıcılar için */}
+          {currentIsAuthenticated && (
+            <div className="relative">
+              <NotificationDropdown />
+            </div>
+          )}
+          
+          {/* Mobil Menü Butonu */}
+          <button className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200" onClick={() => setIsMenuOpen(!isMenuOpen)}          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+            </svg>
+          </button>
+        </div>
 
     {/* Masaüstü Menü */}        <nav className="hidden md:flex space-x-1">          <a href="/" className="px-4 py-2 rounded-xl text-gray-600 hover:text-orange-500 hover:bg-orange-50 font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/')}          >            Ana Sayfa          </a>                    {isModuleEnabled('yemek') && (<a href="/yemek" className="px-4 py-2 rounded-xl text-gray-600 hover:text-orange-500 hover:bg-orange-50 font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/yemek')}            >              Yemek            </a>)}                    {isModuleEnabled('market') && (<a href="/market" className="px-4 py-2 rounded-xl text-gray-600 hover:text-orange-500 hover:bg-orange-50 font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/market')}            >              Market            </a>)}                    {isModuleEnabled('su') && (<a href="/su" className="px-4 py-2 rounded-xl text-gray-600 hover:text-orange-500 hover:bg-orange-50 font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/su')}            >              Su            </a>)}                    {isModuleEnabled('aktuel') && (<a href="/aktuel" className="px-4 py-2 rounded-xl text-gray-600 hover:text-orange-500 hover:bg-orange-50 font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/aktuel')}            >              Aktüel            </a>)}        </nav>
 
@@ -157,127 +173,238 @@ function Header({ onCartClick }) {
         </div>
       </div>
       
-    {/* Mobil Menü (Açılır Panel) */}      {isMenuOpen && (<div className="md:hidden bg-white border-t border-gray-100 py-4 px-4 shadow-lg backdrop-blur-sm bg-white/95">
-      <nav className="flex flex-col space-y-2 mb-6">            <a href="/" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50 py-3 px-4 rounded-xl font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/')}            >              Ana Sayfa            </a>                        {isModuleEnabled('yemek') && (<a href="/yemek" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50 py-3 px-4 rounded-xl font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/yemek')}              >                Yemek              </a>)}                        {isModuleEnabled('market') && (<a href="/market" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50 py-3 px-4 rounded-xl font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/market')}              >                Market              </a>)}                        {isModuleEnabled('su') && (<a href="/su" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50 py-3 px-4 rounded-xl font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/su')}              >                Su              </a>)}                        {isModuleEnabled('aktuel') && (<a href="/aktuel" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50 py-3 px-4 rounded-xl font-medium transition-all duration-200" onClick={(e) => handleLinkClick(e, '/aktuel')}              >                Aktüel              </a>)}          </nav>
+        {/* Mobil Sidebar Overlay - Portal ile */}
+      {isMenuOpen && typeof window !== 'undefined' && createPortal(
+        <div className="mobile-menu-overlay md:hidden overflow-hidden" style={{ position: 'fixed', zIndex: 99999 }}>
+          {/* Tam sayfa sidebar - alt navbar hariç */}
+          <div className="absolute inset-0 bottom-16 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Menü</h2>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
 
-      <div className="flex flex-col space-y-3 border-t border-gray-100 pt-4">            {/* Sepet ikonu her zaman görünür */}            <button onClick={onCartClick} className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-2xl text-center flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200"            >              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />              </svg>              <span className="font-medium">Sepetim</span>              {totalItems > 0 && (<span className="ml-3 bg-white text-orange-500 text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">                  {totalItems}                </span>)}            </button>
-            
-            {/* Mobile auth buttons with hydration control */}
-            <div className={authButtonClass}>
-              {!currentIsAuthenticated ? (
-                <>
-                  <a 
-                    href="/login" 
-                    className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                    onClick={(e) => handleLinkClick(e, '/login')}
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* Navigasyon Modülleri */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Kategoriler</h3>
+                  <div className="space-y-2">
+                    <a 
+                      href="/" 
+                      className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                      onClick={(e) => handleLinkClick(e, '/')}
+                    >
+                      <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">Ana Sayfa</span>
+                    </a>
+
+                    {isModuleEnabled('market') && (
+                      <a 
+                        href="/market" 
+                        className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                        onClick={(e) => handleLinkClick(e, '/market')}
+                      >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        <span className="text-sm font-medium text-gray-700">Market</span>
+                      </a>
+                    )}
+
+                    {isModuleEnabled('yemek') && (
+                      <a 
+                        href="/yemek" 
+                        className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                        onClick={(e) => handleLinkClick(e, '/yemek')}
+                      >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"/>
+                        </svg>
+                        <span className="text-sm font-medium text-gray-700">Yemek</span>
+                      </a>
+                    )}
+
+                    {isModuleEnabled('su') && (
+                      <a 
+                        href="/su" 
+                        className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                        onClick={(e) => handleLinkClick(e, '/su')}
+                      >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                        </svg>
+                        <span className="text-sm font-medium text-gray-700">Su</span>
+                      </a>
+                    )}
+
+                    {isModuleEnabled('aktuel') && (
+                      <a 
+                        href="/aktuel" 
+                        className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                        onClick={(e) => handleLinkClick(e, '/aktuel')}
+                      >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        <span className="text-sm font-medium text-gray-700">Aktüel</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Hızlı Erişim */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Hızlı Erişim</h3>
+                  <button 
+                    onClick={onCartClick} 
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white p-3 rounded-lg flex items-center justify-center space-x-2 shadow-sm hover:shadow-md transition-all duration-200"
                   >
-                    Giriş Yap
-                  </a>
-                  <a 
-                    href="/register" 
-                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 px-4 rounded-full text-center block"
-                    onClick={(e) => handleLinkClick(e, '/register')}
-                  >
-                    Kayıt Ol
-                  </a>
-                </>
-              ) : (
-                <>
-                  {/* Kullanıcı/Mağaza Bilgileri */}
-                  {currentUser?.role === 'store' && currentUser?.storeInfo?.logo && currentUser.storeInfo.logo.trim() !== '' && (
-                    <div className="flex items-center py-2 border-b border-gray-200 mb-2">
-                      <img 
-                        src={currentUser.storeInfo.logo} 
-                        alt={currentUser.storeInfo.name || 'Mağaza'}
-                        className="h-10 w-10 rounded-full object-cover mr-3 border border-gray-300"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {currentUser.storeInfo.name || 'Mağaza Adı'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {currentUser.storeInfo.is_approved ? 'Onaylanmış Mağaza' : 'Onay Bekleniyor'}
-                        </p>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span className="font-medium">Sepetim</span>
+                    {totalItems > 0 && (
+                      <span className="bg-white text-orange-500 text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {totalItems}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Kullanıcı Durumu */}
+                <div className={authButtonClass}>
+                  {!currentIsAuthenticated ? (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Hesap</h3>
+                      <div className="space-y-2">
+                        <a 
+                          href="/login" 
+                          className="w-full bg-gray-100 text-gray-700 p-3 rounded-lg text-center font-medium hover:bg-gray-200 transition-colors"
+                          onClick={(e) => handleLinkClick(e, '/login')}
+                        >
+                          Giriş Yap
+                        </a>
+                        <a 
+                          href="/register" 
+                          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white p-3 rounded-lg text-center font-medium hover:shadow-md transition-all duration-200"
+                          onClick={(e) => handleLinkClick(e, '/register')}
+                        >
+                          Kayıt Ol
+                        </a>
                       </div>
                     </div>
-                  )}
-                  
-                  <a 
-                    href="/profil" 
-                    className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                    onClick={(e) => handleLinkClick(e, '/profil')}
-                  >
-                    Profilim
-                  </a>
-                  {currentUser?.role === 'admin' && (
-                    <a 
-                      href="/admin" 
-                      className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                      onClick={(e) => handleLinkClick(e, '/admin')}
-                    >
-                      Admin Paneli
-                    </a>
-                  )}
-                  {currentUser?.role === 'store' && (
-                    <>
-                      {currentUser?.storeInfo?.is_approved ? (
+                  ) : (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Hesabım</h3>
+                      {/* Kullanıcı Bilgisi */}
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-orange-200">
+                        {currentUser?.role === 'store' && currentUser?.storeInfo?.logo && currentUser.storeInfo.logo.trim() !== '' ? (
+                          <img 
+                            src={currentUser.storeInfo.logo} 
+                            alt={currentUser.storeInfo.name || 'Mağaza'}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-300"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 bg-orange-100 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                            </svg>
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {currentUser?.role === 'store' ? 
+                              (currentUser.storeInfo?.name || 'Mağaza') : 
+                              (currentUser?.name || 'Kullanıcı')
+                            }
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {currentUser?.role === 'store' ? 
+                              (currentUser.storeInfo?.is_approved ? 'Onaylanmış Mağaza' : 'Onay Bekleniyor') :
+                              'Kullanıcı'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Kullanıcı Menü Linkleri */}
+                      <div className="space-y-2">
                         <a 
-                          href="/store" 
-                          className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                          onClick={(e) => handleLinkClick(e, '/store')}
+                          href="/profil" 
+                          className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                          onClick={(e) => handleLinkClick(e, '/profil')}
                         >
-                          Mağaza Paneli
+                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">Profilim</span>
                         </a>
-                      ) : (
                         <a 
-                          href="/store" 
-                          className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                          onClick={(e) => handleLinkClick(e, '/store')}
+                          href="/profil/siparisler" 
+                          className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                          onClick={(e) => handleLinkClick(e, '/profil/siparisler')}
                         >
-                          Mağaza Paneli (Onay Bekleniyor)
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">Siparişlerim</span>
                         </a>
-                      )}
-                      <a 
-                        href="/store/profile" 
-                        className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                        onClick={(e) => handleLinkClick(e, '/store/profile')}
+                        {currentUser?.role === 'admin' && (
+                          <a 
+                            href="/admin" 
+                            className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                            onClick={(e) => handleLinkClick(e, '/admin')}
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span className="text-sm font-medium text-gray-700">Admin Paneli</span>
+                          </a>
+                        )}
+                        {currentUser?.role === 'store' && (
+                          <a 
+                            href="/store" 
+                            className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
+                            onClick={(e) => handleLinkClick(e, '/store')}
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span className="text-sm font-medium text-gray-700">Mağaza Paneli</span>
+                          </a>
+                        )}
+                      </div>
+                      
+                      {/* Çıkış Butonu */}
+                      <button
+                        onClick={logout}
+                        className="w-full p-3 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 hover:border-red-300 transition-all duration-200 flex items-center justify-center space-x-2"
                       >
-                        Mağaza Profili
-                      </a>
-                    </>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>Çıkış Yap</span>
+                      </button>
+                    </div>
                   )}
-                  <a 
-                    href="/profil/siparisler" 
-                    className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                    onClick={(e) => handleLinkClick(e, '/profil/siparisler')}
-                  >
-                    Siparişlerim
-                  </a>
-                  <a 
-                    href="/profil/bildirimler" 
-                    className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                    onClick={(e) => handleLinkClick(e, '/profil/bildirimler')}
-                  >
-                    Bildirimlerim
-                  </a>
-                  <a 
-                    href="/profil/adresler" 
-                    className="text-gray-600 hover:text-orange-500 py-2 font-medium block"
-                    onClick={(e) => handleLinkClick(e, '/profil/adresler')}
-                  >
-                    Adreslerim
-                  </a>
-                  <button
-                    onClick={logout}
-                    className="text-left text-red-600 hover:text-red-700 py-2 font-medium block"
-                  >
-                    Çıkış Yap
-                  </button>
-                </>
-              )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );

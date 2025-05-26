@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import HeaderWrapper from '../components/HeaderWrapper';
 import Footer from '../components/Footer';
+import MobileNavbar from '../components/MobileNavbar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ModuleProvider } from '../contexts/ModuleContext';
 import { ErrorProvider } from '../contexts/ErrorContext';
@@ -44,10 +45,11 @@ export default function RootLayout({ children }) {
                     <CartProvider>
                       <div className="enhanced-gradient min-h-screen bg-gray-50 flex flex-col">
                         <HeaderWrapper onCartClick={handleCartOpen} />
-                        <main className="flex-1">
+                        <main className="flex-1 mb-16 md:mb-0">
                           {children}
                         </main>
                         <Footer />
+                        <MobileNavbar onCartClick={handleCartOpen} />
                         <CartSidebar 
                           isOpen={isCartOpen} 
                           onClose={handleCartClose} 

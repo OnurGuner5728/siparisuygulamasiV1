@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
 import ModuleGuard from '@/components/ModuleGuard';
+import CategoryCampaignBanner from '@/components/CategoryCampaignBanner';
 
 // Sabit olarak Yemek kategorisinin adını tanımlayalım (ID yerine isim kullanmak daha esnek olabilir)
 const YEMEK_CATEGORY_NAME = 'Yemek'; 
@@ -150,32 +151,12 @@ function YemekPageContent() {
         {/* İleride kullanıcı girişi varsa adres seçimi gibi özellikler eklenebilir */}
       </div>
       
-      {/* Kampanyalar */}
-      {campaigns.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Güncel {YEMEK_CATEGORY_NAME} Kampanyaları</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map(campaign => (
-              <div key={campaign.id} className="bg-blue-50 p-4 rounded-lg border border-blue-200 shadow hover:shadow-md transition-shadow">
-                <h3 className="text-lg font-bold text-blue-700">{campaign.title}</h3>
-                <p className="text-sm text-blue-600 line-clamp-2">{campaign.description}</p>
-                {campaign.store && (
-                  <p className="text-xs text-gray-600 mt-2">
-                    Sadece: <span className="font-medium">{campaign.store.name}</span>
-                  </p>
-                )}
-                {!campaign.store_id && campaign.main_category_id === yemekCategoryId && (
-                    <p className="text-xs text-gray-500 mt-2">Tüm {YEMEK_CATEGORY_NAME} restoranlarında geçerli</p>
-                )}
-                {(campaign.store_id && !restaurants.find(r => r.id === campaign.store_id)) && (
-                    <p className="text-xs text-orange-500 mt-2">
-                      Bu kampanya şu anda bulunduğunuz bölgedeki bir {YEMEK_CATEGORY_NAME} restoranına ait değil.
-                    </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Kampanya Banner */}
+      {yemekCategoryId && (
+        <CategoryCampaignBanner 
+          categoryId={yemekCategoryId} 
+          categoryName="yemek" 
+        />
       )}
       
       {/* Filtreler */}

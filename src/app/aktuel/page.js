@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ModuleGuard from '@/components/ModuleGuard';
+import CategoryCampaignBanner from '@/components/CategoryCampaignBanner';
 
 export default function AktuelPage() {
   return (
@@ -167,23 +168,11 @@ function AktuelPageContent() {
       <h1 className="text-3xl font-bold mb-2">Aktüel Ürünler</h1>
       <p className="text-gray-600 mb-8">Özel indirimli ve sınırlı stoklarla sunulan ürünleri kaçırmayın!</p>
       
-      {/* Kampanyalar */}
-      {campaigns.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Güncel Kampanyalar</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map(campaign => (
-              <div key={campaign.id} className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <h3 className="text-lg font-bold text-purple-700">{campaign.title}</h3>
-                <p className="text-sm text-purple-600">{campaign.description}</p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Son {calculateDaysLeft(campaign.endDate)} gün!
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Kampanya Banner */}
+      <CategoryCampaignBanner 
+        categoryId={4} 
+        categoryName="aktuel" 
+      />
       
       {/* Arama ve Filtreler */}
       <div className="bg-gray-50 p-4 rounded-lg mb-8">

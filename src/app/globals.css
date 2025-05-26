@@ -296,3 +296,13 @@
 body.hydrated .auth-buttons {
   opacity: 1;
 }
+
+/* Mobil menü için z-index override */
+.mobile-menu-overlay {
+  position: fixed !important;
+  z-index: 99999 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}

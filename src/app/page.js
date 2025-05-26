@@ -19,7 +19,8 @@ export default function Home() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Debug için kullanıcı bilgilerini göster - sadece development'ta  useEffect(() => {    if (process.env.NODE_ENV === 'development') {      if (user) {        console.log("Giriş yapmış kullanıcı:", user.email);        console.log("Kullanıcı rolü:", user.role);      }    }  }, [user]);
+  // Debug için kullanıcı bilgilerini göster - sadece development'ta  
+ useEffect(() => {    if (process.env.NODE_ENV === 'development') {      if (user) {        console.log("Giriş yapmış kullanıcı:", user.email);        console.log("Kullanıcı rolü:", user.role);      }    }  }, [user]);
 
   // Kategori arka plan rengini belirle
   const getCategoryColor = (categoryId) => {
@@ -223,335 +224,175 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
       </div>
       
-      {/* Kampanya Banner */}
-      <div className="py-8">
-        <div className="container mx-auto px-4">
-          <CampaignBanner />
+      {/* Ana Modüller - Görseldeki tasarıma uygun */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-4 md:space-y-6">
+          {/* Üst kısım - Market ve Yemek büyük kartlar */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            {/* Market Kartı */}
+            {isModuleEnabled('market') && (
+              <Link href="/market" className="group">
+                <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-32 md:h-40 flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-1 md:mb-2">Market</h3>
+                    <p className="text-gray-600 mb-2 md:mb-3 text-sm md:text-base">Market siparişi ver!</p>
+                    <div className="flex items-center text-xs md:text-sm text-gray-500">
+                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                      </svg>
+                      {storeCountByCategory[2] || 0} mağaza
+                    </div>
+                  </div>
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-teal-100 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
+                    {categories.find(cat => cat.name.toLowerCase() === 'market')?.image ? (
+                      <img 
+                        src={categories.find(cat => cat.name.toLowerCase() === 'market')?.image} 
+                        alt="Market" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <svg className="w-8 h-8 md:w-12 md:h-12 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            )}
+
+            {/* Yemek Kartı */}
+            {isModuleEnabled('yemek') && (
+              <Link href="/yemek" className="group">
+                <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-32 md:h-40 flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-1 md:mb-2">Yemek</h3>
+                    <p className="text-gray-600 mb-2 md:mb-3 text-sm md:text-base">Yemek siparişi ver!</p>
+                    <div className="flex items-center text-xs md:text-sm text-gray-500">
+                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 3a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/>
+                      </svg>
+                      {storeCountByCategory[1] || 0} restoran
+                    </div>
+                  </div>
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-orange-100 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
+                    {categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image ? (
+                      <img 
+                        src={categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image} 
+                        alt="Yemek" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <svg className="w-8 h-8 md:w-12 md:h-12 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            )}
+          </div>
+
+          {/* Alt kısım - Su ve Aktüel kartları */}
+          {/* Eğer hem Su hem Aktüel modülü aktifse yanyana, sadece Su aktifse yatay */}
+          <div className={`grid gap-3 md:gap-4 ${
+            isModuleEnabled('su') && isModuleEnabled('aktuel') 
+              ? 'grid-cols-2 md:grid-cols-2' 
+              : 'grid-cols-1'
+          }`}>
+            {/* Su ve Damacana Kartı */}
+            {isModuleEnabled('su') && (
+              <Link href="/su" className="group">
+                <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-28 md:h-32 flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-1 md:mb-2">Su ve Damacana</h3>
+                    <p className="text-gray-600 text-sm md:text-base">Su siparişi ver!</p>
+                  </div>
+                  <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-100 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
+                    {categories.find(cat => cat.name.toLowerCase() === 'su')?.image ? (
+                      <img 
+                        src={categories.find(cat => cat.name.toLowerCase() === 'su')?.image} 
+                        alt="Su" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <svg className="w-8 h-8 md:w-10 md:h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            )}
+
+            {/* Aktüel Kartı */}
+            {isModuleEnabled('aktuel') && (
+              <Link href="/aktuel" className="group">
+                <div className="bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-28 md:h-32 flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-1 md:mb-2">Aktüel Ürünler</h3>
+                    <p className="text-gray-600 text-sm md:text-base">Güncel kampanyalar!</p>
+                  </div>
+                  <div className="w-14 h-14 md:w-16 md:h-16 bg-purple-100 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
+                    {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image ? (
+                      <img 
+                        src={categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image} 
+                        alt="Aktüel" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <svg className="w-8 h-8 md:w-10 md:h-10 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            )}
+          </div>
+
+          {/* Hızlı Market Bölümü */}
+          <div className="bg-white rounded-2xl shadow-md p-4 md:p-6">
+            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">Hızlı Market</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+              {/* Hemen Gelsin */}
+              <Link href="/market" className="text-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-gray-800 text-sm">Hemen Gelsin</h4>
+              </Link>
+
+              {/* Dilediğin Saate */}
+              <div 
+                className="text-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
+                onClick={() => alert('Bu özellik yakında aktif edilecek!')}
+              >
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-gray-800 text-sm">Dilediğin Saate</h4>
+              </div>
+
+              {/* Semtin */}
+              <div 
+                className="text-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
+                onClick={() => alert('Bu özellik yakında aktif edilecek!')}
+              >
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-gray-800 text-sm">Semtin</h4>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      {/* Ana kategoriler */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12 animate-fadeInUp">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-            Kategoriler
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            İhtiyacınız olan her şey için geniş kategori seçeneklerimizi keşfedin
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {categories.map((category, index) => (
-            <div
-              key={category.id}
-              className="animate-fadeInUp"
-              style={{ animationDelay: `${index * 200}ms` }}
-            >
-              <CategoryCard
-                id={category.id}
-                name={category.name}
-                description={category.description}
-                color={getCategoryColor(category.id)}
-                imageUrl={category.image}
-                storeCount={storeCountByCategory[category.id] || 0}
-                isOpen={isCategoryOpen(category.id)}
-                url={`/${category.name.toLowerCase()}`}
-              />
-            </div>
-          ))}
-        </div>
-        
-        {/* Popüler Restoranlar - Yemek modülü aktifse göster */}
-        {isModuleEnabled('yemek') && (
-          <div className="mt-16">
-            <div className="text-center mb-12 animate-fadeInUp">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-                Popüler Restoranlar
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                En çok tercih edilen lezzet durağları
-              </p>
-              <Button href="/yemek" variant="text" className="text-orange-500 hover:text-orange-600 font-semibold">
-                Tümünü Gör →
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stores
-                .filter(store => store.category_id === 1 && store.is_approved)
-                .slice(0, 4)
-                .map((store, index) => (
-                  <Link 
-                    key={store.id} 
-                    href={`/yemek/store/${store.id}`} 
-                    className="group animate-slideInUp"
-                    style={{ animationDelay: `${index * 150}ms` }}
-                  >
-                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
-                      store.status !== 'active' ? 'opacity-75' : ''
-                    }`}>
-                      {/* Kapalı mağaza etiketi */}
-                      {store.status !== 'active' && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                            Kapalı
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="h-32 bg-gray-200 relative">
-                        {store.logo && (
-                          <img 
-                            src={store.logo} 
-                            alt={store.name} 
-                            className={`w-full h-full object-cover ${
-                              store.status !== 'active' ? 'filter grayscale' : ''
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className={`font-bold ${
-                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
-                        }`}>{store.name}</h3>
-                        <p className={`text-sm line-clamp-1 ${
-                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                        }`}>{store.description || 'Lezzetli yemekler'}</p>
-                        <div className="flex items-center mt-2">
-                          <div className="text-yellow-500 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
-                          </div>
-                          <span className="mx-2 text-gray-300">•</span>
-                          <span className={`text-xs ${
-                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {store.status === 'active' ? '30-45 dk' : 'Kapalı'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Yakındaki Marketler - Market modülü aktifse göster */}
-        {isModuleEnabled('market') && (
-          <div className="mt-16">
-            <div className="text-center mb-12 animate-fadeInUp">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-                Yakındaki Marketler
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                Taze ürünler kapınızda
-              </p>
-              <Button href="/market" variant="text" className="text-orange-500 hover:text-orange-600 font-semibold">
-                Tümünü Gör →
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stores
-                .filter(store => store.category_id === 2 && store.is_approved)
-                .slice(0, 4)
-                .map((store, index) => (
-                  <Link 
-                    key={store.id} 
-                    href={`/market/store/${store.id}`} 
-                    className="group animate-slideInUp"
-                    style={{ animationDelay: `${index * 150}ms` }}
-                  >
-                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
-                      store.status !== 'active' ? 'opacity-75' : ''
-                    }`}>
-                      {/* Kapalı mağaza etiketi */}
-                      {store.status !== 'active' && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                            Kapalı
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="h-32 bg-gray-200 relative">
-                        {store.logo && (
-                          <img 
-                            src={store.logo} 
-                            alt={store.name} 
-                            className={`w-full h-full object-cover ${
-                              store.status !== 'active' ? 'filter grayscale' : ''
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className={`font-bold ${
-                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
-                        }`}>{store.name}</h3>
-                        <p className={`text-sm line-clamp-1 ${
-                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                        }`}>{store.description || 'Taze ürünler'}</p>
-                        <div className="flex items-center mt-2">
-                          <div className="text-yellow-500 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
-                          </div>
-                          <span className="mx-2 text-gray-300">•</span>
-                          <span className={`text-xs ${
-                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {store.status === 'active' ? '15-25 dk' : 'Kapalı'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Su Satıcıları - Su modülü aktifse göster */}
-        {isModuleEnabled('su') && (
-          <div className="mt-12 pb-10">
-            <div className="flex justify-between items-center mb-6 animate-fadeInUp">
-              <h2 className="text-2xl font-bold text-gray-800">Su Satıcıları</h2>
-              <Button href="/su" variant="text">Tümünü Gör</Button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {stores
-                .filter(store => store.category_id === 3 && store.is_approved)
-                .slice(0, 4)
-                .map((store, index) => (
-                  <Link 
-                    key={store.id} 
-                    href={`/su/store/${store.id}`} 
-                    className="group animate-slideInUp"
-                    style={{ animationDelay: `${index * 150}ms` }}
-                  >
-                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
-                      store.status !== 'active' ? 'opacity-75' : ''
-                    }`}>
-                      {/* Kapalı mağaza etiketi */}
-                      {store.status !== 'active' && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                            Kapalı
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="h-32 bg-gray-200 relative">
-                        {store.logo && (
-                          <img 
-                            src={store.logo} 
-                            alt={store.name} 
-                            className={`w-full h-full object-cover ${
-                              store.status !== 'active' ? 'filter grayscale' : ''
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className={`font-bold ${
-                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
-                        }`}>{store.name}</h3>
-                        <p className={`text-sm line-clamp-1 ${
-                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                        }`}>{store.description || 'Kaliteli içme suyu'}</p>
-                        <div className="flex items-center mt-2">
-                          <div className="text-yellow-500 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            <span className="ml-1 text-xs">{store.rating?.toFixed(1) || '0.0'}</span>
-                          </div>
-                          <span className="mx-2 text-gray-300">•</span>
-                          <span className={`text-xs ${
-                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {store.status === 'active' ? '45-60 dk' : 'Kapalı'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Aktüel Ürünler - Aktüel modülü aktifse göster */}
-        {isModuleEnabled('aktuel') && (
-          <div className="mt-12 pb-10">
-            <div className="flex justify-between items-center mb-6 animate-fadeInUp">
-              <h2 className="text-2xl font-bold text-gray-800">Aktüel Ürünler</h2>
-              <Button href="/aktuel" variant="text">Tümünü Gör</Button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {stores
-                .filter(store => store.category_id === 4 && store.is_approved)
-                .slice(0, 4)
-                .map((store, index) => (
-                  <Link 
-                    key={store.id} 
-                    href={`/aktuel/store/${store.id}`} 
-                    className="group animate-slideInUp"
-                    style={{ animationDelay: `${index * 150}ms` }}
-                  >
-                    <div className={`bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative ${
-                      store.status !== 'active' ? 'opacity-75' : ''
-                    }`}>
-                      {/* Kapalı mağaza etiketi */}
-                      {store.status !== 'active' && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                            Kapalı
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="h-32 bg-gray-200 relative">
-                        {store.logo && (
-                          <img 
-                            src={store.logo} 
-                            alt={store.name} 
-                            className={`w-full h-full object-cover ${
-                              store.status !== 'active' ? 'filter grayscale' : ''
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className={`font-bold ${
-                          store.status !== 'active' ? 'text-gray-600' : 'text-gray-800'
-                        }`}>{store.name}</h3>
-                        <p className={`text-sm line-clamp-1 ${
-                          store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                        }`}>{store.description || 'Güncel kampanyalar'}</p>
-                        <div className="flex items-center mt-2">
-                          <span className={`text-xs ${
-                            store.status !== 'active' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {store.status === 'active' ? 'Yeni Kampanyalar' : 'Kapalı'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

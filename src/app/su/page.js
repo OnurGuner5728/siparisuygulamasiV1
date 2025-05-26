@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api'; // Mock importları kaldırıldı
 import ModuleGuard from '@/components/ModuleGuard';
+import CategoryCampaignBanner from '@/components/CategoryCampaignBanner';
 
 const SU_CATEGORY_NAME = 'Su';
 
@@ -124,26 +125,12 @@ function SuPageContent() {
       <h1 className="text-3xl font-bold mb-2">{SU_CATEGORY_NAME} Siparişi</h1>
       <p className="text-gray-600 mb-8">Damacana ve şişe su siparişlerinizi hızlıca verin!</p>
       
-      {campaigns.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Güncel {SU_CATEGORY_NAME} Kampanyaları</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map(campaign => (
-              <div key={campaign.id} className="bg-sky-50 p-4 rounded-lg border border-sky-200 shadow hover:shadow-md transition-shadow">
-                <h3 className="text-lg font-bold text-sky-700">{campaign.title}</h3>
-                <p className="text-sm text-sky-600 line-clamp-2">{campaign.description}</p>
-                {campaign.store && (
-                  <p className="text-xs text-gray-600 mt-2">
-                    Sadece: <span className="font-medium">{campaign.store.name}</span>
-                  </p>
-                )}
-                {!campaign.store_id && campaign.main_category_id === suCategoryId && (
-                    <p className="text-xs text-gray-500 mt-2">Tüm {SU_CATEGORY_NAME} satıcılarında geçerli</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Kampanya Banner */}
+      {suCategoryId && (
+        <CategoryCampaignBanner 
+          categoryId={suCategoryId} 
+          categoryName="su" 
+        />
       )}
 
       {availableBrands.length > 0 && (
