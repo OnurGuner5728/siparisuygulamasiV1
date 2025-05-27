@@ -99,11 +99,11 @@ function OrdersList() {
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row">
+        <div className="container mx-auto px-4 py-4 md:py-8">
+          <div className="flex flex-col md:flex-row md:gap-8">
             <ProfileSidebar activeTab="orders" />
             
-            <div className="md:flex-1 md:ml-8">
+            <div className="md:flex-1">
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-center items-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -118,11 +118,11 @@ function OrdersList() {
   
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row">
+      <div className="container mx-auto px-4 py-4 md:py-8">
+        <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="orders" />
           
-          <div className="md:flex-1 md:ml-8 mt-8 md:mt-0">
+          <div className="md:flex-1">
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-800">Siparişlerim</h2>
@@ -130,27 +130,27 @@ function OrdersList() {
               </div>
               
               {/* Tab menüsü */}
-              <div className="flex border-b border-gray-200">
+              <div className="flex border-b border-gray-200 overflow-x-auto">
                 <button
-                  className={`px-4 py-3 text-sm font-medium ${activeTab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium whitespace-nowrap ${activeTab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                   onClick={() => setActiveTab('all')}
                 >
                   Tümü ({orders.length})
                 </button>
                 <button
-                  className={`px-4 py-3 text-sm font-medium ${activeTab === 'active' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium whitespace-nowrap ${activeTab === 'active' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                   onClick={() => setActiveTab('active')}
                 >
                   Aktif
                 </button>
                 <button
-                  className={`px-4 py-3 text-sm font-medium ${activeTab === 'completed' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium whitespace-nowrap ${activeTab === 'completed' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                   onClick={() => setActiveTab('completed')}
                 >
                   Tamamlanan
                 </button>
                 <button
-                  className={`px-4 py-3 text-sm font-medium ${activeTab === 'canceled' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium whitespace-nowrap ${activeTab === 'canceled' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                   onClick={() => setActiveTab('canceled')}
                 >
                   İptal Edilen

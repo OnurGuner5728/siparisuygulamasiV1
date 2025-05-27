@@ -103,6 +103,15 @@ function OrderDetailContent({ promiseParams }) {
       }
 
       const updatedOrder = await api.updateOrder(order.id, updates);
+      
+      // Müşteriye bildirim gönder
+      try {
+        await api.createOrderStatusNotification(order.id, newStatus, order.customer_id);
+        console.log('✅ Müşteriye bildirim gönderildi:', newStatus);
+      } catch (notificationError) {
+        console.error('❌ Bildirim gönderilirken hata:', notificationError);
+      }
+      
       setOrder(updatedOrder);
 
     } catch (err) {

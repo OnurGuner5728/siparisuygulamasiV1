@@ -12,32 +12,37 @@ export function AuthProvider({ children }) {
       const userRole = authUser?.user_metadata?.role || 'user';
       const userName = authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'Kullanıcı';
 
-      // Sadece eksik bilgiler varsa veya store kullanıcısıysa API çağrısı yap
+      // Her zaman database'den profil bilgilerini yükle
       let profile = null;
       let storeInfo = null;
       
-      if (userRole === 'store' || !authUser?.user_metadata?.name) {
-        profile = await getUserProfile(authUser.id).catch(error => {
-          console.warn('Profil yüklenirken hata:', error);
-          return { data: null };
-        });
-        
-        // Store bilgilerini al (sadece store rolü için ve sadece bir kez)
+      profile = await getUserProfile(authUser.id).catch(error => {
+        console.warn('Profil yüklenirken hata:', error);
+        return { data: null };
+      });
+      
+      // Store bilgilerini al (sadece store rolü için)
       if (userRole === 'store') {
-          storeInfo = await api.getStoreByOwnerId(authUser.id).catch(error => {
+        storeInfo = await api.getStoreByOwnerId(authUser.id).catch(error => {
           console.warn('Store bilgileri alınamadı:', error);
-            return null;
-          });
-        }
+          return null;
+        });
       }
 
-      return {
+      const fullUser = {
         ...authUser,
         ...profile?.data,
         role: userRole,
         name: profile?.data?.name || userName,
         storeInfo
       };
+      
+      console.log('🔧 Debug - Profile data:', profile?.data);
+      console.log('🔧 Debug - Full user:', fullUser);
+      
+
+      
+      return fullUser;
     } catch (error) {
       console.error('Profil yüklenirken hata:', error);
       return {
@@ -74,9 +79,10 @@ export function AuthProvider({ children }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
-        if (session?.user && mounted) { const fullUser = await loadUserProfile(session.user); setUser(fullUser); setUserBackup(fullUser); } else if (!session?.user && userBackup && mounted) {
-          setUser(userBackup);
-
+        if (session?.user && mounted) { 
+          const fullUser = await loadUserProfile(session.user); 
+          setUser(fullUser); 
+          setUserBackup(fullUser); 
         }
       } catch (error) {
         console.error('Auth başlatma hatası:', error);
@@ -93,7 +99,14 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      if (event === 'SIGNED_OUT' || !session?.user) { setUser(null); setUserBackup(null); } else if (session?.user) { const fullUser = await loadUserProfile(session.user); setUser(fullUser); setUserBackup(fullUser); }
+      if (event === 'SIGNED_OUT' || !session?.user) { 
+        setUser(null); 
+        setUserBackup(null); 
+      } else if (session?.user) { 
+        const fullUser = await loadUserProfile(session.user); 
+        setUser(fullUser); 
+        setUserBackup(fullUser); 
+      }
 
       setLoading(false);
     });

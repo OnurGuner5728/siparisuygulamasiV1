@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +9,12 @@ import { useCart } from '../contexts/CartContext';
 export default function MobileNavbar({ onCartClick }) {
   const pathname = usePathname();
   const { user, isAuthenticated } = useAuth();
-  const { totalItems } = useCart();
+  const { totalItems, forceRender } = useCart();
+  
+  // Debug: forceRender değişikliklerini izle
+  React.useEffect(() => {
+    console.log('🎨 [MOBILE] forceRender değişti:', forceRender, 'totalItems:', totalItems);
+  }, [forceRender, totalItems]);
 
   // Mobil navbar'ın gösterilmeyeceği sayfalar
   const hiddenPaths = ['/login', '/register', '/admin', '/store'];

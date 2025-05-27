@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { useToast } from '../../contexts/ToastContext';
 import AuthGuard from '../../components/AuthGuard';
 import api from '@/lib/api';
 
@@ -26,6 +27,7 @@ function CheckoutContent() {
     calculateTotal,
     clearCart 
   } = useCart();
+  const { error, warning, success } = useToast();
   
   const [activeStep, setActiveStep] = useState(1);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -155,22 +157,22 @@ function CheckoutContent() {
       const { cardNumber, cardName, expiryDate, cvv } = cardInfo;
       
       if (!cardNumber || cardNumber.replace(/\s/g, '').length !== 16) {
-        alert('Lütfen geçerli bir kart numarası girin.');
+        error('Lütfen geçerli bir kart numarası girin.');
         return false;
       }
       
       if (!cardName) {
-        alert('Lütfen kart üzerindeki ismi girin.');
+        error('Lütfen kart üzerindeki ismi girin.');
         return false;
       }
       
       if (!expiryDate || expiryDate.length !== 5) {
-        alert('Lütfen geçerli bir son kullanma tarihi girin.');
+        error('Lütfen geçerli bir son kullanma tarihi girin.');
         return false;
       }
       
       if (!cvv || cvv.length !== 3) {
-        alert('Lütfen geçerli bir CVV girin.');
+        error('Lütfen geçerli bir CVV girin.');
         return false;
       }
     }
@@ -186,23 +188,23 @@ function CheckoutContent() {
     console.log('💳 PaymentMethod:', paymentMethod);
     
     if (!selectedAddress) {
-      alert('Lütfen bir adres seçin');
+      warning('Lütfen bir adres seçin');
       return;
     }
     
     if (!user || !user.id) {
-      alert('Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+      error('Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
       return;
     }
     
     if (!cartItems || cartItems.length === 0) {
-      alert('Sepetiniz boş. Lütfen ürün ekleyin.');
+      warning('Sepetiniz boş. Lütfen ürün ekleyin.');
       return;
     }
     
     const storeId = cartItems[0]?.store_id;
     if (!storeId) {
-      alert('Mağaza bilgisi bulunamadı. Lütfen sepeti yenileyin.');
+      error('Mağaza bilgisi bulunamadı. Lütfen sepeti yenileyin.');
       console.error('Store ID bulunamadı:', cartItems[0]);
       return;
     }
@@ -258,7 +260,7 @@ function CheckoutContent() {
       
     } catch (err) {
       console.error('❌ Sipariş oluşturulurken hata:', err);
-      alert('Sipariş oluşturulurken bir hata oluştu: ' + err.message);
+      error('Sipariş oluşturulurken bir hata oluştu: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -567,16 +569,39 @@ function CheckoutContent() {
             
             <div className="max-h-[300px] overflow-y-auto mb-4">
               {cartItems.map((item, index) => (
-                <div key={`${item.product_id}-${item.store_id}-${index}`} className="py-3 border-b last:border-b-0 flex justify-between items-center">
-                  <div>
-                    <div className="flex items-center">
-                      <span className="font-medium">{item.name}</span>
-                      <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">{item.quantity}x</span>
-                    </div>
-                    <p className="text-sm text-gray-600">{(item.price * item.quantity).toFixed(2)} TL</p>
-                    {item.storeName && (
-                      <p className="text-xs text-gray-400">{item.storeName}</p>
+                <div key={`${item.product_id}-${item.store_id}-${index}`} className="py-3 border-b last:border-b-0 flex items-center space-x-3">
+                  {/* Ürün resmi */}
+                  <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                    {(item.product?.image || item.image) ? (
+                      <img 
+                        src={item.product?.image || item.image} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <span className="text-lg">
+                          {item.store_type === 'yemek' ? '🍽️' : 
+                           item.store_type === 'market' ? '🏪' : '💧'}
+                        </span>
+                      </div>
                     )}
+                  </div>
+                  
+                  {/* Ürün bilgileri */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center">
+                          <span className="font-medium text-sm">{item.name}</span>
+                          <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">{item.quantity}x</span>
+                        </div>
+                        <p className="text-sm text-gray-600">{(item.price * item.quantity).toFixed(2)} TL</p>
+                        {item.storeName && (
+                          <p className="text-xs text-gray-400">{item.storeName}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

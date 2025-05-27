@@ -24,8 +24,14 @@ const CartSidebar = ({ isOpen, onClose }) => {
     clearCart,
     calculateSubtotal,
     calculateDeliveryFee,
-    calculateTotal
+    calculateTotal,
+    forceRender
   } = useCart();
+  
+  // Debug: forceRender değişikliklerini izle
+  React.useEffect(() => {
+    console.log('🎨 [SIDEBAR] forceRender değişti:', forceRender, 'cartItems:', cartItems.length);
+  }, [forceRender, cartItems.length]);
   
   // ESC tuşuna basıldığında sidebar'ı kapat
   useEffect(() => {
@@ -198,15 +204,18 @@ const CartSidebar = ({ isOpen, onClose }) => {
                       <div className="flex items-start">
                         {/* Ürün resmi */}
                         <div className="w-16 h-16 rounded-lg bg-gray-700 mr-3 overflow-hidden flex-shrink-0">
-                          {item.image ? (
+                          {(item.product?.image || item.image) ? (
                             <img 
-                              src={item.image} 
+                              src={item.product?.image || item.image} 
                               alt={item.name} 
                               className="w-full h-full object-cover"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-500">
-                              <span className="text-xs">Resim Yok</span>
+                              <span className="text-2xl">
+                                {item.store_type === 'yemek' ? '🍽️' : 
+                                 item.store_type === 'market' ? '🏪' : '💧'}
+                              </span>
                             </div>
                           )}
                         </div>

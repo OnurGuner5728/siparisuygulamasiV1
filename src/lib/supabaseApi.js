@@ -95,8 +95,10 @@ export const getUserProfile = async (userId) => {
         }
       }
     }
+    console.log('📋 Debug - getUserProfile result:', { data, error, userId });
     return { data, error };
   } catch (error) {
+    console.error('📋 Debug - getUserProfile catch error:', error);
     return { data: null, error };
   }
 }

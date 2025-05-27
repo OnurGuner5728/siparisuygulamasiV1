@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
@@ -28,8 +28,13 @@ function getInitialBackupUser() {
 
 function Header({ onCartClick }) {
   const { user, isAuthenticated, logout, loading } = useAuth();
-  const { totalItems } = useCart();
+  const { totalItems, forceRender } = useCart();
   const { isModuleEnabled } = useModule();
+  
+  // Debug: forceRender değişikliklerini izle
+  React.useEffect(() => {
+    console.log('🎨 [HEADER] forceRender değişti:', forceRender, 'totalItems:', totalItems);
+  }, [forceRender, totalItems]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);

@@ -1,10 +1,17 @@
 'use client';
 import { useError } from '@/contexts/ErrorContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NotificationContainer = () => {
   const { notifications, removeNotification } = useError();
+  const { user } = useAuth();
+  const { canReceiveNotification } = useSettings();
 
-  if (notifications.length === 0) return null;
+  // Kullanıcı giriş yapmamışsa veya push bildirimleri kapalıysa gösterme
+  if (!user || !canReceiveNotification('push') || notifications.length === 0) {
+    return null;
+  }
 
   const getIcon = (type) => {
     switch (type) {

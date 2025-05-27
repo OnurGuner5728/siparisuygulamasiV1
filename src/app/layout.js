@@ -10,11 +10,16 @@ import MobileNavbar from '../components/MobileNavbar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ModuleProvider } from '../contexts/ModuleContext';
 import { ErrorProvider } from '../contexts/ErrorContext';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import { SettingsProvider } from '../contexts/SettingsContext';
+import { LanguageProvider } from '../contexts/LanguageContext';
 import CartSidebar from '../components/CartSidebar';
 import { FileProvider } from '../contexts/FileContext';
 import { CartProvider } from '../contexts/CartContext';
+import { ToastProvider } from '../contexts/ToastContext';
 import ErrorBoundary from '../components/ErrorBoundary';
 import NotificationContainer from '../components/NotificationContainer';
+import ToastContainer from '../components/Toast';
 import { SWRConfig } from 'swr';
 import swrConfig from '../lib/swrConfig';
 import ServiceWorkerManager from '../components/ServiceWorkerManager';
@@ -45,27 +50,36 @@ export default function RootLayout({ children }) {
           <ErrorProvider>
             <SWRConfig value={swrConfig}>
               <AuthProvider>
-                <ModuleProvider>
-                  <FileProvider>
-                    <CartProvider>
-                      <div className="enhanced-gradient min-h-screen bg-gray-50 flex flex-col">
-                        <HeaderWrapper onCartClick={handleCartOpen} />
-                        <main className="flex-1 mb-16 md:mb-0">
-                          {children}
-                        </main>
-                        <Footer />
-                        <MobileNavbar onCartClick={handleCartOpen} />
-                        <CartSidebar 
-                          isOpen={isCartOpen} 
-                          onClose={handleCartClose} 
-                        />
-                        <NotificationContainer />
-                        <ServiceWorkerManager />
-                        <DebugPanel />
-                      </div>
-                    </CartProvider>
-                  </FileProvider>
-                </ModuleProvider>
+                <SettingsProvider>
+                  <LanguageProvider>
+                    <ThemeProvider>
+                      <ModuleProvider>
+                      <FileProvider>
+                        <ToastProvider>
+                          <CartProvider>
+                        <div className="enhanced-gradient min-h-screen bg-gray-50 flex flex-col">
+                          <HeaderWrapper onCartClick={handleCartOpen} />
+                          <main className="flex-1 mb-16 md:mb-0">
+                            {children}
+                          </main>
+                          <Footer />
+                          <MobileNavbar onCartClick={handleCartOpen} />
+                          <CartSidebar 
+                            isOpen={isCartOpen} 
+                            onClose={handleCartClose} 
+                          />
+                          <NotificationContainer />
+                          <ToastContainer />
+                          <ServiceWorkerManager />
+                          <DebugPanel />
+                        </div>
+                          </CartProvider>
+                        </ToastProvider>
+                      </FileProvider>
+                      </ModuleProvider>
+                    </ThemeProvider>
+                  </LanguageProvider>
+                </SettingsProvider>
               </AuthProvider>
             </SWRConfig>
           </ErrorProvider>

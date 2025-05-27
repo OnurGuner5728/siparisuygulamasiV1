@@ -42,23 +42,110 @@
   --foreground: #171717;
 }
 
-/* Karanlık mod desteği */
+/* Açık tema */
+.light {
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --primary: #FF6B6B;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #0a0a0a;
+  --accent: #f4f4f5;
+  --accent-foreground: #0a0a0a;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --ring: #3b82f6;
+}
+
+/* Koyu tema */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a1a1aa;
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --border: #262626;
+  --input: #262626;
+  --primary: #FF6B6B;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+  --destructive: #7c2d12;
+  --destructive-foreground: #fafafa;
+  --ring: #3b82f6;
+  
+  /* Karanlık mod için renk geçişleri */
+  --color-gray-50: #1F2937;
+  --color-gray-100: #1E293B;
+  --color-gray-200: #334155;
+  --color-gray-300: #475569;
+  --color-gray-400: #64748B;
+  --color-gray-500: #94A3B8;
+  --color-gray-600: #CBD5E1;
+  --color-gray-700: #E2E8F0;
+  --color-gray-800: #F1F5F9;
+  --color-gray-900: #F8FAFC;
+}
+
+/* Sistem ayarına göre tema */
 @media (prefers-color-scheme: dark) {
-  :root {
+  .auto {
     --background: #0a0a0a;
-    --foreground: #ededed;
-    
-    /* Karanlık mod için renk geçişleri */
-    --color-gray-50: #1F2937;
-    --color-gray-100: #1E293B;
-    --color-gray-200: #334155;
-    --color-gray-300: #475569;
-    --color-gray-400: #64748B;
-    --color-gray-500: #94A3B8;
-    --color-gray-600: #CBD5E1;
-    --color-gray-700: #E2E8F0;
-    --color-gray-800: #F1F5F9;
-    --color-gray-900: #F8FAFC;
+    --foreground: #fafafa;
+    --muted: #262626;
+    --muted-foreground: #a1a1aa;
+    --popover: #0a0a0a;
+    --popover-foreground: #fafafa;
+    --card: #0a0a0a;
+    --card-foreground: #fafafa;
+    --border: #262626;
+    --input: #262626;
+    --primary: #FF6B6B;
+    --primary-foreground: #0a0a0a;
+    --secondary: #262626;
+    --secondary-foreground: #fafafa;
+    --accent: #262626;
+    --accent-foreground: #fafafa;
+    --destructive: #7c2d12;
+    --destructive-foreground: #fafafa;
+    --ring: #3b82f6;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .auto {
+    --background: #ffffff;
+    --foreground: #171717;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --popover: #ffffff;
+    --popover-foreground: #171717;
+    --card: #ffffff;
+    --card-foreground: #171717;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --primary: #FF6B6B;
+    --primary-foreground: #fafafa;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #0a0a0a;
+    --accent: #f4f4f5;
+    --accent-foreground: #0a0a0a;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --ring: #3b82f6;
   }
 }
 
@@ -213,6 +300,11 @@
     opacity: 0;
   }
 
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+    opacity: 0;
+  }
+
   .animate-slideInLeft {
     animation: slideInLeft 0.6s ease-out forwards;
     opacity: 0;
@@ -274,6 +366,25 @@
   .hover-glow:hover {
     box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
     transition: box-shadow 0.3s ease-out;
+  }
+
+  /* Extra small breakpoint */
+  @media (min-width: 480px) {
+    .xs\:inline {
+      display: inline;
+    }
+    
+    .xs\:block {
+      display: block;
+    }
+    
+    .xs\:flex {
+      display: flex;
+    }
+    
+    .xs\:hidden {
+      display: none;
+    }
   }
 }
 

@@ -127,6 +127,18 @@ function AdminOrdersContent() {
       }
 
       await api.updateOrder(orderId, updates);
+      
+      // Müşteriye bildirim gönder
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        try {
+          await api.createOrderStatusNotification(orderId, newStatus, order.customer_id);
+          console.log('✅ Müşteriye bildirim gönderildi:', newStatus);
+        } catch (notificationError) {
+          console.error('❌ Bildirim gönderilirken hata:', notificationError);
+        }
+      }
+      
       const updatedOrders = orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order
       );
