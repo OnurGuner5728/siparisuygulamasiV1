@@ -78,6 +78,11 @@ const migrateUsers = async () => {
             city: address.city || 'İstanbul',
             district: address.district || 'Kadıköy',
             neighborhood: address.neighborhood || 'Merkez',
+            street: address.street || '',
+            building_number: address.buildingNumber || '',
+            floor: address.floor || '',
+            apartment_number: address.apartmentNumber || '',
+            directions: address.directions || '',
             full_address: address.fullAddress || 'Örnek adres bilgisi',
             postal_code: address.postalCode || '34000',
             is_default: address.isDefault || false
@@ -98,6 +103,11 @@ const migrateUsers = async () => {
           city: 'İstanbul',
           district: 'Kadıköy',
           neighborhood: 'Merkez',
+          street: 'Örnek Sokak',
+          building_number: '1',
+          floor: '1',
+          apartment_number: '1',
+          directions: 'Test adres',
           full_address: 'Örnek adres bilgisi',
           postal_code: '34000',
           is_default: true
@@ -169,23 +179,6 @@ const migrateStores = async () => {
       // Mağaza ID'sini haritada sakla
       storeIdMap[store.id] = storeData[0].id;
       storeIdMap[store.name] = storeData[0].id; // Mağaza adıyla da erişebilmek için
-      
-      // Mağaza çalışma saatleri ekle
-      if (store.workingHours) {
-        for (const [day, hours] of Object.entries(store.workingHours)) {
-          const { error: hourError } = await supabaseAdmin.from('store_working_hours').insert({
-            store_id: storeData[0].id,
-            day_of_week: day,
-            opening_time: hours.open,
-            closing_time: hours.close,
-            is_closed: hours.isClosed || false
-          });
-          
-          if (hourError) {
-            console.error(`Hata: Çalışma saati kaydedilemedi (${store.name}, ${day}):`, hourError);
-          }
-        }
-      }
       
       console.log(`Mağaza göç ettirildi: ${store.name}`);
     } catch (error) {
@@ -334,24 +327,35 @@ const migrateOrders = async () => {
       
       // Sipariş kaydı oluştur
       const { data: orderData, error: orderError } = await supabaseAdmin.from('orders').insert({
-        customer_id: customerId,
         store_id: storeId,
+        user_id: customerId,
+        order_number: order.orderNumber,
         status: order.status || 'pending',
-        order_date: order.orderDate || new Date().toISOString(),
-        delivery_date: order.deliveryDate,
-        subtotal: order.subtotal,
-        delivery_fee: order.deliveryFee || 0,
-        total: order.total,
-        discount: order.discount || 0,
-        payment_method: order.paymentMethod || 'cash',
         payment_status: order.paymentStatus || 'pending',
-        delivery_address_id: deliveryAddressId
+        payment_method: order.paymentMethod || 'cash',
+        subtotal: order.subtotal,
+        tax_amount: 0,
+        delivery_fee: order.deliveryFee || 0,
+        discount_amount: order.discount || 0,
+        total_amount: order.total,
+        currency: 'TRY',
+        delivery_address: JSON.stringify({
+          title: 'Ev',
+          address_line_1: 'Test Adres',
+          city: 'İstanbul',
+          district: 'Kadıköy'
+        }),
+        delivery_notes: 'Test sipariş notu',
+        created_at: order.orderDate || new Date().toISOString(),
+        updated_at: order.orderDate || new Date().toISOString()
       }).select();
       
       if (orderError) {
         console.error(`Hata: Sipariş kaydedilemedi (${order.id}):`, orderError);
         continue;
       }
+      
+      const orderId = orderData[0].id;
       
       // Sipariş öğelerini ekle
       if (order.items && order.items.length > 0) {
@@ -376,7 +380,7 @@ const migrateOrders = async () => {
           }
           
           const { error: itemError } = await supabaseAdmin.from('order_items').insert({
-            order_id: orderData[0].id,
+            order_id: orderId,
             product_id: productId,
             name: item.name,
             quantity: item.quantity,
@@ -386,7 +390,7 @@ const migrateOrders = async () => {
           });
           
           if (itemError) {
-            console.error(`Hata: Sipariş öğesi kaydedilemedi (${order.id}, ${item.name}):`, itemError);
+            console.error(`Hata: Sipariş öğesi kaydedilemedi (${orderId}, ${item.name}):`, itemError);
           }
         }
       }

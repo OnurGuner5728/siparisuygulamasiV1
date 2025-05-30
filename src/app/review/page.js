@@ -39,7 +39,7 @@ const demoOrder = {
 // Loading komponenti
 function ReviewPageLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
     </div>
   );
@@ -170,7 +170,7 @@ function ReviewPageContent() {
   // Eğer yükleniyor durumundaysa
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -179,7 +179,7 @@ function ReviewPageContent() {
   // Eğer sipariş bulunamadıysa
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="bg-white rounded-lg shadow-sm p-8 text-center max-w-md">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FiXCircle className="text-red-500 text-2xl" />
@@ -200,7 +200,7 @@ function ReviewPageContent() {
   // Başarı durumunda
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="bg-white rounded-lg shadow-sm p-8 text-center max-w-md">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FiThumbsUp className="text-green-500 text-2xl" />
@@ -214,7 +214,7 @@ function ReviewPageContent() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Başlık */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -348,7 +348,7 @@ function ReviewPageContent() {
               ))}
               
               {photos.length < 3 && (
-                <label className="flex flex-col items-center justify-center w-24 h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-50">
+                <label className="flex flex-col items-center justify-center w-24 h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-50 dark:bg-gray-900">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <FiUpload className="text-gray-400 mb-1" size={20} />
                     <p className="text-xs text-gray-500">Yükle</p>

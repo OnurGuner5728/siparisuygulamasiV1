@@ -152,7 +152,7 @@ export default function PaymentMethods() {
 
         {/* Kredi Kartı Ödeme - İnaktif */}
         <div className="mb-6">
-          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center opacity-60">
                 <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">

@@ -40,63 +40,70 @@ export const getUserProfile = async (userId) => {
   }
   
   try {
-    // Önce service_role ile deneyelim (RLS bypass)
-    let { data, error } = await supabaseAdmin
+    console.log('📋 Debug - Profil sorgulanıyor, UserID:', userId);
+    
+    // Önce normal client ile deneyelim
+    let { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
       .single();
       
+    console.log('📋 Debug - Normal client sonucu:', { data, error });
+    
     if (error) {
-      // Admin başarısız olursa normal client ile deneyelim
-      const result = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Eğer kayıt bulunamadıysa otomatik oluşturmaya çalış
+      if (error.code === 'PGRST116') {
+        console.log('📋 Debug - Kullanıcı kaydı bulunamadı, otomatik oluşturuluyor...');
         
-      data = result.data;
-      error = result.error;
-      
-      if (error) {
-        // Eğer hata status: 406 (Not Acceptable) ise, muhtemelen kayıt bulunamadı demektir
-        if (error.code === 'PGRST116') {
-          // Otomatik profil oluşturmayı deneyebiliriz
-          try {
-            const { data: authUser, error: authError } = await supabase.auth.getUser();
+        try {
+          const { data: authUser, error: authError } = await supabase.auth.getUser();
+          
+          if (authUser?.user && !authError) {
+            console.log('📋 Debug - Auth user data:', authUser.user);
             
-            if (authUser && authUser.user) {
-              const { data: insertData, error: insertError } = await supabaseAdmin
-                .from('users')
-                .insert([{
-                  id: userId,
-                  name: authUser.user.user_metadata?.name || authUser.user.email.split('@')[0],
-                  first_name: authUser.user.user_metadata?.firstName || authUser.user.user_metadata?.first_name || '',
-                  last_name: authUser.user.user_metadata?.lastName || authUser.user.user_metadata?.last_name || '',
-                  email: authUser.user.email,
-                  phone: authUser.user.user_metadata?.phone || '',
-                  address: authUser.user.user_metadata?.address || '',
-                  city: authUser.user.user_metadata?.city || '',
-                  district: authUser.user.user_metadata?.district || '',
-                  role: authUser.user.user_metadata?.role || 'user',
-                  updated_at: new Date()
-                }])
-                .select('*')
-                .single();
-                
-              if (!insertError) {
-                data = insertData;
-                error = null;
-              }
+            // Admin client varsa kullan, yoksa normal client ile dene
+            const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
+            
+            const { data: insertData, error: insertError } = await client
+              .from('users')
+              .insert([{
+                id: userId,
+                name: authUser.user.user_metadata?.name || authUser.user.raw_user_meta_data?.name || authUser.user.email?.split('@')[0],
+                first_name: authUser.user.user_metadata?.first_name || authUser.user.raw_user_meta_data?.first_name || '',
+                last_name: authUser.user.user_metadata?.last_name || authUser.user.raw_user_meta_data?.last_name || '',
+                email: authUser.user.email,
+                phone: authUser.user.user_metadata?.phone || authUser.user.raw_user_meta_data?.phone || '',
+                address: authUser.user.user_metadata?.address || authUser.user.raw_user_meta_data?.address || '',
+                city: authUser.user.user_metadata?.city || authUser.user.raw_user_meta_data?.city || '',
+                district: authUser.user.user_metadata?.district || authUser.user.raw_user_meta_data?.district || '',
+                role: authUser.user.user_metadata?.role || authUser.user.raw_user_meta_data?.role || 'user',
+                updated_at: new Date()
+              }])
+              .select('*')
+              .single();
+              
+            console.log('📋 Debug - Insert sonucu:', { insertData, insertError });
+              
+            if (!insertError) {
+              data = insertData;
+              error = null;
+              console.log('📋 Debug - Kullanıcı kaydı oluşturuldu');
+            } else {
+              console.warn('📋 Debug - Kullanıcı kaydı oluşturulamadı:', insertError);
             }
-          } catch (createError) {
-            // Sessizce devam et
+          } else {
+            console.warn('📋 Debug - Auth user alınamadı:', authError);
           }
+        } catch (createError) {
+          console.warn('📋 Debug - Otomatik kayıt oluşturma hatası:', createError);
         }
       }
     }
-    console.log('📋 Debug - getUserProfile result:', { data, error, userId });
+    
+    console.log('📋 Debug - getUserProfile final result:', { data, error, userId });
     return { data, error };
+    
   } catch (error) {
     console.error('📋 Debug - getUserProfile catch error:', error);
     return { data: null, error };
@@ -201,46 +208,46 @@ export const getProductById = async (productId) => {
 }
 
 // Sipariş işlemleri
-export const createOrder = async (orderData) => {
-  // Önce ana sipariş kaydı oluştur
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      customer_id: orderData.customerId,
-      store_id: orderData.storeId,
-      status: 'pending',
-      order_date: new Date(),
-      subtotal: orderData.subtotal,
-      delivery_fee: orderData.deliveryFee,
-      total: orderData.total,
-      discount: orderData.discount,
-      payment_method: orderData.paymentMethod,
-      payment_status: 'pending',
-      delivery_address_id: orderData.deliveryAddressId
-    })
-    .select()
-    .single()
-
-  if (orderError) return { error: orderError }
-
-  // Sipariş öğelerini ekle
-  for (const item of orderData.items) {
-    const { error: itemError } = await supabase
-      .from('order_items')
+export const createOrder = async (orderData, orderItems) => {
+  try {
+    // Sipariş oluştur
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
       .insert({
-        order_id: order.id,
-        product_id: item.productId,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        total: item.total,
-        notes: item.notes
+        ...orderData,
+        user_id: orderData.customerId,
+        order_number: `ORD-${Date.now()}`,
+        status: 'pending',
+        payment_status: 'pending'
       })
+      .select()
+      .single()
 
-    if (itemError) return { error: itemError }
+    if (orderError) {
+      console.error('Sipariş oluştururken hata:', orderError)
+      return { error: orderError }
+    }
+
+    // Sipariş öğelerini ekle
+    const orderItemsWithOrderId = orderItems.map(item => ({
+      ...item,
+      order_id: order.id
+    }))
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItemsWithOrderId)
+
+    if (itemsError) {
+      console.error('Sipariş öğeleri oluştururken hata:', itemsError)
+      return { error: itemsError }
+    }
+
+    return { data: order, error: null }
+  } catch (error) {
+    console.error('Sipariş oluşturma işlemi başarısız:', error)
+    return { error }
   }
-
-  return { data: order, error: null }
 }
 
 export const getUserOrders = async (userId) => {
@@ -251,7 +258,7 @@ export const getUserOrders = async (userId) => {
       store:stores(*),
       items:order_items(*)
     `)
-    .eq('customer_id', userId)
+    .eq('user_id', userId)
     .order('order_date', { ascending: false })
 
   return { data, error }
@@ -278,7 +285,7 @@ export const getCampaigns = async () => {
     .from('campaigns')
     .select('*')
     .gte('end_date', new Date().toISOString())
-    .eq('status', 'active')
+    .eq('is_active', true)
 
   return { data, error }
 }
@@ -289,7 +296,7 @@ export const getCampaignByCode = async (code) => {
     .select('*')
     .eq('code', code)
     .gte('end_date', new Date().toISOString())
-    .eq('status', 'active')
+    .eq('is_active', true)
     .single()
 
   return { data, error }

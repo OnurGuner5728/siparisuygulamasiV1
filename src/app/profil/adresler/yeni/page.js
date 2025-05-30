@@ -118,18 +118,23 @@ export default function NewAddress() {
     try {
       setLoading(true);
       
-      // Adres verilerini hazırla - veritabanı şemasına uygun
+      // Adres verilerini hazırla - yeni tablo yapısına uygun
       const fullAddress = `${formData.street} ${formData.buildingNo ? 'No:' + formData.buildingNo : ''} ${formData.floor ? 'Kat:' + formData.floor : ''} ${formData.apartmentNo ? 'Daire:' + formData.apartmentNo : ''}`.trim();
       
       const addressData = {
         user_id: user.id,
         title: formData.title,
-        type: formData.addressType, // Veritabanında 'type' alanı var
+        type: formData.addressType,
         full_name: formData.fullName,
         phone: formData.phone,
         city: formData.city,
         district: formData.district,
         neighborhood: formData.neighborhood,
+        street: formData.street,
+        building_number: formData.buildingNo,
+        floor: formData.floor,
+        apartment_number: formData.apartmentNo,
+        directions: formData.directions,
         full_address: fullAddress + (formData.directions ? ` - ${formData.directions}` : ''),
         postal_code: null, // Şimdilik null
         is_default: formData.isDefault
@@ -156,7 +161,7 @@ export default function NewAddress() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Başlık */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -236,7 +241,7 @@ export default function NewAddress() {
                   className={`flex flex-col items-center justify-center p-4 rounded-lg border ${
                     formData.addressType === type.id
                       ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      : 'border-gray-200 hover:bg-gray-50 dark:bg-gray-900'
                   }`}
                 >
                   <div className={`p-3 rounded-full mb-2 ${

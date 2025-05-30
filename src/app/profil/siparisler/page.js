@@ -74,7 +74,7 @@ function OrdersList() {
       3: 'bg-blue-500', // Su
       4: 'bg-pink-500', // Çiçek
       5: 'bg-yellow-500', // Tatlı
-      default: 'bg-gray-500'
+      default: 'bg-gray-50 dark:bg-gray-9000'
     };
     return colors[categoryId] || colors.default;
   }
@@ -98,7 +98,7 @@ function OrdersList() {
   
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-4 md:py-8">
           <div className="flex flex-col md:flex-row md:gap-8">
             <ProfileSidebar activeTab="orders" />
@@ -117,7 +117,7 @@ function OrdersList() {
   }
   
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="orders" />
@@ -183,7 +183,7 @@ function OrdersList() {
               ) : (
                 <div className="divide-y divide-gray-200">
                   {filteredOrders.map((order) => (
-                    <div key={order.id} className="p-4 sm:p-6 hover:bg-gray-50">
+                    <div key={order.id} className="p-4 sm:p-6 hover:bg-gray-50 dark:bg-gray-900">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
                         <div className="mb-2 sm:mb-0">
                           <div className="flex items-center mb-2">

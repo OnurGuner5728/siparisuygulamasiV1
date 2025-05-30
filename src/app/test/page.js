@@ -23,7 +23,7 @@ export default function TestPage() {
               {isAuthenticated && (
                 <div className="mt-2">
                   <h3 className="font-medium">Kullanıcı Bilgileri:</h3>
-                  <pre className="mt-1 text-sm bg-gray-50 p-2 rounded">
+                  <pre className="mt-1 text-sm bg-gray-50 dark:bg-gray-900 p-2 rounded">
                     {JSON.stringify({
                       id: user?.id,
                       email: user?.email,

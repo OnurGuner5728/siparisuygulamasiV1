@@ -95,7 +95,7 @@ function ReviewsContent() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="reviews" />
@@ -115,7 +115,7 @@ function ReviewsContent() {
 
   if (error) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="reviews" />
@@ -140,7 +140,7 @@ function ReviewsContent() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row">
           <ProfileSidebar activeTab="reviews" />
@@ -199,7 +199,7 @@ function ReviewCard({ review, onDelete }) {
   const reviewDate = formatDate(review.created_at);
   
   return (
-    <div className="p-6 hover:bg-gray-50">
+    <div className="p-6 hover:bg-gray-50 dark:bg-gray-900">
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center">

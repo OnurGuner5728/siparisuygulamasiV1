@@ -157,20 +157,20 @@ function SuPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="bg-white">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Water View</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Su</h1>
             </div>
             <button className="p-2 text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,18 +241,15 @@ function SuPageContent() {
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   {/* Vendor Image */}
               <div className="h-48 bg-gray-200 relative">
-                {vendor.cover_image_url ? (
+                {vendor.banner_url || vendor.logo_url ? (
                   <img 
-                    src={vendor.cover_image_url} 
+                    src={vendor.banner_url || vendor.logo_url} 
                     alt={vendor.name} 
                         className="w-full h-full object-cover"
                   />
                 ) : (
                       <div className="w-full h-full bg-gradient-to-br from-sky-100 to-blue-100 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-4xl mb-2">💧</div>
-                          <div className="text-gray-500 font-medium">{vendor.name}</div>
-                        </div>
+                        {vendor.logo_url ? <img src={vendor.logo_url} alt={vendor.name} className="w-full h-full object-cover" /> : '💧'}
                       </div>
                     )}
                     
@@ -274,13 +271,13 @@ function SuPageContent() {
                           <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
-                          Free
+                          {vendor.delivery_fee || '0 ₺' + " teslimat ücreti"}
                         </span>
                         <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
                           <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                          {vendor.delivery_time_estimation || '30 min'}
+                          </svg>
+                          {vendor.delivery_time_min + " min" || '25 min'}
                         </span>
                       </div>
                     </div>
@@ -311,7 +308,7 @@ function SuPageContent() {
 
                     {/* Vendor Stats */}
                     <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>Min. sipariş: {vendor.min_order_amount || 0} TL</span>
+                      <span>Min. sipariş: {vendor.minimum_order_amount || 0} TL</span>
                       {vendor.rating && (
                         <div className="flex items-center">
                           <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">

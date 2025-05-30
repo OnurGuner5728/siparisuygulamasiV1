@@ -357,7 +357,7 @@ function StorePanelContent() {
       {user?.storeInfo?.payment_link && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Ödeme Linki</h2>
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-600 mb-1">Mağaza Ödeme Linkiniz:</p>
@@ -430,7 +430,7 @@ function StorePanelContent() {
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Sipariş No
@@ -455,7 +455,7 @@ function StorePanelContent() {
             <tbody className="bg-white divide-y divide-gray-200">
               {stats.recentOrders && stats.recentOrders.length > 0 ? (
                 stats.recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
+                  <tr key={order.id} className="hover:bg-gray-50 dark:bg-gray-900">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                       #{order.order_number || order.id.substring(0, 8)}
                     </td>

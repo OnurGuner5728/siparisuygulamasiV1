@@ -25,8 +25,8 @@ export const SettingsProvider = ({ children }) => {
         try {
           setLoading(true);
           const userSettings = await api.getUserSettings(user.id);
-          setSettings(userSettings);
           console.log('✅ Kullanıcı ayarları yüklendi:', userSettings);
+          setSettings(userSettings);
         } catch (error) {
           console.error('❌ Kullanıcı ayarları yüklenirken hata:', error);
           setSettings(null);
@@ -90,6 +90,20 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
+  // Güvenlik ayarlarını kontrol et
+  const getSecurityLevel = () => {
+    if (!settings) return 'low';
+    
+    let score = 0;
+    if (settings.two_factor_enabled) score += 3;
+    if (settings.login_notifications) score += 1;
+    if (settings.session_timeout < 60) score += 1;
+    
+    if (score >= 4) return 'high';
+    if (score >= 2) return 'medium';
+    return 'low';
+  };
+
   const value = {
     settings,
     loading,
@@ -97,12 +111,22 @@ export const SettingsProvider = ({ children }) => {
     updateSetting,
     getSetting,
     canReceiveNotification,
-    // Kısayol fonksiyonlar
+    getSecurityLevel,
+    // Kısayol fonksiyonlar ve varsayılan değerler
     isNotificationsEnabled: getSetting('notifications_enabled', true),
     theme: getSetting('theme', 'light'),
     language: getSetting('language', 'tr'),
     currency: getSetting('currency', 'TRY'),
-    timezone: getSetting('timezone', 'Europe/Istanbul')
+    timezone: getSetting('timezone', 'Europe/Istanbul'),
+    emailNotifications: getSetting('email_notifications', true),
+    smsNotifications: getSetting('sms_notifications', false),
+    pushNotifications: getSetting('push_notifications', true),
+    marketingEmails: getSetting('marketing_emails', false),
+    orderUpdates: getSetting('order_updates', true),
+    promoNotifications: getSetting('promo_notifications', true),
+    twoFactorEnabled: getSetting('two_factor_enabled', false),
+    loginNotifications: getSetting('login_notifications', true),
+    sessionTimeout: getSetting('session_timeout', 30)
   };
 
   return (

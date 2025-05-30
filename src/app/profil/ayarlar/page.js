@@ -10,7 +10,6 @@ import {
   FiSettings, 
   FiBell, 
   FiShield, 
-  FiEye, 
   FiGlobe, 
   FiMoon, 
   FiSun, 
@@ -79,13 +78,13 @@ function SettingsContent() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="settings" />
             
             <div className="md:flex-1 md:ml-8">
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <div className="flex justify-center items-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
@@ -99,14 +98,14 @@ function SettingsContent() {
 
   if (!settings) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="settings" />
             
             <div className="md:flex-1 md:ml-8">
-              <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                <p className="text-gray-600">Ayarlar yüklenemedi.</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-600 dark:text-gray-400">Ayarlar yüklenemedi.</p>
               </div>
             </div>
           </div>
@@ -117,33 +116,32 @@ function SettingsContent() {
 
   const sections = [
     { id: 'notifications', name: 'Bildirimler', icon: FiBell },
-    { id: 'privacy', name: 'Gizlilik', icon: FiEye },
     { id: 'security', name: 'Güvenlik', icon: FiShield },
     { id: 'appearance', name: 'Görünüm', icon: FiMonitor },
     { id: 'language', name: 'Dil & Bölge', icon: FiGlobe }
   ];
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="settings" />
           
           <div className="md:flex-1">
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center">
                       <FiSettings className="mr-2 text-blue-500" />
                       Hesap Ayarları
                     </h2>
-                    <p className="text-gray-600 text-sm mt-1">
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
                       Hesap tercihlerinizi ve güvenlik ayarlarınızı yönetin
                     </p>
                   </div>
                   {saving && (
-                    <div className="flex items-center text-sm text-blue-600">
+                    <div className="flex items-center text-sm text-blue-600 dark:text-blue-400">
                       <FiRefreshCw className="mr-2 animate-spin" size={16} />
                       Kaydediliyor...
                     </div>
@@ -153,7 +151,7 @@ function SettingsContent() {
 
               <div className="flex">
                 {/* Yan Menü */}
-                <div className="w-64 border-r border-gray-200">
+                <div className="w-64 border-r border-gray-200 dark:border-gray-700">
                   <nav className="p-4">
                     {sections.map((section) => (
                       <button
@@ -161,8 +159,8 @@ function SettingsContent() {
                         onClick={() => setActiveSection(section.id)}
                         className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors mb-1 ${
                           activeSection === section.id
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-50'
+                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                         }`}
                       >
                         <section.icon className="mr-3" size={18} />
@@ -176,12 +174,6 @@ function SettingsContent() {
                 <div className="flex-1 p-6">
                   {activeSection === 'notifications' && (
                     <NotificationSettings 
-                      settings={settings} 
-                      onChange={handleSettingChange} 
-                    />
-                  )}
-                  {activeSection === 'privacy' && (
-                    <PrivacySettings 
                       settings={settings} 
                       onChange={handleSettingChange} 
                     />
@@ -217,7 +209,7 @@ function SettingsContent() {
 function NotificationSettings({ settings, onChange }) {
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
         <FiBell className="mr-2 text-blue-500" />
         Bildirim Ayarları
       </h3>
@@ -258,7 +250,7 @@ function NotificationSettings({ settings, onChange }) {
           disabled={!settings.notifications_enabled}
         />
         
-        <hr className="border-gray-200" />
+        <hr className="border-gray-200 dark:border-gray-700" />
         
         <SettingToggle
           label="Pazarlama E-postaları"
@@ -285,55 +277,10 @@ function NotificationSettings({ settings, onChange }) {
   );
 }
 
-function PrivacySettings({ settings, onChange }) {
-  return (
-    <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-        <FiEye className="mr-2 text-blue-500" />
-        Gizlilik Ayarları
-      </h3>
-      
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Profil Görünürlüğü
-          </label>
-          <select
-            value={settings.profile_visibility}
-            onChange={(e) => onChange('profile_visibility', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="public">Herkese Açık</option>
-            <option value="private">Gizli</option>
-            <option value="friends">Sadece Arkadaşlar</option>
-          </select>
-          <p className="text-sm text-gray-500 mt-1">
-            Profilinizin kimler tarafından görüleceğini belirleyin
-          </p>
-        </div>
-        
-        <SettingToggle
-          label="Çevrimiçi Durumu Göster"
-          description="Diğer kullanıcılar aktif olduğunuzu görebilsin"
-          checked={settings.show_online_status}
-          onChange={(checked) => onChange('show_online_status', checked)}
-        />
-        
-        <SettingToggle
-          label="Arkadaşlık İsteklerine İzin Ver"
-          description="Diğer kullanıcılar size arkadaşlık isteği gönderebilsin"
-          checked={settings.allow_friend_requests}
-          onChange={(checked) => onChange('allow_friend_requests', checked)}
-        />
-      </div>
-    </div>
-  );
-}
-
 function SecuritySettings({ settings, onChange }) {
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
         <FiShield className="mr-2 text-blue-500" />
         Güvenlik Ayarları
       </h3>
@@ -355,7 +302,7 @@ function SecuritySettings({ settings, onChange }) {
         />
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Oturum Zaman Aşımı (dakika)
           </label>
           <input
@@ -364,9 +311,9 @@ function SecuritySettings({ settings, onChange }) {
             max="480"
             value={settings.session_timeout}
             onChange={(e) => onChange('session_timeout', parseInt(e.target.value))}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             İşlem yapmadığınızda oturumunuz kaç dakika sonra kapansın
           </p>
         </div>
@@ -379,38 +326,108 @@ function AppearanceSettings({ settings, onChange }) {
   const { theme: currentTheme } = useTheme();
   
   const themes = [
-    { value: 'light', label: 'Açık Tema', icon: FiSun },
-    { value: 'dark', label: 'Koyu Tema', icon: FiMoon },
-    { value: 'auto', label: 'Sistem Ayarı', icon: FiMonitor }
+    { 
+      value: 'light', 
+      label: 'Açık Tema', 
+      icon: FiSun,
+      description: 'Gündüz kullanımı için ideal olan açık renkli tema'
+    },
+    { 
+      value: 'dark', 
+      label: 'Koyu Tema', 
+      icon: FiMoon,
+      description: 'Gece kullanımı için göz dostu koyu renkli tema'
+    },
+    { 
+      value: 'auto', 
+      label: 'Sistem Ayarı', 
+      icon: FiMonitor,
+      description: 'Cihazınızın sistem ayarlarına göre otomatik değişir'
+    }
   ];
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
         <FiMonitor className="mr-2 text-blue-500" />
         Görünüm Ayarları
       </h3>
       
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Tema Seçimi
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Uygulamanın genel görünümünü ve renklerini belirleyin
+          </p>
+          <div className="grid grid-cols-1 gap-4">
             {themes.map((theme) => (
               <button
                 key={theme.value}
                 onClick={() => onChange('theme', theme.value)}
-                className={`p-4 border-2 rounded-lg transition-colors flex flex-col items-center ${
+                className={`p-4 border-2 rounded-lg transition-all duration-200 text-left ${
                   currentTheme === theme.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm bg-white dark:bg-gray-800'
                 }`}
               >
-                <theme.icon size={24} className="mb-2" />
-                <span className="text-sm font-medium">{theme.label}</span>
+                <div className="flex items-start space-x-3">
+                  <div className={`p-2 rounded-lg ${
+                    currentTheme === theme.value 
+                      ? 'bg-blue-100 dark:bg-blue-800' 
+                      : 'bg-gray-100 dark:bg-gray-700'
+                  }`}>
+                    <theme.icon size={20} className={
+                      currentTheme === theme.value 
+                        ? 'text-blue-600 dark:text-blue-400' 
+                        : 'text-gray-600 dark:text-gray-400'
+                    } />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className={`font-medium ${
+                      currentTheme === theme.value 
+                        ? 'text-blue-900 dark:text-blue-100' 
+                        : 'text-gray-900 dark:text-gray-100'
+                    }`}>
+                      {theme.label}
+                    </h4>
+                    <p className={`text-sm mt-1 ${
+                      currentTheme === theme.value 
+                        ? 'text-blue-700 dark:text-blue-300' 
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {theme.description}
+                    </p>
+                  </div>
+                  {currentTheme === theme.value && (
+                    <div className="text-blue-500 dark:text-blue-400">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Tema Önizlemesi</h4>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white border border-gray-200 rounded p-2 text-center text-xs">
+              <div className="w-full h-4 bg-blue-500 rounded mb-1"></div>
+              <div className="text-gray-600">Açık Tema</div>
+            </div>
+            <div className="bg-gray-900 border border-gray-700 rounded p-2 text-center text-xs">
+              <div className="w-full h-4 bg-blue-400 rounded mb-1"></div>
+              <div className="text-gray-300">Koyu Tema</div>
+            </div>
+            <div className="bg-gradient-to-r from-white to-gray-900 border border-gray-400 rounded p-2 text-center text-xs">
+              <div className="w-full h-4 bg-blue-500 rounded mb-1"></div>
+              <div className="text-gray-600">Otomatik</div>
+            </div>
           </div>
         </div>
       </div>
@@ -419,84 +436,98 @@ function AppearanceSettings({ settings, onChange }) {
 }
 
 function LanguageSettings({ settings, onChange }) {
-  const { currentLanguage, changeLanguage, availableLanguages } = useLanguage();
-  
-  const handleLanguageChange = async (newLanguage) => {
-    await changeLanguage(newLanguage);
-    await onChange('language', newLanguage);
-  };
+  // Şimdilik sadece Türkçe seçenekleri
+  const languages = [
+    { code: 'tr', name: 'Türkçe', flag: '🇹🇷' }
+  ];
 
   const currencies = [
-    { code: 'TRY', name: 'Türk Lirası (₺)' },
-    { code: 'USD', name: 'US Dollar ($)' },
-    { code: 'EUR', name: 'Euro (€)' },
-    { code: 'GBP', name: 'British Pound (£)' }
+    { code: 'TRY', name: 'Türk Lirası (₺)', symbol: '₺' }
   ];
 
   const timezones = [
-    { value: 'Europe/Istanbul', name: 'İstanbul (UTC+3)' },
-    { value: 'Europe/London', name: 'London (UTC+0)' },
-    { value: 'America/New_York', name: 'New York (UTC-5)' },
-    { value: 'Asia/Tokyo', name: 'Tokyo (UTC+9)' }
+    { value: 'Europe/Istanbul', name: 'İstanbul (UTC+3)', description: 'Türkiye saati' }
   ];
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
         <FiGlobe className="mr-2 text-blue-500" />
         Dil & Bölge Ayarları
       </h3>
       
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Dil
           </label>
-          <select
-            value={currentLanguage}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {availableLanguages.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.flag} {lang.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <div className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center">
+              <span className="text-xl mr-3">🇹🇷</span>
+              <span className="text-gray-900 dark:text-gray-100">Türkçe</span>
+              <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">Varsayılan</span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Uygulama dili şu anda sadece Türkçe olarak desteklenmektedir
+          </p>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Para Birimi
           </label>
-          <select
-            value={settings.currency}
-            onChange={(e) => onChange('currency', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {currencies.map((currency) => (
-              <option key={currency.code} value={currency.code}>
-                {currency.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <div className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center">
+              <span className="text-lg mr-3">₺</span>
+              <span className="text-gray-900 dark:text-gray-100">Türk Lirası (TRY)</span>
+              <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">Varsayılan</span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Tüm fiyatlar Türk Lirası cinsinden gösterilmektedir
+          </p>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Saat Dilimi
           </label>
-          <select
-            value={settings.timezone}
-            onChange={(e) => onChange('timezone', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {timezones.map((tz) => (
-              <option key={tz.value} value={tz.value}>
-                {tz.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <div className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center">
+              <span className="text-lg mr-3">🕐</span>
+              <div className="flex-1">
+                <span className="text-gray-900 dark:text-gray-100">İstanbul (UTC+3)</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Türkiye saati</p>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Varsayılan</span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Tüm zamanlar Türkiye saati cinsinden gösterilmektedir
+          </p>
+        </div>
+
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Bölgesel Ayarlar</h4>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-blue-700 dark:text-blue-300 font-medium">Tarih Formatı:</span>
+              <p className="text-blue-600 dark:text-blue-400">DD.MM.YYYY</p>
+            </div>
+            <div>
+              <span className="text-blue-700 dark:text-blue-300 font-medium">Saat Formatı:</span>
+              <p className="text-blue-600 dark:text-blue-400">24 Saat</p>
+            </div>
+            <div>
+              <span className="text-blue-700 dark:text-blue-300 font-medium">Sayı Formatı:</span>
+              <p className="text-blue-600 dark:text-blue-400">1.234,56</p>
+            </div>
+            <div>
+              <span className="text-blue-700 dark:text-blue-300 font-medium">Hafta Başlangıcı:</span>
+              <p className="text-blue-600 dark:text-blue-400">Pazartesi</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -505,20 +536,22 @@ function LanguageSettings({ settings, onChange }) {
 
 function SettingToggle({ label, description, checked, onChange, icon, disabled = false }) {
   return (
-    <div className={`flex items-start justify-between p-4 rounded-lg border ${
-      disabled ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-200'
+    <div className={`flex items-start justify-between p-4 rounded-lg border transition-all duration-200 ${
+      disabled 
+        ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' 
+        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
     }`}>
       <div className="flex items-start">
         {icon && (
-          <div className={`mr-3 mt-1 ${disabled ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`mr-3 mt-1 ${disabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>
             {icon}
           </div>
         )}
         <div>
-          <h4 className={`font-medium ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>
+          <h4 className={`font-medium ${disabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
             {label}
           </h4>
-          <p className={`text-sm mt-1 ${disabled ? 'text-gray-300' : 'text-gray-500'}`}>
+          <p className={`text-sm mt-1 ${disabled ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
             {description}
           </p>
         </div>
@@ -527,16 +560,16 @@ function SettingToggle({ label, description, checked, onChange, icon, disabled =
       <button
         onClick={() => !disabled && onChange(!checked)}
         disabled={disabled}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
           disabled 
-            ? 'bg-gray-200 cursor-not-allowed' 
+            ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed' 
             : checked 
-              ? 'bg-blue-600' 
-              : 'bg-gray-200'
+              ? 'bg-blue-600 dark:bg-blue-500' 
+              : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${
             checked ? 'translate-x-6' : 'translate-x-1'
           }`}
         />

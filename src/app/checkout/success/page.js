@@ -41,14 +41,14 @@ export default function CheckoutSuccess() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen py-12 px-4 sm:px-6">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen py-12 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto">
         {/* Başarı Animasyonu */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8 text-center">
@@ -117,7 +117,7 @@ export default function CheckoutSuccess() {
         <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
           <Link 
             href="/"
-            className="flex-1 bg-white text-gray-800 font-semibold py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-center hover:bg-gray-50 flex items-center justify-center"
+            className="flex-1 bg-white text-gray-800 font-semibold py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-center hover:bg-gray-50 dark:bg-gray-900 flex items-center justify-center"
           >
             <FiHome className="mr-2" />
             Ana Sayfaya Dön

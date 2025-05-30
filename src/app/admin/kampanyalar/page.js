@@ -219,7 +219,7 @@ function CampaignsManagement() {
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ID
@@ -249,7 +249,7 @@ function CampaignsManagement() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCampaigns.map(campaign => (
-                  <tr key={campaign.id} className="hover:bg-gray-50">
+                  <tr key={campaign.id} className="hover:bg-gray-50 dark:bg-gray-900">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {campaign.id.substring(0, 8)}...
                     </td>
@@ -515,7 +515,7 @@ function PermissionsManagement() {
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Kullanıcı
@@ -536,7 +536,7 @@ function PermissionsManagement() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:bg-gray-900">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{user.name}</div>
                       <div className="text-sm text-gray-500">ID: {user.id.substring(0,8)}...</div>

@@ -16,7 +16,7 @@ export default function NotificationsPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center p-6 max-w-sm mx-auto">
           <div className="text-orange-500 text-5xl mb-4">🔔</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Giriş Gerekli</h2>
@@ -33,7 +33,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="container mx-auto px-4">
         <NotificationSystem 
           userRole={user?.role || 'user'} 

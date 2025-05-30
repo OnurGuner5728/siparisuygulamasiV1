@@ -77,7 +77,7 @@ const demoCartItem = {
 // Loading komponenti
 function CartEditLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
     </div>
   );
@@ -201,7 +201,7 @@ function EditCartItemContent() {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -209,7 +209,7 @@ function EditCartItemContent() {
   
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="bg-white rounded-lg shadow-sm p-8 text-center max-w-md">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FiX className="text-red-500 text-2xl" />
@@ -228,7 +228,7 @@ function EditCartItemContent() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Başlık */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -288,7 +288,7 @@ function EditCartItemContent() {
                     className={`flex items-center justify-between p-3 rounded-lg border ${
                       isSelected 
                         ? 'border-orange-500 bg-orange-50' 
-                        : 'border-gray-200 hover:bg-gray-50'
+                        : 'border-gray-200 hover:bg-gray-50 dark:bg-gray-900'
                     }`}
                   >
                     <div className="flex items-center">
@@ -335,7 +335,7 @@ function EditCartItemContent() {
                   className={`flex items-center p-3 rounded-lg border ${
                     removedItems.includes(item.id) 
                       ? 'border-orange-500 bg-orange-50' 
-                      : 'border-gray-200 hover:bg-gray-50'
+                      : 'border-gray-200 hover:bg-gray-50 dark:bg-gray-900'
                   }`}
                 >
                   <input 

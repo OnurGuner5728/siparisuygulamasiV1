@@ -145,7 +145,7 @@ export default function CicekPage() {
         </div>
       )}
       
-      <div className="bg-gray-50 p-4 rounded-lg mb-8 shadow">
+      <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-8 shadow">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
           <div>
             <label htmlFor="storeTypeFilter" className="block text-sm font-medium text-gray-700 mb-1">Çiçekçi Türü</label>

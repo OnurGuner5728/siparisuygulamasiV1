@@ -112,7 +112,7 @@ function FavoritesContent() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="favorites" />
@@ -131,7 +131,7 @@ function FavoritesContent() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="favorites" />
@@ -239,7 +239,7 @@ function FavoritesContent() {
 function FavoriteCard({ favorite, detail, onRemove }) {
   if (detail.type === 'product') {
     return (
-      <div className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
         <div className="relative">
           <img
             src={detail.image || '/placeholder-product.jpg'}
@@ -289,7 +289,7 @@ function FavoriteCard({ favorite, detail, onRemove }) {
 
   if (detail.type === 'store') {
     return (
-      <div className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
         <div className="relative">
           <img
             src={detail.cover_image || detail.logo || '/placeholder-store.jpg'}

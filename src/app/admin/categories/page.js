@@ -359,7 +359,7 @@ function AdminCategoriesContent() {
 
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Kategori
@@ -380,7 +380,7 @@ function AdminCategoriesContent() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredCategories.map((category) => (
-                    <tr key={category.id} className="hover:bg-gray-50">
+                    <tr key={category.id} className="hover:bg-gray-50 dark:bg-gray-900">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -575,7 +575,7 @@ function AdminCategoriesContent() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('categories')}
-                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900"
                 >
                   İptal
                 </button>
@@ -721,7 +721,7 @@ function AdminCategoriesContent() {
                     setEditingCategory(null);
                     setActiveTab('categories');
                   }}
-                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900"
                 >
                   İptal
                 </button>
@@ -744,7 +744,7 @@ function AdminCategoriesContent() {
               Kullanıcı ve mağazalara gösterilecek modülleri seçin. Aktif olmayan modüller sadece admin tarafından görüntülenebilir.
             </p>
             
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex items-center">
                   <input

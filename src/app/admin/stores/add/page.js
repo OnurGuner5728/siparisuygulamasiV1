@@ -230,7 +230,7 @@ function AddStoreContent() {
             <h3 className="text-lg font-semibold mb-3">Modül Yetkileri</h3>
             <p className="text-gray-500 mb-3 text-sm">Mağazanın görebileceği modülleri seçin. Kategori seçimine göre otomatik olarak belirlenecektir, değiştirebilirsiniz.</p>
             
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex items-center">
                   <input
@@ -288,7 +288,7 @@ function AddStoreContent() {
             <h3 className="text-lg font-semibold mb-3">Çalışma Saatleri</h3>
             <p className="text-gray-500 mb-3 text-sm">Mağazanın çalışma saatlerini belirleyin.</p>
             
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-6">
                   {Object.entries({

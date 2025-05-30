@@ -19,6 +19,10 @@ const nextConfig = {
       'ozqsbbngkkssstmaktou.supabase.co'
     ],
   },
+  // Hydration mismatch hatalarını azaltmak için
+  experimental: {
+    suppressHydrationWarning: true,
+  },
 };
 
 export default nextConfig;

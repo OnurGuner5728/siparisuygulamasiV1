@@ -101,9 +101,47 @@ const NotificationDropdown = () => {
       order_cancelled: '❌',
       new_order: '🔔',
       store_registered: '🏪',
+      store_approved: '✅',
+      store_approval_revoked: '❌',
       system: 'ℹ️'
     };
     return icons[type] || '📢';
+  };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Bildirimi okundu olarak işaretle
+      await api.markNotificationAsRead(notification.id);
+      
+      // Bildirimi güncelle
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notification.id 
+            ? { ...n, is_read: true, read_at: new Date().toISOString() }
+            : n
+        )
+      );
+      
+      // Okunmamış sayısını güncelle
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Bildirim tipine göre yönlendirme
+      if (notification.type === 'store_registered') {
+        // Mağaza kayıt bildirimi - admin/stores sayfasına yönlendir
+        window.location.href = '/admin/stores';
+      } else if (notification.type === 'store_approved' || notification.type === 'store_approval_revoked') {
+        // Mağaza onay bildirimi - mağaza paneline yönlendir (eğer store kullanıcısıysa)
+        if (user?.role === 'store') {
+          window.location.href = '/store';
+        }
+      } else if (notification.data?.order_id) {
+        // Sipariş bildirimi - sipariş detayına yönlendir
+        window.location.href = `/orders/${notification.data.order_id}`;
+      }
+      
+    } catch (error) {
+      console.error('Bildirim işlenirken hata:', error);
+    }
   };
 
   if (!isAuthenticated) {
@@ -179,9 +217,7 @@ const NotificationDropdown = () => {
                         !notification.is_read ? 'bg-blue-50' : ''
                       }`}
                       onClick={() => {
-                        if (!notification.is_read) {
-                          markAsRead(notification.id);
-                        }
+                        handleNotificationClick(notification);
                       }}
                     >
                       <div className="flex items-start space-x-3">

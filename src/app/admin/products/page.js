@@ -185,7 +185,7 @@ function AdminProductsContent() {
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ürün
@@ -209,7 +209,7 @@ function AdminProductsContent() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
+                <tr key={product.id} className="hover:bg-gray-50 dark:bg-gray-900">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">

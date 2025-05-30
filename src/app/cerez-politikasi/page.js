@@ -28,7 +28,7 @@ export default function CookiePolicyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
         <div className="container mx-auto px-4 py-16">
@@ -155,7 +155,7 @@ export default function CookiePolicyPage() {
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Kullandığımız Çerezler</h2>
                     <div className="overflow-x-auto">
                       <table className="min-w-full bg-white border border-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Çerez Adı
@@ -384,13 +384,13 @@ export default function CookiePolicyPage() {
                   </button>
                   <button
                     onClick={() => setPreferences({ necessary: true, functional: true, analytics: true, marketing: true })}
-                    className="w-full border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200"
+                    className="w-full border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
                   >
                     Tümünü Kabul Et
                   </button>
                   <button
                     onClick={() => setPreferences({ necessary: true, functional: false, analytics: false, marketing: false })}
-                    className="w-full border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200"
+                    className="w-full border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
                   >
                     Sadece Zorunlu
                   </button>

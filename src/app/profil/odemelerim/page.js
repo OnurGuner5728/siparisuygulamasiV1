@@ -101,7 +101,7 @@ function PaymentMethodsContent() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="payments" />
@@ -120,7 +120,7 @@ function PaymentMethodsContent() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="payments" />
@@ -195,7 +195,7 @@ function PaymentMethodsContent() {
 
                 {/* Ekleme Formu Placeholder */}
                 {showAddForm && (
-                  <div className="mt-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <div className="mt-6 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                     <FiCreditCard size={48} className="text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-800 mb-2">Ödeme Yöntemi Ekleme</h3>
                     <p className="text-gray-600 mb-4">
@@ -204,7 +204,7 @@ function PaymentMethodsContent() {
                     </p>
                     <button
                       onClick={() => setShowAddForm(false)}
-                      className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                      className="bg-gray-50 dark:bg-gray-9000 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
                     >
                       Kapat
                     </button>

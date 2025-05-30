@@ -426,11 +426,17 @@ function UserDetailContent({ promiseParams }) {
                           <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Varsayılan</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">{address.address_line1}</p>
-                      {address.address_line2 && <p className="text-sm text-gray-600">{address.address_line2}</p>}
-                      <p className="text-sm text-gray-600">{address.city}, {address.postal_code}</p>
-                      <p className="text-sm text-gray-600">{address.country}</p>
-                      {address.phone && <p className="text-sm text-gray-600 mt-1">Tel: {address.phone}</p>}
+                      {address.full_name && <p className="text-sm text-gray-600 font-medium">{address.full_name}</p>}
+                      {address.phone && <p className="text-sm text-gray-600">Tel: {address.phone}</p>}
+                      <p className="text-sm text-gray-600 mt-1">{address.full_address || address.street}</p>
+                      {address.neighborhood && <p className="text-sm text-gray-600">Mahalle: {address.neighborhood}</p>}
+                      <p className="text-sm text-gray-600">{address.district}, {address.city}</p>
+                      {address.postal_code && <p className="text-sm text-gray-600">Posta Kodu: {address.postal_code}</p>}
+                      {address.type && (
+                        <span className="inline-block mt-2 px-2 py-1 bg-gray-200 text-gray-700 rounded-full text-xs">
+                          {address.type === 'home' ? 'Ev' : address.type === 'work' ? 'İş' : 'Diğer'}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

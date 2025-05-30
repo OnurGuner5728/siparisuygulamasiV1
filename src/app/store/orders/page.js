@@ -267,7 +267,7 @@ function StoreOrdersContent() {
           <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Sipariş No
@@ -291,7 +291,7 @@ function StoreOrdersContent() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {currentOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
+                    <tr key={order.id} className="hover:bg-gray-50 dark:bg-gray-900">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">#{order.id.substring(0,8)}...</div>
                       </td>
@@ -409,7 +409,7 @@ function StoreOrdersContent() {
                     className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                       currentPage === 1
                         ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                        : 'text-gray-700 bg-white hover:bg-gray-50'
+                        : 'text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900'
                     }`}
                   >
                     Önceki
@@ -433,7 +433,7 @@ function StoreOrdersContent() {
                         className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                           currentPage === pageNumber
                             ? 'bg-blue-500 text-white'
-                            : 'text-gray-700 bg-white hover:bg-gray-50'
+                            : 'text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900'
                         }`}
                       >
                         {pageNumber}
@@ -446,7 +446,7 @@ function StoreOrdersContent() {
                     className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                       currentPage === totalPages
                         ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                        : 'text-gray-700 bg-white hover:bg-gray-50'
+                        : 'text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900'
                     }`}
                   >
                     Sonraki

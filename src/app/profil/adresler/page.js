@@ -247,7 +247,7 @@ function AddressesContent() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="addresses" />
@@ -266,7 +266,7 @@ function AddressesContent() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="addresses" />

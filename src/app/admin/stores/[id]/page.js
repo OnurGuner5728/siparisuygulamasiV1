@@ -169,8 +169,21 @@ function StoreDetailContent({ promiseParams }) {
     );
   }
 
-  const workingHours = store?.working_hours || {};
+  const workingHours = store?.workingHours || {};
   const modulePermissions = store?.module_permissions || {};
+
+  // workingHours string ise parse et
+  let parsedWorkingHours = {};
+  if (typeof workingHours === 'string') {
+    try {
+      parsedWorkingHours = JSON.parse(workingHours);
+    } catch (error) {
+      console.error('workingHours parse hatası:', error);
+      parsedWorkingHours = {};
+    }
+  } else {
+    parsedWorkingHours = workingHours;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -359,17 +372,23 @@ function StoreDetailContent({ promiseParams }) {
           )}
 
           {/* Çalışma Saatleri */}
-          {Object.keys(workingHours).length > 0 && (
+          {Object.keys(parsedWorkingHours).length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Çalışma Saatleri</h2>
               <div className="space-y-2">
                 {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
                   <div key={day} className="flex justify-between">
-                    <span className="font-medium capitalize">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
+                    <span className="font-medium capitalize">
+                      {day === 'monday' ? 'Pazartesi' :
+                       day === 'tuesday' ? 'Salı' :
+                       day === 'wednesday' ? 'Çarşamba' :
+                       day === 'thursday' ? 'Perşembe' :
+                       day === 'friday' ? 'Cuma' :
+                       day === 'saturday' ? 'Cumartesi' :
+                       day === 'sunday' ? 'Pazar' : day}
+                    </span>
                     <span>
-                      {workingHours[day]?.is_open 
-                        ? `${workingHours[day]?.open} - ${workingHours[day]?.close}` 
-                        : 'Kapalı'}
+                      {parsedWorkingHours[day] || 'Kapalı'}
                     </span>
                   </div>
                 ))}

@@ -162,22 +162,22 @@ function MarketPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white">
+      <div className="bg-white dark:bg-gray-800">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Market View</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Market</h1>
             </div>
-            <button className="p-2 text-gray-600">
+            <button className="p-2 text-gray-600 dark:text-gray-400">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
@@ -268,18 +268,15 @@ function MarketPageContent() {
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   {/* Market Image */}
               <div className="h-48 bg-gray-200 relative">
-                {market.cover_image_url ? (
+                {market.banner_url || market.logo_url ? (
                   <img 
-                    src={market.cover_image_url} 
+                    src={market.banner_url || market.logo_url} 
                     alt={market.name} 
                         className="w-full h-full object-cover"
                   />
                 ) : (
                       <div className="w-full h-full bg-gradient-to-br from-green-100 to-teal-100 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-4xl mb-2">🏪</div>
-                          <div className="text-gray-500 font-medium">{market.name}</div>
-                        </div>
+                        {market.logo_url ? <img src={market.logo_url} alt={market.name} className="w-full h-full object-cover" /> : '🏪'}
                       </div>
                     )}
                     
@@ -301,13 +298,13 @@ function MarketPageContent() {
                           <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
-                          Free
+                          {market.delivery_fee || '0 ₺' + " teslimat ücreti"}
                         </span>
                         <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
                           <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                          {market.delivery_time || '15-30 dk'}
+                          </svg>
+                          {market.delivery_time_min + " min" || '20 min'}
                         </span>
                       </div>
                     </div>
@@ -337,7 +334,7 @@ function MarketPageContent() {
 
                     {/* Market Stats */}
                     <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>Min. sipariş: {market.min_order_amount || 0} TL</span>
+                      <span>Min. sipariş: {market.minimum_order_amount || 0} TL</span>
                       {market.rating && (
                         <div className="flex items-center">
                           <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">

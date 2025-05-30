@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="tr">
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning={true}>
         <ErrorBoundary>
           <ErrorProvider>
             <SWRConfig value={swrConfig}>
@@ -57,7 +57,7 @@ export default function RootLayout({ children }) {
                       <FileProvider>
                         <ToastProvider>
                           <CartProvider>
-                        <div className="enhanced-gradient min-h-screen bg-gray-50 flex flex-col">
+                        <div className="enhanced-gradient min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
                           <HeaderWrapper onCartClick={handleCartOpen} />
                           <main className="flex-1 mb-16 md:mb-0">
                             {children}

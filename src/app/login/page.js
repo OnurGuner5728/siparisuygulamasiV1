@@ -136,7 +136,7 @@ function LoginContent() {
                     type="email"
                     autoComplete="email"
                     required
-                    className={`w-full bg-gray-50 border-2 rounded-2xl pl-12 pr-4 py-4 text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-500 transition-all duration-200 ${
+                    className={`w-full bg-gray-50 dark:bg-gray-900 border-2 rounded-2xl pl-12 pr-4 py-4 text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-500 transition-all duration-200 ${
                       errors.email ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                     }`}
                     placeholder="ornek@email.com"
@@ -175,7 +175,7 @@ function LoginContent() {
                     type="password"
                     autoComplete="current-password"
                     required
-                    className={`w-full bg-gray-50 border-2 rounded-2xl pl-12 pr-4 py-4 text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-500 transition-all duration-200 ${
+                    className={`w-full bg-gray-50 dark:bg-gray-900 border-2 rounded-2xl pl-12 pr-4 py-4 text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-500 transition-all duration-200 ${
                       errors.password ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                     }`}
                     placeholder="Şifrenizi girin"

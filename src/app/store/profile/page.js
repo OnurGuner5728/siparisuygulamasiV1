@@ -25,7 +25,8 @@ function StoreProfileContent() {
     email: '',
     phone: '',
     description: '',
-    logo: '',
+    logo_url: '',
+    banner_url: '',
     address: {
       city: '',
       district: '',
@@ -44,11 +45,12 @@ function StoreProfileContent() {
   });
   const [activeTab, setActiveTab] = useState('general');
   const [submitting, setSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
-  // Mağaza onaylanmamışsa özel ekran göster
+  // Mağaza onaylanmamışsa özel ekran göster - hooks'ların altında
   if (!user?.storeInfo?.is_approved) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -84,54 +86,13 @@ function StoreProfileContent() {
         if (storeData) {
           setStore(storeData);
           
-          // Eğer mağaza adresinde bilgi yoksa, kullanıcının varsayılan adresini al
+          // Mağaza adres bilgilerini stores tablosundan al
           let addressData = {
-            city: '',
-            district: '',
-            neighborhood: '',
-            fullAddress: ''
+            city: storeData.city || '',
+            district: storeData.district || '',
+            neighborhood: storeData.neighborhood || '',
+            fullAddress: storeData.address || ''
           };
-          
-          if (storeData.address) {
-            // Mağaza adres bilgileri varsa onları kullan
-            try {
-              const parsedAddress = typeof storeData.address === 'string' 
-                ? JSON.parse(storeData.address) 
-                : storeData.address;
-              addressData = {
-                city: parsedAddress?.city || '',
-                district: parsedAddress?.district || '',
-                neighborhood: parsedAddress?.neighborhood || '',
-                fullAddress: parsedAddress?.fullAddress || ''
-              };
-            } catch (parseError) {
-              console.log('Adres JSON parse hatası, string olarak kullanılıyor:', parseError);
-              // Eğer JSON parse edilemezse, string'i fullAddress olarak kullan
-              addressData = {
-                city: '',
-                district: '',
-                neighborhood: '',
-                fullAddress: storeData.address || ''
-              };
-            }
-          } else {
-            // Mağaza adres bilgisi yoksa kullanıcının varsayılan adresini al
-            try {
-              const userAddresses = await api.getUserAddresses(user.id);
-              const defaultAddress = userAddresses.find(addr => addr.is_default) || userAddresses[0];
-              
-              if (defaultAddress) {
-                addressData = {
-                  city: defaultAddress.city || '',
-                  district: defaultAddress.district || '',
-                  neighborhood: defaultAddress.neighborhood || '',
-                  fullAddress: defaultAddress.full_address || ''
-                };
-              }
-            } catch (addressError) {
-              console.log('Kullanıcı adresleri alınamadı:', addressError);
-            }
-          }
           
           // WorkingHours parse işlemi
           let workingHoursData = {
@@ -169,7 +130,8 @@ function StoreProfileContent() {
             email: storeData.email || user.email || '', // Kullanıcı email'i ile senkronize
             phone: storeData.phone || '',
             description: storeData.description || '',
-            logo: storeData.logo || '',
+            logo_url: storeData.logo_url || '',
+            banner_url: storeData.banner_url || '',
             address: addressData,
             workingHours: workingHoursData
           });
@@ -206,8 +168,8 @@ function StoreProfileContent() {
     }
   };
 
-  // Resim yükleme fonksiyonu
-  const handleImageUpload = async (e) => {
+  // Logo yükleme fonksiyonu
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -224,31 +186,75 @@ function StoreProfileContent() {
       return;
     }
 
-    setUploadingImage(true);
+    setUploadingLogo(true);
     setError('');
 
     try {
       // Eski resmi sil (eğer varsa)
-      if (formData.logo) {
+      if (formData.logo_url) {
         try {
-          await api.deleteImage(formData.logo, 'stores');
+          await api.deleteImage(formData.logo_url, 'stores');
         } catch (deleteError) {
-          console.log('Eski resim silinirken hata (normal olabilir):', deleteError);
+          console.log('Eski logo silinirken hata (normal olabilir):', deleteError);
         }
       }
 
       // Yeni resmi yükle
       const imageUrl = await api.uploadImage(file, 'stores');
-      setFormData(prev => ({ ...prev, logo: imageUrl }));
-      setSuccess('Resim başarıyla yüklendi!');
+      setFormData(prev => ({ ...prev, logo_url: imageUrl }));
       
-      // Success mesajını 3 saniye sonra temizle
-      setTimeout(() => setSuccess(''), 3000);
+      // Lokalize success mesajı - global state'i etkilemez
+      console.log('Logo başarıyla yüklendi:', imageUrl);
     } catch (error) {
-      console.error('Resim yükleme hatası:', error);
-      setError('Resim yüklenirken bir hata oluştu: ' + error.message);
+      console.error('Logo yükleme hatası:', error);
+      setError('Logo yüklenirken bir hata oluştu: ' + error.message);
     } finally {
-      setUploadingImage(false);
+      setUploadingLogo(false);
+    }
+  };
+
+  // Banner yükleme fonksiyonu
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Dosya boyutu kontrolü (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Dosya boyutu 10MB\'dan büyük olamaz.');
+      return;
+    }
+
+    // Dosya formatı kontrolü
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Sadece JPG, PNG, GIF ve WebP formatındaki resimler yüklenebilir.');
+      return;
+    }
+
+    setUploadingBanner(true);
+    setError('');
+
+    try {
+      // Eski banner'ı sil (eğer varsa)
+      if (formData.banner_url) {
+        try {
+          await api.deleteImage(formData.banner_url, 'stores');
+        } catch (deleteError) {
+          console.log('Eski banner silinirken hata (normal olabilir):', deleteError);
+        }
+      }
+
+      // Yeni resmi yükle
+      const imageUrl = await api.uploadImage(file, 'stores');
+      setFormData(prev => ({ ...prev, banner_url: imageUrl }));
+      
+      // Lokalize success mesajı - global state'i etkilemez
+      console.log('Banner başarıyla yüklendi:', imageUrl);
+    } catch (error) {
+      console.error('Banner yükleme hatası:', error);
+      setError('Banner yüklenirken bir hata oluştu: ' + error.message);
+    } finally {
+      setUploadingBanner(false);
     }
   };
 
@@ -268,8 +274,12 @@ function StoreProfileContent() {
         email: formData.email,
         phone: formData.phone,
         description: formData.description,
-        logo: formData.logo,
-        address: JSON.stringify(formData.address),
+        logo_url: formData.logo_url,
+        banner_url: formData.banner_url,
+        city: formData.address.city,
+        district: formData.address.district,
+        neighborhood: formData.address.neighborhood,
+        address: formData.address.fullAddress,
         workingHours: JSON.stringify(formData.workingHours)
       };
       
@@ -385,7 +395,7 @@ function StoreProfileContent() {
         </div>
 
         {/* Sekmeler */}
-        <div className="bg-gray-50 px-6 border-b">
+        <div className="bg-gray-50 dark:bg-gray-900 px-6 border-b">
           <nav className="flex overflow-x-auto">
             <button
               onClick={() => setActiveTab('general')}
@@ -506,7 +516,7 @@ function StoreProfileContent() {
                     type="text"
                     id="category"
                     value={typeof store?.category === 'object' ? store?.category?.name || 'Kategori' : store?.category || 'Kategori'}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-900"
                     disabled
                   />
                   <p className="text-xs text-gray-500 mt-1">Kategori değiştirmek için lütfen destek ile iletişime geçin.</p>
@@ -532,61 +542,126 @@ function StoreProfileContent() {
                   </label>
                   
                   {/* Mevcut Logo Gösterimi */}
-                  {formData.logo && (
-                    <div className="mb-4 flex items-center space-x-4">
+                  {formData.logo_url && (
+                    <div className="mb-3 flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         <img
-                          src={formData.logo}
+                          src={formData.logo_url}
                           alt="Mağaza logosu"
-                          className="h-16 w-16 object-cover rounded-lg border border-gray-300"
+                          className="h-12 w-12 object-cover rounded-lg border border-gray-300"
                         />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm text-gray-600">Mevcut logo</p>
+                        <p className="text-xs text-gray-600">Mevcut logo</p>
                         <button
                           type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, logo: '' }))}
-                          className="text-sm text-red-600 hover:text-red-800"
+                          onClick={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
+                          className="text-xs text-red-600 hover:text-red-800"
                         >
-                          Logoyu Kaldır
+                          Kaldır
                         </button>
                       </div>
                     </div>
                   )}
                   
                   {/* Dosya Yükleme */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
                     <input
                       type="file"
                       id="logo-upload"
                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                      onChange={handleImageUpload}
+                      onChange={handleLogoUpload}
                       className="hidden"
-                      disabled={uploadingImage}
+                      disabled={uploadingLogo}
                     />
                     <label
                       htmlFor="logo-upload"
-                      className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50' : ''}`}
+                      className={`cursor-pointer flex flex-col items-center ${uploadingLogo ? 'opacity-50' : ''}`}
                     >
-                      {uploadingImage ? (
+                      {uploadingLogo ? (
                         <div className="flex flex-col items-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                          <span className="text-sm text-gray-600">Yükleniyor...</span>
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-1"></div>
+                          <span className="text-xs text-gray-600">Yükleniyor...</span>
                         </div>
                       ) : (
                         <>
-                          <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          <span className="text-sm font-medium text-gray-700">Logo yüklemek için tıklayın</span>
-                          <span className="text-xs text-gray-500 mt-1">PNG, JPG, GIF, WebP (Max 5MB)</span>
+                          <span className="text-xs font-medium text-gray-700">Logo yükle</span>
+                          <span className="text-xs text-gray-500">Max 5MB</span>
                         </>
                       )}
                     </label>
                   </div>
                   
-                  <p className="text-xs text-gray-500 mt-2">
-                    En iyi sonuç için kare format (örn: 200x200px) önerilir.
+                  <p className="text-xs text-gray-500 mt-1">
+                    Kare format (200x200px) önerilir.
+                  </p>
+                </div>
+
+                {/* Banner Yükleme */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mağaza Banner'ı
+                  </label>
+                  
+                  {/* Mevcut Banner Gösterimi */}
+                  {formData.banner_url && (
+                    <div className="mb-3 flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={formData.banner_url}
+                          alt="Mağaza banner'ı"
+                          className="h-12 w-20 object-cover rounded-lg border border-gray-300"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-600">Mevcut banner</p>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, banner_url: '' }))}
+                          className="text-xs text-red-600 hover:text-red-800"
+                        >
+                          Kaldır
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Banner Dosya Yükleme */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      id="banner-upload"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleBannerUpload}
+                      className="hidden"
+                      disabled={uploadingBanner}
+                    />
+                    <label
+                      htmlFor="banner-upload"
+                      className={`cursor-pointer flex flex-col items-center ${uploadingBanner ? 'opacity-50' : ''}`}
+                    >
+                      {uploadingBanner ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-1"></div>
+                          <span className="text-xs text-gray-600">Yükleniyor...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <svg className="h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-xs font-medium text-gray-700">Banner yükle</span>
+                          <span className="text-xs text-gray-500">Max 10MB</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 mt-1">
+                    Yatay format (800x300px) önerilir.
                   </p>
                 </div>
               </div>

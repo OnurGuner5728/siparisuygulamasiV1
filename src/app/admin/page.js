@@ -19,7 +19,7 @@ function AdminPanelContent() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-12">
       {/* Başlık */}
       <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">

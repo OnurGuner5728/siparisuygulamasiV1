@@ -9,342 +9,396 @@ export default function Register() {
   const router = useRouter();
   const { register } = useAuth();
   
-  const [formData, setFormData] = useState({
+  // Hydration mismatch önlemek için client-side mounting kontrolü
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Form state'leri ayrılmış - kişisel ve mağaza bilgileri
+  const [accountType, setAccountType] = useState('customer'); // customer veya business
+  
+  // Kişisel bilgiler (Her iki rol için de gerekli)
+  const [personalInfo, setPersonalInfo] = useState({
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     password: '',
-    confirmPassword: '',
-    address: '',
+    confirmPassword: ''
+  });
+  
+  // Müşteri için detaylı adres bilgileri
+  const [addressInfo, setAddressInfo] = useState({
     city: '',
     district: '',
-    phone: '',
-    role: 'customer', // Varsayılan olarak müşteri
-    // İş ortağı için ek alanlar
+    neighborhood: '',
+    street: '',
+    buildingNo: '',
+    floor: '',
+    apartmentNo: '',
+    directions: ''
+  });
+  
+  // İş ortağı için yetkili kişi adres bilgileri (detaylı)
+  const [ownerAddressInfo, setOwnerAddressInfo] = useState({
+    city: '',
+    district: '',
+    neighborhood: '',
+    street: '',
+    buildingNo: '',
+    floor: '',
+    apartmentNo: '',
+    directions: ''
+  });
+  
+  // İş ortağı için işletme bilgileri (basit adres)
+  const [businessInfo, setBusinessInfo] = useState({
     businessName: '',
-    businessPhone: '',
     businessEmail: '',
+    businessPhone: '',
+    businessCity: '',
+    businessDistrict: '',
     businessAddress: '',
+    businessDescription: '',
     categoryId: '',
-    subcategories: [],
+    subcategories: []
   });
   
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
-  const [filteredSubcategories, setFilteredSubcategories] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Kategorileri ve alt kategorileri veritabanından yükle
+  // Kategorileri yükle
   useEffect(() => {
-    const fetchCategoriesData = async () => {
+    setIsMounted(true);
+    
+    const loadCategories = async () => {
       try {
         setLoading(true);
-        // Ana kategorileri getir
-        const mainCategories = await api.getMainCategories();
-        setCategories(mainCategories || []);
+        const categoriesData = await api.getCategories();
+        setCategories(categoriesData);
         
-        // Tüm alt kategorileri getir
-        const allSubcategories = await api.getAllSubcategories();
-        setSubcategories(allSubcategories || []);
+        const subcategoriesData = await api.getAllSubcategories();
+        setSubcategories(subcategoriesData);
       } catch (error) {
-        console.error('Kategori verileri yüklenirken hata:', error);
+        console.error('Kategoriler yüklenirken hata:', error);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchCategoriesData();
+    loadCategories();
   }, []);
 
-  // Kategori değiştiğinde alt kategori listesini güncelle
+  // Alt kategorileri filtrele
   useEffect(() => {
-    if (formData.categoryId) {
-      const categoryId = parseInt(formData.categoryId);
-      const subs = subcategories.filter(sub => sub.parent_id === categoryId);
-      setFilteredSubcategories(subs);
+    if (businessInfo.categoryId) {
+      const filtered = subcategories.filter(sub => 
+        sub.parent_id === parseInt(businessInfo.categoryId)
+      );
+      setFilteredSubcategories(filtered);
     } else {
       setFilteredSubcategories([]);
+      setSelectedSubcategories([]);
+      setBusinessInfo({ ...businessInfo, subcategories: [] });
     }
-  }, [formData.categoryId, subcategories]);
+  }, [businessInfo.categoryId, subcategories]);
 
-  const handleChange = (e) => {
+  // Input change handler'ları
+  const handlePersonalInfoChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setPersonalInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
 
-    // E-posta senkronizasyonu - İşletme e-postası değiştiğinde yetkili e-postasını da güncelle
-    if (name === 'businessEmail' && formData.role === 'business') {
-      setFormData(prev => ({
+    // Hata varsa temizle
+    if (errors[name]) {
+      setErrors(prev => ({
         ...prev,
-        [name]: value,
-        email: value // İşletme e-postasını yetkili e-postası olarak da ayarla
+        [name]: undefined
+      }));
+    }
+  };
+
+  const handleAddressInfoChange = (e) => {
+    const { name, value } = e.target;
+    setAddressInfo(prev => ({
+        ...prev,
+      [name]: value
+    }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
+
+  const handleBusinessInfoChange = (e) => {
+    const { name, value } = e.target;
+    setBusinessInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
       }));
     }
 
-    // Rol değiştiğinde e-posta senkronizasyonu
-    if (name === 'role' && value === 'business' && formData.businessEmail) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        email: prev.businessEmail // Mevcut işletme e-postasını yetkili e-postası olarak ayarla
-      }));
-    }
-
-    // Eğer kategori değiştiyse, alt kategori seçimlerini sıfırla
+    // Kategori değiştiğinde alt kategori seçimlerini sıfırla
     if (name === 'categoryId') {
       setSelectedSubcategories([]);
-      setFormData(prev => ({
+      setBusinessInfo(prev => ({
         ...prev,
         subcategories: []
       }));
     }
   };
 
-  const handleSubcategoryChange = (e) => {
-    const subcategoryId = parseInt(e.target.value);
-    
-    // Eğer zaten seçiliyse kaldır, değilse ekle
+  const handleSubcategoryChange = (subcategoryId) => {
+    let updated;
     if (selectedSubcategories.includes(subcategoryId)) {
-      const updatedSelection = selectedSubcategories.filter(id => id !== subcategoryId);
-      setSelectedSubcategories(updatedSelection);
-      setFormData(prev => ({
-        ...prev,
-        subcategories: updatedSelection
-      }));
+      updated = selectedSubcategories.filter(id => id !== subcategoryId);
     } else {
-      const updatedSelection = [...selectedSubcategories, subcategoryId];
-      setSelectedSubcategories(updatedSelection);
-      setFormData(prev => ({
-        ...prev,
-        subcategories: updatedSelection
-      }));
+      updated = [...selectedSubcategories, subcategoryId];
     }
+    setSelectedSubcategories(updated);
+    setBusinessInfo({ ...businessInfo, subcategories: updated });
   };
 
+  const handleAccountTypeChange = (type) => {
+    setAccountType(type);
+    setErrors({}); // Hataları temizle
+  };
+
+  // Form validasyonu
   const validateForm = () => {
-    let formErrors = {};
+    const formErrors = {};
     
-    if (formData.role === 'customer') {
-      // Müşteri validasyonu
-      // Ad kontrolü
-      if (!formData.firstName.trim()) {
+    // Kişisel bilgileri doğrula
+    if (!personalInfo.firstName.trim()) {
         formErrors.firstName = 'Ad gereklidir';
       }
       
-      // Soyad kontrolü
-      if (!formData.lastName.trim()) {
+    if (!personalInfo.lastName.trim()) {
         formErrors.lastName = 'Soyad gereklidir';
       }
       
-      // E-posta kontrolü
-      if (!formData.email) {
-        formErrors.email = 'E-posta adresi gereklidir';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (!personalInfo.email.trim()) {
+      formErrors.email = 'E-posta gereklidir';
+    } else if (!/\S+@\S+\.\S+/.test(personalInfo.email)) {
         formErrors.email = 'Geçerli bir e-posta adresi giriniz';
       }
       
-      // Şifre kontrolü
-      if (!formData.password) {
+    if (!personalInfo.phone.trim()) {
+      formErrors.phone = 'Telefon gereklidir';
+    } else if (!/^[0-9]{10,11}$/.test(personalInfo.phone.replace(/\s/g, ''))) {
+      formErrors.phone = 'Geçerli bir telefon numarası giriniz (10-11 haneli)';
+    }
+    
+    if (!personalInfo.password) {
         formErrors.password = 'Şifre gereklidir';
-      } else if (formData.password.length < 6) {
+    } else if (personalInfo.password.length < 6) {
         formErrors.password = 'Şifre en az 6 karakter olmalıdır';
       }
       
-      // Şifre onay kontrolü
-      if (formData.password !== formData.confirmPassword) {
+    if (personalInfo.password !== personalInfo.confirmPassword) {
         formErrors.confirmPassword = 'Şifreler eşleşmiyor';
       }
       
-      // Adres kontrolü
-      if (!formData.address.trim()) {
-        formErrors.address = 'Adres gereklidir';
-      }
-      
-      // Şehir kontrolü
-      if (!formData.city.trim()) {
+    // Müşteri için detaylı adres bilgilerini doğrula
+    if (accountType === 'customer') {
+      if (!addressInfo.city.trim()) {
         formErrors.city = 'Şehir gereklidir';
       }
       
-      // İlçe kontrolü
-      if (!formData.district.trim()) {
+      if (!addressInfo.district.trim()) {
         formErrors.district = 'İlçe gereklidir';
       }
       
-      // Telefon kontrolü
-      if (!formData.phone) {
-        formErrors.phone = 'Telefon numarası gereklidir';
-      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-        formErrors.phone = 'Geçerli bir telefon numarası giriniz';
-      }
-    } else {
-      // İş ortağı validasyonu
-      // İşletme adı kontrolü
-      if (!formData.businessName.trim()) {
-        formErrors.businessName = 'İşletme adı gereklidir';
+      if (!addressInfo.neighborhood.trim()) {
+        formErrors.neighborhood = 'Mahalle gereklidir';
       }
       
-      // Kategori kontrolü
-      if (!formData.categoryId) {
-        formErrors.categoryId = 'Kategori seçimi gereklidir';
-      }
-      
-      // Alt kategori kontrolü - artık zorunlu değil
-      // if (!formData.subcategories.length) {
-      //   formErrors.subcategories = 'En az bir alt kategori seçimi gereklidir';
-      // }
-      
-      // İşletme adresi kontrolü
-      if (!formData.businessAddress.trim()) {
-        formErrors.businessAddress = 'İşletme adresi gereklidir';
-      }
-      
-      // İşletme telefonu kontrolü
-      if (!formData.businessPhone) {
-        formErrors.businessPhone = 'İşletme telefon numarası gereklidir';
-      } else if (!/^[0-9]{10,11}$/.test(formData.businessPhone.replace(/[^0-9]/g, ''))) {
-        formErrors.businessPhone = 'Geçerli bir telefon numarası giriniz';
-      }
-      
-      // İşletme e-posta kontrolü
-      if (!formData.businessEmail) {
-        formErrors.businessEmail = 'İşletme e-posta adresi gereklidir';
-      } else if (!/\S+@\S+\.\S+/.test(formData.businessEmail)) {
-        formErrors.businessEmail = 'Geçerli bir e-posta adresi giriniz';
-      }
-      
-      // Yetkili adı kontrolü
-      if (!formData.firstName.trim()) {
-        formErrors.firstName = 'Yetkili adı gereklidir';
-      }
-      
-      // Yetkili soyadı kontrolü
-      if (!formData.lastName.trim()) {
-        formErrors.lastName = 'Yetkili soyadı gereklidir';
-      }
-      
-      // Yetkili telefonu
-      if (!formData.phone) {
-        formErrors.phone = 'Yetkili telefon numarası gereklidir';
-      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-        formErrors.phone = 'Geçerli bir telefon numarası giriniz';
-      }
-      
-      // Yetkili e-posta kontrolü
-      if (!formData.email) {
-        formErrors.email = 'Yetkili e-posta adresi gereklidir';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        formErrors.email = 'Geçerli bir e-posta adresi giriniz';
-      }
-      
-      // Şifre kontrolü
-      if (!formData.password) {
-        formErrors.password = 'Şifre gereklidir';
-      } else if (formData.password.length < 6) {
-        formErrors.password = 'Şifre en az 6 karakter olmalıdır';
-      }
-      
-      // Şifre onay kontrolü
-      if (formData.password !== formData.confirmPassword) {
-        formErrors.confirmPassword = 'Şifreler eşleşmiyor';
+      if (!addressInfo.street.trim()) {
+        formErrors.street = 'Sokak/Cadde gereklidir';
       }
     }
     
-    return formErrors;
+    // İş ortağı için yetkili kişi adres bilgilerini doğrula
+    if (accountType === 'business') {
+      if (!ownerAddressInfo.city.trim()) {
+        formErrors.ownerCity = 'Yetkili kişi şehri gereklidir';
+      }
+      
+      if (!ownerAddressInfo.district.trim()) {
+        formErrors.ownerDistrict = 'Yetkili kişi ilçesi gereklidir';
+      }
+      
+      if (!ownerAddressInfo.neighborhood.trim()) {
+        formErrors.ownerNeighborhood = 'Yetkili kişi mahallesi gereklidir';
+      }
+      
+      if (!ownerAddressInfo.street.trim()) {
+        formErrors.ownerStreet = 'Yetkili kişi sokak/caddesi gereklidir';
+      }
+      
+      // İşletme bilgilerini doğrula
+      if (!businessInfo.businessName.trim()) {
+        formErrors.businessName = 'İşletme adı gereklidir';
+      }
+      
+      if (!businessInfo.businessEmail.trim()) {
+        formErrors.businessEmail = 'İşletme e-postası gereklidir';
+      } else if (!/\S+@\S+\.\S+/.test(businessInfo.businessEmail)) {
+        formErrors.businessEmail = 'Geçerli bir e-posta adresi giriniz';
+      }
+      
+      if (!businessInfo.businessPhone.trim()) {
+        formErrors.businessPhone = 'İşletme telefonu gereklidir';
+      } else if (!/^[0-9\s\-\(\)]{10,15}$/.test(businessInfo.businessPhone)) {
+        formErrors.businessPhone = 'Geçerli bir telefon numarası giriniz (10-11 haneli)';
+      }
+      
+      if (!businessInfo.categoryId) {
+        formErrors.categoryId = 'Kategori seçimi gereklidir';
+      }
+      
+      if (!businessInfo.businessCity.trim()) {
+        formErrors.businessCity = 'İşletme şehri gereklidir';
+      }
+      
+      if (!businessInfo.businessDistrict.trim()) {
+        formErrors.businessDistrict = 'İşletme ilçesi gereklidir';
+      }
+      
+      if (!businessInfo.businessAddress.trim()) {
+        formErrors.businessAddress = 'İşletme adresi gereklidir';
+      }
+    }
+    
+    setErrors(formErrors);
+    return Object.keys(formErrors).length === 0;
   };
 
+  // Form gönderim fonksiyonu
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
+    if (!validateForm()) {
       return;
     }
     
     setIsSubmitting(true);
-    setErrors({});
     
     try {
-      // Kullanıcı kayıt işlemi
-      const fullName = `${formData.firstName} ${formData.lastName}`;
-      const userRole = formData.role === 'customer' ? 'user' : 'store';
+      const userRole = accountType === 'customer' ? 'user' : 'store';
+      const fullName = `${personalInfo.firstName} ${personalInfo.lastName}`.trim();
       
-      let result;
+      let formData;
       
-      if (userRole === 'store') {
-        // İş ortağı kaydı için gerekli bilgileri hazırla
-        const businessData = {
-          name: formData.businessName,
-          phone: formData.businessPhone,
-          email: formData.businessEmail,
-          address: formData.businessAddress,
-          category_id: parseInt(formData.categoryId),
-          subcategories: formData.subcategories,
-          owner_phone: formData.phone,
-          is_approved: false, // Yeni mağazalar onay bekleyecek
-          logo: null,
-          type: categories.find(c => c.id === parseInt(formData.categoryId))?.name || '',
-          // Kullanıcı profili için gerekli alanlar
-          firstName: formData.firstName,
-          lastName: formData.lastName
-        };
+      if (accountType === 'customer') {
+        // Müşteri kayıtı için detaylı adres bilgilerini hazırla
+        const fullAddress = `${addressInfo.street} ${addressInfo.buildingNo ? 'No:' + addressInfo.buildingNo : ''} ${addressInfo.floor ? 'Kat:' + addressInfo.floor : ''} ${addressInfo.apartmentNo ? 'Daire:' + addressInfo.apartmentNo : ''}`.trim();
         
-        result = await register(fullName, formData.email, formData.password, userRole, businessData);
+        formData = {
+          userData: {
+            firstName: personalInfo.firstName,
+            lastName: personalInfo.lastName,
+            phone: personalInfo.phone,
+            // Detaylı adres bilgileri
+            city: addressInfo.city,
+            district: addressInfo.district,
+            neighborhood: addressInfo.neighborhood,
+            street: addressInfo.street,
+            buildingNo: addressInfo.buildingNo,
+            floor: addressInfo.floor,
+            apartmentNo: addressInfo.apartmentNo,
+            directions: addressInfo.directions,
+            fullAddress: fullAddress + (addressInfo.directions ? ` - ${addressInfo.directions}` : '')
+          }
+        };
       } else {
-        // Normal kullanıcı kaydı
-        const userData = {
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          district: formData.district,
-          // Kullanıcı profili için gerekli alanlar
-          firstName: formData.firstName,
-          lastName: formData.lastName
-        };
+        // İş ortağı kayıtı için yetkili kişi ve işletme bilgilerini hazırla
+        const ownerFullAddress = `${ownerAddressInfo.street} ${ownerAddressInfo.buildingNo ? 'No:' + ownerAddressInfo.buildingNo : ''} ${ownerAddressInfo.floor ? 'Kat:' + ownerAddressInfo.floor : ''} ${ownerAddressInfo.apartmentNo ? 'Daire:' + ownerAddressInfo.apartmentNo : ''}`.trim();
         
-        result = await register(fullName, formData.email, formData.password, userRole, userData);
+        formData = {
+          userData: {
+            firstName: personalInfo.firstName,
+            lastName: personalInfo.lastName,
+            phone: personalInfo.phone,
+            // Yetkili kişi detaylı adres bilgileri
+            city: ownerAddressInfo.city,
+            district: ownerAddressInfo.district,
+            neighborhood: ownerAddressInfo.neighborhood,
+            street: ownerAddressInfo.street,
+            buildingNo: ownerAddressInfo.buildingNo,
+            floor: ownerAddressInfo.floor,
+            apartmentNo: ownerAddressInfo.apartmentNo,
+            directions: ownerAddressInfo.directions,
+            fullAddress: ownerFullAddress + (ownerAddressInfo.directions ? ` - ${ownerAddressInfo.directions}` : '')
+          },
+          businessData: {
+            name: businessInfo.businessName,
+            phone: businessInfo.businessPhone,
+            email: businessInfo.businessEmail,
+            // İşletme için basit adres (stores tablosu için)
+            city: businessInfo.businessCity,
+            district: businessInfo.businessDistrict,
+            address: businessInfo.businessAddress,
+            description: businessInfo.businessDescription,
+            category_id: businessInfo.categoryId,
+            subcategories: businessInfo.subcategories,
+            status: 'pending',
+            is_approved: false,
+            logo_url: null,
+            banner_url: null,
+            type: 'restaurant'
+          }
+        };
       }
+      
+      const result = await register(
+        fullName,
+        personalInfo.email,
+        personalInfo.password,
+        userRole,
+        formData
+      );
       
       if (result.success) {
-        // Başarılı kayıt
-        if (result.needsConfirmation) {
-          alert(result.message || 'Kayıt işleminiz tamamlandı. Lütfen e-posta adresinizi kontrol ederek hesabınızı onaylayın.');
-          router.push('/login');
-        } else if (userRole === 'store') {
-          alert(`İş ortağı başvurunuz başarıyla alınmıştır! 
-
-📧 Giriş E-postası: ${formData.email}
-🏪 İşletme Adı: ${formData.businessName}
-
-✅ Başvurunuz admin onayına gönderilmiştir.
-⏳ Onay sonrası ${formData.email} e-postası ile giriş yapabilirsiniz.
-
-Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
-          router.push('/login');
-        } else {
-          alert('Kayıt işleminiz başarıyla tamamlanmıştır.');
-          router.push('/login');
-        }
-      } else {
-        // Başarısız kayıt
-        setErrors({ form: result.error || 'Kayıt oluşturulurken bir hata oluştu' });
+        alert('Kayıt başarılı! E-posta adresinizi doğrulamanız gerekmektedir.');
+        router.push(`/auth/email-confirmation?email=${encodeURIComponent(personalInfo.email)}`);
       }
     } catch (error) {
-      console.error('Kayıt işlemi sırasında hata:', error);
-      setErrors({ form: error.message || 'Kayıt oluşturulurken bir hata oluştu' });
+      console.error('Kayıt hatası:', error);
+      alert(error.message || 'Kayıt sırasında bir hata oluştu');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Hydration mismatch önlemek için ilk render'da boş sayfa
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-4 flex items-center justify-center">
+        <div className="bg-white rounded-3xl p-8 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-4 flex items-center justify-center relative overflow-hidden">
-      {/* Background Decorative Elements */}
+      {/* Background decorative elements */}
       <div className="absolute top-0 left-0 w-72 h-72 bg-white/10 rounded-full -translate-x-36 -translate-y-36"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full translate-x-48 translate-y-48"></div>
       <div className="absolute top-1/2 left-1/4 w-4 h-4 bg-white/20 rounded-full animate-pulse"></div>
@@ -352,7 +406,7 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
       
       <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full mx-auto shadow-2xl backdrop-blur-sm max-h-[90vh] overflow-y-auto">
         <div className="px-8 pt-12 pb-8">
-          {/* Logo/Brand Section */}
+          {/* Header Section */}
           <div className="text-center mb-10">
             <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 w-16 h-16 mx-auto mb-6 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -360,10 +414,10 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
               </svg>
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-3">
-              {formData.role === 'customer' ? 'Hesap Oluşturun' : 'İş Ortağı Olun'}
+              {accountType === 'customer' ? 'Hesap Oluşturun' : 'İş Ortağı Olun'}
         </h2>
             <p className="text-gray-500 text-base mb-6">
-              {formData.role === 'customer' 
+              {accountType === 'customer' 
                 ? 'Lezzetli deneyimler sizi bekliyor' 
                 : 'İşletmenizi büyütmek için bize katılın'
               }
@@ -373,9 +427,9 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
             <div className="flex bg-gray-100 rounded-2xl p-1 max-w-sm mx-auto">
               <button
                 type="button"
-                onClick={() => setFormData({...formData, role: 'customer'})}
+                onClick={() => handleAccountTypeChange('customer')}
                 className={`flex-1 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-                  formData.role === 'customer'
+                  accountType === 'customer'
                     ? 'bg-white text-orange-500 shadow-md'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
@@ -384,9 +438,9 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
               </button>
               <button
                 type="button"
-                onClick={() => setFormData({...formData, role: 'business'})}
+                onClick={() => handleAccountTypeChange('business')}
                 className={`flex-1 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-                  formData.role === 'business'
+                  accountType === 'business'
                     ? 'bg-white text-orange-500 shadow-md'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
@@ -396,9 +450,9 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
             </div>
           </div>
 
-
+          {/* Error Display */}
           {errors.form && (
-            <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -413,417 +467,512 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
           )}
 
           {loading ? (
-            <div className="flex justify-center my-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="flex flex-col items-center justify-center my-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+              <p className="text-gray-600">Kategoriler yükleniyor...</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {formData.role === 'business' && (
+              {/* Kişisel Bilgiler Section */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900">İşletme Bilgileri</h3>
+                <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                  {accountType === 'business' ? 'Yetkili Kişi Bilgileri' : 'Kişisel Bilgiler'}
+                </h3>
                   
-                  {/* İşletme Adı */}
+                {/* Ad Soyad */}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="businessName" className="block text-sm font-medium text-gray-700">
-                      İşletme Adı <span className="text-red-500">*</span>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Ad <span className="text-red-500">*</span>
                     </label>
-                    <div className="mt-1">
                       <input
-                        id="businessName"
-                        name="businessName"
-                        type="text"
-                        required
-                        value={formData.businessName}
-                        onChange={handleChange}
-                        className={`appearance-none block w-full px-3 py-2 border ${
-                          errors.businessName ? 'border-red-300' : 'border-gray-300'
-                        } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                      />
-                      {errors.businessName && (
-                        <p className="mt-2 text-sm text-red-600">{errors.businessName}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Kategori Seçimi */}
-                  <div>
-                    <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
-                      Kategori <span className="text-red-500">*</span>
-                    </label>
-                    <div className="mt-1">
-                      <select
-                        id="categoryId"
-                        name="categoryId"
-                        value={formData.categoryId}
-                        onChange={handleChange}
-                        className={`block w-full px-3 py-2 border ${
-                          errors.categoryId ? 'border-red-300' : 'border-gray-300'
-                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                      >
-                        <option value="">Kategori Seçin</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.categoryId && (
-                        <p className="mt-2 text-sm text-red-600">{errors.categoryId}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Alt Kategori Seçimi */}
-                  {formData.categoryId && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Alt Kategoriler
-                      </label>
-                      <div className="mt-1">
-                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded-md">
-                          {filteredSubcategories.length > 0 ? (
-                            filteredSubcategories.map((subcategory) => (
-                              <div key={subcategory.id} className="flex items-center">
-                                <input
-                                  id={`subcategory-${subcategory.id}`}
-                                  name={`subcategory-${subcategory.id}`}
-                                  type="checkbox"
-                                  value={subcategory.id}
-                                  checked={selectedSubcategories.includes(subcategory.id)}
-                                  onChange={handleSubcategoryChange}
-                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                />
-                                <label
-                                  htmlFor={`subcategory-${subcategory.id}`}
-                                  className="ml-2 block text-sm text-gray-900"
-                                >
-                                  {subcategory.name}
-                                </label>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-sm text-gray-500 col-span-2 py-2">
-                              Bu kategori için alt kategori bulunamadı.
-                            </p>
-                          )}
-                        </div>
-                        {errors.subcategories && (
-                          <p className="mt-2 text-sm text-red-600">{errors.subcategories}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* İşletme Adresi */}
-                  <div>
-                    <label htmlFor="businessAddress" className="block text-sm font-medium text-gray-700">
-                      İşletme Adresi <span className="text-red-500">*</span>
-                    </label>
-                    <div className="mt-1">
-                      <textarea
-                        id="businessAddress"
-                        name="businessAddress"
-                        rows="3"
-                        value={formData.businessAddress}
-                        onChange={handleChange}
-                        className={`appearance-none block w-full px-3 py-2 border ${
-                          errors.businessAddress ? 'border-red-300' : 'border-gray-300'
-                        } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                      />
-                      {errors.businessAddress && (
-                        <p className="mt-2 text-sm text-red-600">{errors.businessAddress}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* İşletme Telefonu */}
-                  <div>
-                    <label htmlFor="businessPhone" className="block text-sm font-medium text-gray-700">
-                      İşletme Telefonu <span className="text-red-500">*</span>
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        id="businessPhone"
-                        name="businessPhone"
-                        type="tel"
-                        value={formData.businessPhone}
-                        onChange={handleChange}
-                        className={`appearance-none block w-full px-3 py-2 border ${
-                          errors.businessPhone ? 'border-red-300' : 'border-gray-300'
-                        } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                        placeholder="05XX XXX XX XX"
-                      />
-                      {errors.businessPhone && (
-                        <p className="mt-2 text-sm text-red-600">{errors.businessPhone}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* İşletme E-postası */}
-                  <div>
-                    <label htmlFor="businessEmail" className="block text-sm font-medium text-gray-700">
-                      İşletme E-postası <span className="text-red-500">*</span>
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        id="businessEmail"
-                        name="businessEmail"
-                        type="email"
-                        value={formData.businessEmail}
-                        onChange={handleChange}
-                        className={`appearance-none block w-full px-3 py-2 border ${
-                          errors.businessEmail ? 'border-red-300' : 'border-gray-300'
-                        } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                        placeholder="magaza@example.com"
-                      />
-                      {errors.businessEmail && (
-                        <p className="mt-2 text-sm text-red-600">{errors.businessEmail}</p>
-                      )}
-                      <p className="mt-1 text-xs text-gray-500">Bu e-posta müşteri iletişimi için kullanılacak</p>
-                      <p className="mt-1 text-xs text-blue-600 font-medium">
-                        ℹ️ Bu e-posta otomatik olarak giriş e-postanız olarak da ayarlanacak
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-lg font-medium text-gray-900 pt-4">Yetkili Bilgileri</h3>
-                </div>
-              )}
-
-              {/* Kişisel Bilgiler */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {/* Ad */}
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                    {formData.role === 'business' ? 'Yetkili Adı' : 'Ad'} <span className="text-red-500">*</span>
-                  </label>
-                  <div className="mt-1">
-                    <input
                       id="firstName"
                       name="firstName"
-                      type="text"
-                      required
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      className={`appearance-none block w-full px-3 py-2 border ${
-                        errors.firstName ? 'border-red-300' : 'border-gray-300'
-                      } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                        type="text"
+                      value={personalInfo.firstName}
+                      onChange={handlePersonalInfoChange}
+                      className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                        errors.firstName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Adınız"
                     />
-                    {errors.firstName && (
-                      <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
-                    )}
-                  </div>
+                    {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
                 </div>
 
-                {/* Soyad */}
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                    {formData.role === 'business' ? 'Yetkili Soyadı' : 'Soyad'} <span className="text-red-500">*</span>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Soyad <span className="text-red-500">*</span>
                   </label>
-                  <div className="mt-1">
                     <input
                       id="lastName"
                       name="lastName"
                       type="text"
-                      required
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      className={`appearance-none block w-full px-3 py-2 border ${
-                        errors.lastName ? 'border-red-300' : 'border-gray-300'
-                      } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                    />
-                    {errors.lastName && (
-                      <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
-                    )}
+                      value={personalInfo.lastName}
+                      onChange={handlePersonalInfoChange}
+                      className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                        errors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Soyadınız"
+                      />
+                    {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
+                    </div>
                   </div>
-                </div>
-              </div>
-
+                  
               {/* E-posta */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  {formData.role === 'business' ? 'Yetkili E-postası (Giriş E-postası)' : 'E-posta'} <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-1">
+                  <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    {accountType === 'business' ? 'Kişisel E-posta (Giriş için kullanılacak)' : 'E-posta'} <span className="text-red-500">*</span>
+                    </label>
                   <input
                     id="email"
                     name="email"
                     type="email"
-                    autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    readOnly={formData.role === 'business'}
-                    className={`appearance-none block w-full px-3 py-2 border ${
-                      errors.email ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                      formData.role === 'business' ? 'bg-gray-50 text-gray-600' : ''
+                    value={personalInfo.email}
+                    onChange={handlePersonalInfoChange}
+                    className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                      errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder={formData.role === 'business' ? 'yetkili@example.com' : 'ornek@example.com'}
+                    placeholder="ornek@example.com"
                   />
-                  {errors.email && (
-                    <p className="mt-2 text-sm text-red-600">{errors.email}</p>
-                  )}
-                  {formData.role === 'business' && (
-                    <p className="mt-1 text-xs text-blue-600 font-medium">
-                      ⚠️ Bu alan yukarıdaki işletme e-postası ile otomatik senkronize ediliyor
-                    </p>
-                  )}
-                </div>
-              </div>
+                  {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+                  {accountType === 'business' && (
+                    <p className="mt-1 text-xs text-blue-600">Bu e-posta adresiniz ile sisteme giriş yapacaksınız</p>
+                      )}
+                    </div>
 
               {/* Telefon */}
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  {formData.role === 'business' ? 'Yetkili Telefonu' : 'Telefon'} <span className="text-red-500">*</span>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    {accountType === 'business' ? 'Kişisel Telefon' : 'Telefon'} <span className="text-red-500">*</span>
                 </label>
-                <div className="mt-1">
                   <input
                     id="phone"
                     name="phone"
                     type="tel"
-                    autoComplete="tel"
-                    required
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={`appearance-none block w-full px-3 py-2 border ${
-                      errors.phone ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                    value={personalInfo.phone}
+                    onChange={handlePersonalInfoChange}
+                    className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                      errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="05XX XXX XX XX"
                   />
-                  {errors.phone && (
-                    <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Adres (sadece normal kullanıcılar için) */}
-              {formData.role === 'customer' && (
-                <>
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    {/* Şehir */}
+                  {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+                  </div>
+                  
+                {/* Şifre */}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="city" className="block text-sm font-medium text-gray-700">
-                        Şehir <span className="text-red-500">*</span>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                      Şifre <span className="text-red-500">*</span>
                       </label>
-                      <div className="mt-1">
-                        <input
-                          id="city"
-                          name="city"
-                          type="text"
-                          required
-                          value={formData.city}
-                          onChange={handleChange}
-                          className={`appearance-none block w-full px-3 py-2 border ${
-                            errors.city ? 'border-red-300' : 'border-gray-300'
-                          } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                          placeholder="İstanbul"
-                        />
-                        {errors.city && (
-                          <p className="mt-2 text-sm text-red-600">{errors.city}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* İlçe */}
-                    <div>
-                      <label htmlFor="district" className="block text-sm font-medium text-gray-700">
-                        İlçe <span className="text-red-500">*</span>
-                      </label>
-                      <div className="mt-1">
-                        <input
-                          id="district"
-                          name="district"
-                          type="text"
-                          required
-                          value={formData.district}
-                          onChange={handleChange}
-                          className={`appearance-none block w-full px-3 py-2 border ${
-                            errors.district ? 'border-red-300' : 'border-gray-300'
-                          } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                          placeholder="Kadıköy"
-                        />
-                        {errors.district && (
-                          <p className="mt-2 text-sm text-red-600">{errors.district}</p>
-                        )}
-                      </div>
-                    </div>
+                                <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={personalInfo.password}
+                      onChange={handlePersonalInfoChange}
+                      className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                        errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="En az 6 karakter"
+                    />
+                    {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
                   </div>
 
                   <div>
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      Detay Adres <span className="text-red-500">*</span>
-                    </label>
-                    <div className="mt-1">
-                      <textarea
-                        id="address"
-                        name="address"
-                        rows="3"
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                      Şifre Onayı <span className="text-red-500">*</span>
+                                </label>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      value={personalInfo.confirmPassword}
+                      onChange={handlePersonalInfoChange}
+                      className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                        errors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Şifrenizi tekrar girin"
+                    />
+                    {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+                              </div>
+                        </div>
+                      </div>
+
+              {/* Müşteri için adres bilgileri */}
+              {accountType === 'customer' && (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold mb-4 text-orange-600">Adres Bilgileri</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Şehir <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={addressInfo.city}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, city: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="İstanbul"
                         required
-                        value={formData.address}
-                        onChange={handleChange}
-                        className={`appearance-none block w-full px-3 py-2 border ${
-                          errors.address ? 'border-red-300' : 'border-gray-300'
-                        } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                        placeholder="Mahalle, sokak, apartman no, daire no gibi detayları yazınız"
                       />
-                      {errors.address && (
-                        <p className="mt-2 text-sm text-red-600">{errors.address}</p>
-                      )}
+                      {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                    </div>
+                  
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İlçe <span className="text-red-500">*</span>
+                    </label>
+                      <input
+                        type="text"
+                        value={addressInfo.district}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, district: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Kadıköy"
+                        required
+                      />
+                      {errors.district && <p className="text-red-500 text-xs mt-1">{errors.district}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mahalle <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={addressInfo.neighborhood}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, neighborhood: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Caddebostan Mahallesi"
+                        required
+                      />
+                      {errors.neighborhood && <p className="text-red-500 text-xs mt-1">{errors.neighborhood}</p>}
+                  </div>
+                  
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Sokak/Cadde <span className="text-red-500">*</span>
+                    </label>
+                      <input
+                        type="text"
+                        value={addressInfo.street}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, street: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Bağdat Caddesi"
+                        required
+                      />
+                      {errors.street && <p className="text-red-500 text-xs mt-1">{errors.street}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bina No
+                      </label>
+                      <input
+                        type="text"
+                        value={addressInfo.buildingNo}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, buildingNo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="123"
+                      />
+                  </div>
+                  
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Kat
+                    </label>
+                      <input
+                        type="text"
+                        value={addressInfo.floor}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, floor: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="2"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Daire No
+                      </label>
+                      <input
+                        type="text"
+                        value={addressInfo.apartmentNo}
+                        onChange={(e) => setAddressInfo({ ...addressInfo, apartmentNo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="5"
+                      />
                     </div>
                   </div>
-                </>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Adres Tarifi (Opsiyonel)
+                    </label>
+                    <textarea
+                      value={addressInfo.directions}
+                      onChange={(e) => setAddressInfo({ ...addressInfo, directions: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      rows="3"
+                      placeholder="Ek adres bilgileri, tarif..."
+                    />
+                  </div>
+                </div>
               )}
 
-              {/* Şifre */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Şifre <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`appearance-none block w-full px-3 py-2 border ${
-                      errors.password ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  />
-                  {errors.password && (
-                    <p className="mt-2 text-sm text-red-600">{errors.password}</p>
-                  )}
+              {/* İş ortağı için yetkili kişi adres bilgileri */}
+              {accountType === 'business' && (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold mb-4 text-orange-600">Yetkili Kişi Adres Bilgileri</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Şehir <span className="text-red-500">*</span>
+                  </label>
+                    <input
+                      type="text"
+                        value={ownerAddressInfo.city}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, city: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="İstanbul"
+                      required
+                    />
+                      {errors.ownerCity && <p className="text-red-500 text-xs mt-1">{errors.ownerCity}</p>}
                 </div>
-              </div>
 
-              {/* Şifre Onayı */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Şifre Onayı <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`appearance-none block w-full px-3 py-2 border ${
-                      errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  />
-                  {errors.confirmPassword && (
-                    <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>
-                  )}
-                </div>
+                <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İlçe <span className="text-red-500">*</span>
+                  </label>
+                    <input
+                      type="text"
+                        value={ownerAddressInfo.district}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, district: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Kadıköy"
+                      required
+                    />
+                      {errors.ownerDistrict && <p className="text-red-500 text-xs mt-1">{errors.ownerDistrict}</p>}
               </div>
 
               <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mahalle <span className="text-red-500">*</span>
+                </label>
+                  <input
+                        type="text"
+                        value={ownerAddressInfo.neighborhood}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, neighborhood: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Caddebostan Mahallesi"
+                    required
+                      />
+                      {errors.ownerNeighborhood && <p className="text-red-500 text-xs mt-1">{errors.ownerNeighborhood}</p>}
+              </div>
+
+              <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Sokak/Cadde <span className="text-red-500">*</span>
+                </label>
+                  <input
+                        type="text"
+                        value={ownerAddressInfo.street}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, street: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Bağdat Caddesi"
+                    required
+                  />
+                      {errors.ownerStreet && <p className="text-red-500 text-xs mt-1">{errors.ownerStreet}</p>}
+                </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bina No
+                      </label>
+                      <input
+                        type="text"
+                        value={ownerAddressInfo.buildingNo}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, buildingNo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="123"
+                      />
+              </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Kat
+                      </label>
+                        <input
+                          type="text"
+                        value={ownerAddressInfo.floor}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, floor: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="2"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Daire No
+                      </label>
+                        <input
+                          type="text"
+                        value={ownerAddressInfo.apartmentNo}
+                        onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, apartmentNo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="5"
+                        />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Adres Tarifi (Opsiyonel)
+                    </label>
+                      <textarea
+                      value={ownerAddressInfo.directions}
+                      onChange={(e) => setOwnerAddressInfo({ ...ownerAddressInfo, directions: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        rows="3"
+                      placeholder="Ek adres bilgileri, tarif..."
+                      />
+                    </div>
+                  </div>
+              )}
+
+              {/* İş ortağı için işletme bilgileri */}
+              {accountType === 'business' && (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold mb-4 text-orange-600">İşletme Bilgileri</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İşletme Adı <span className="text-red-500">*</span>
+                </label>
+                  <input
+                        type="text"
+                        value={businessInfo.businessName}
+                        onChange={(e) => setBusinessInfo({ ...businessInfo, businessName: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Restoran Adı"
+                    required
+                  />
+                      {errors.businessName && <p className="text-red-500 text-xs mt-1">{errors.businessName}</p>}
+                </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İşletme E-postası <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={businessInfo.businessEmail}
+                        onChange={(e) => setBusinessInfo({ ...businessInfo, businessEmail: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="restoran@example.com"
+                        required
+                      />
+                      {errors.businessEmail && <p className="text-red-500 text-xs mt-1">{errors.businessEmail}</p>}
+              </div>
+
+              <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İşletme Telefonu <span className="text-red-500">*</span>
+                </label>
+                  <input
+                        type="tel"
+                        value={businessInfo.businessPhone}
+                        onChange={(e) => setBusinessInfo({ ...businessInfo, businessPhone: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="0212 XXX XXXX"
+                    required
+                  />
+                      {errors.businessPhone && <p className="text-red-500 text-xs mt-1">{errors.businessPhone}</p>}
+                </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Kategori <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={businessInfo.categoryId}
+                        onChange={(e) => setBusinessInfo({ ...businessInfo, categoryId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        required
+                      >
+                        <option value="">Kategori Seçin</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>{category.name}</option>
+                        ))}
+                      </select>
+                      {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId}</p>}
+              </div>
+
+              <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İşletme Şehri <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={businessInfo.businessCity}
+                        onChange={(e) => setBusinessInfo({ ...businessInfo, businessCity: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="İstanbul"
+                        required
+                      />
+                      {errors.businessCity && <p className="text-red-500 text-xs mt-1">{errors.businessCity}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İşletme İlçesi <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={businessInfo.businessDistrict}
+                        onChange={(e) => setBusinessInfo({ ...businessInfo, businessDistrict: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Kadıköy"
+                        required
+                      />
+                      {errors.businessDistrict && <p className="text-red-500 text-xs mt-1">{errors.businessDistrict}</p>}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      İşletme Adresi <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={businessInfo.businessAddress}
+                      onChange={(e) => setBusinessInfo({ ...businessInfo, businessAddress: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      rows="3"
+                      placeholder="Detay adres bilgileri..."
+                      required
+                    />
+                    {errors.businessAddress && <p className="text-red-500 text-xs mt-1">{errors.businessAddress}</p>}
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      İşletme Açıklaması
+                    </label>
+                    <textarea
+                      value={businessInfo.businessDescription}
+                      onChange={(e) => setBusinessInfo({ ...businessInfo, businessDescription: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      rows="3"
+                      placeholder="İşletmenizi tanıtın..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="pt-6">
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -845,6 +994,7 @@ Onay durumunuzu profil sayfanızdan takip edebilirsiniz.`);
             </form>
           )}
           
+          {/* Footer */}
           <div className="text-center mt-8">
             <p className="text-gray-600 text-base">
               Zaten hesabınız var mı?{' '}

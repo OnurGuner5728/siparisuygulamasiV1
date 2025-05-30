@@ -300,7 +300,7 @@ function CheckoutContent() {
             </Link>
             <Link 
               href="/" 
-              className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+              className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 dark:bg-gray-900"
             >
               Ana Sayfaya Dön
             </Link>
@@ -391,7 +391,7 @@ function CheckoutContent() {
               <div className="mt-6 flex justify-between">
                 <Link 
                   href="/profil/adresler"
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-900"
                 >
                   Adres Ekle
                 </Link>
@@ -535,7 +535,7 @@ function CheckoutContent() {
               <div className="mt-6 flex justify-between">
                 <button
                   onClick={() => setActiveStep(1)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-900"
                 >
                   Geri
                 </button>

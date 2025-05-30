@@ -163,6 +163,20 @@ function AdminStoresContent() {
         status: newStatus
       });
       
+      // Mağaza sahibine bildirim gönder
+      try {
+        await api.createStoreApprovalNotification(
+          storeId,
+          store.name,
+          store.owner_id,
+          newApprovalStatus
+        );
+        console.log('✅ Mağaza onay bildirimi gönderildi');
+      } catch (notificationError) {
+        console.error('❌ Mağaza onay bildirimi gönderilemedi:', notificationError);
+        // Bildirim hatası ana işlemi etkilemesin
+      }
+      
       // UI'ı güncelle
       const updatedStores = allStores.map(s => {
         if (s.id === storeId) {
@@ -266,21 +280,21 @@ function AdminStoresContent() {
               <option value="approved">Onaylanmış</option>
               <option value="pending">Onay Bekleyen</option>
             </select>
-            <Link 
-              href="/admin/stores/add"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center"
+            <button 
+              disabled
+              className="bg-gray-400 cursor-not-allowed text-white font-semibold py-2 px-4 rounded inline-flex items-center opacity-50"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              Yeni Mağaza
-            </Link>
+              Yeni Mağaza (Geçici Olarak Kapalı)
+            </button>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mağaza
@@ -307,7 +321,7 @@ function AdminStoresContent() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentStores.map((store) => (
-                <tr key={store.id} className="hover:bg-gray-50">
+                <tr key={store.id} className="hover:bg-gray-50 dark:bg-gray-900">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -407,7 +421,7 @@ function AdminStoresContent() {
                 className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                   currentPage === 1
                     ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    : 'text-gray-700 bg-white hover:bg-gray-50'
+                    : 'text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900'
                 }`}
               >
                 Önceki
@@ -431,7 +445,7 @@ function AdminStoresContent() {
                     className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                       currentPage === pageNumber
                         ? 'z-10 bg-blue-600 text-white'
-                        : 'text-gray-700 bg-white hover:bg-gray-50'
+                        : 'text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900'
                     }`}
                   >
                     {pageNumber}
@@ -444,7 +458,7 @@ function AdminStoresContent() {
                 className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                   currentPage === totalPages
                     ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    : 'text-gray-700 bg-white hover:bg-gray-50'
+                    : 'text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-900'
                 }`}
               >
                 Sonraki

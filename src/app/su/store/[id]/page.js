@@ -282,9 +282,9 @@ export default function SuStoreDetailPage({ params }) {
       <div className="relative">
         {/* Large Image Area */}
         <div className="h-80 bg-gray-300 relative overflow-hidden">
-          {store.cover_image_url || store.logo ? (
+          {store.banner_url || store.logo_url ? (
             <img
-              src={store.cover_image_url || store.logo}
+              src={store.banner_url || store.logo_url}
               alt={store.name}
                 className="w-full h-full object-cover"
             />

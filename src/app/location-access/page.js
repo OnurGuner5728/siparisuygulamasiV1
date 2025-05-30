@@ -177,7 +177,7 @@ export default function LocationAccess() {
                   <button
                     key={index}
                     onClick={() => selectAddress(suggestion)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center"
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:bg-gray-900 flex items-center"
                   >
                     <FiMapPin className="text-gray-400 mr-3 flex-shrink-0" />
                     <span>{suggestion}</span>

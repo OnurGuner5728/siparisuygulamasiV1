@@ -78,14 +78,14 @@ function ModulesManagementContent() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-12">
       {/* Başlık */}
       <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
@@ -188,7 +188,7 @@ function ModulesManagementContent() {
 
 function ModuleCard({ name, title, description, enabled, onToggle }) {
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:bg-gray-900">
       <div>
         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
         <p className="text-gray-600">{description}</p>

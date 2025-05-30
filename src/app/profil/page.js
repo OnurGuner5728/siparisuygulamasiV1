@@ -23,6 +23,7 @@ import {
   FiXCircle
 } from 'react-icons/fi';
 import { getUserStats } from '@/lib/api';
+import api from '@/lib/api';
 
 export default function Profile() {
   return (
@@ -54,6 +55,13 @@ function ProfileContent() {
         
         // Kullanıcı istatistiklerini database'den çek
         const stats = await getUserStats(user?.id);
+        console.log('📊 Debug - getUserStats result:', stats);
+        
+        // Debug: Adresleri direkt çek ve say
+        const directAddresses = await api.getUserAddresses(user?.id);
+        console.log('📍 Debug - Direct address count:', directAddresses?.length);
+        console.log('📍 Debug - Direct addresses:', directAddresses);
+        
         setUserStats(stats);
       } catch (error) {
         console.error('Kullanıcı istatistikleri yüklenemedi:', error);
@@ -69,7 +77,7 @@ function ProfileContent() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row">
             <ProfileSidebar activeTab="profile" />
@@ -105,7 +113,7 @@ function ProfileContent() {
 
   if (!user) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Kullanıcı bilgisi yüklenemedi</h2>
           <p className="text-gray-500">Lütfen sayfayı yenileyin veya tekrar giriş yapın.</p>
@@ -143,7 +151,7 @@ function ProfileContent() {
   const roleInfo = getRoleInfo(user?.role);
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="flex flex-col md:flex-row md:gap-8">
           <ProfileSidebar activeTab="profile" />

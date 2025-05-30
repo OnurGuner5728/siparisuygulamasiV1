@@ -46,24 +46,24 @@ function AdminReportsContent() {
 
         // Rapor verilerini hesapla
         const salesReport = {
-          total: ordersData.reduce((sum, order) => sum + order.total, 0),
-          todayTotal: ordersData.filter(order => new Date(order.order_date).setHours(0,0,0,0) === today.setHours(0,0,0,0)).reduce((sum, order) => sum + order.total, 0),
+          total: ordersData.reduce((sum, order) => sum + order.total_amount, 0),
+          todayTotal: ordersData.filter(order => new Date(order.order_date).setHours(0,0,0,0) === today.setHours(0,0,0,0)).reduce((sum, order) => sum + order.total_amount, 0),
           weeklyTotal: ordersData.filter(order => {
             const orderDate = new Date(order.order_date);
             return orderDate >= weekAgo && orderDate <= today;
-          }).reduce((sum, order) => sum + order.total, 0),
+          }).reduce((sum, order) => sum + order.total_amount, 0),
           monthlyTotal: ordersData.filter(order => {
             const orderDate = new Date(order.order_date);
             return orderDate >= monthAgo && orderDate <= today;
-          }).reduce((sum, order) => sum + order.total, 0),
-          averageOrderValue: ordersData.length > 0 ? ordersData.reduce((sum, order) => sum + order.total, 0) / ordersData.length : 0,
+          }).reduce((sum, order) => sum + order.total_amount, 0),
+          averageOrderValue: ordersData.length > 0 ? ordersData.reduce((sum, order) => sum + order.total_amount, 0) / ordersData.length : 0,
           byCategory: mainCategoriesData.reduce((acc, category) => {
             acc[category.name] = ordersData
               .filter(order => {
                 const store = storesData.find(s => s.id === order.store_id);
                 return store && store.category_id === category.id;
               })
-              .reduce((sum, order) => sum + order.total, 0);
+              .reduce((sum, order) => sum + order.total_amount, 0);
             return acc;
           }, {}),
         };
@@ -125,7 +125,7 @@ function AdminReportsContent() {
               ...store,
               totalRevenue: ordersData
                 .filter(order => order.store_id === store.id)
-                .reduce((sum, order) => sum + order.total, 0),
+                .reduce((sum, order) => sum + order.total_amount, 0),
               ordersCount: ordersData.filter(order => order.store_id === store.id).length,
             }))
             .filter(store => store.totalRevenue > 0)
@@ -472,7 +472,7 @@ function AdminReportsContent() {
       case 'in_progress': return 'bg-blue-500';
       case 'delivered': return 'bg-green-500';
       case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-gray-50 dark:bg-gray-9000';
     }
   };
 
@@ -481,20 +481,20 @@ function AdminReportsContent() {
       case 'user': return 'bg-blue-500';
       case 'store': return 'bg-green-500';
       case 'admin': return 'bg-purple-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-gray-50 dark:bg-gray-9000';
     }
   };
 
   const getCategoryColorByName = (categoryName) => {
     const category = mainCategories.find(cat => cat.name === categoryName);
-    if (!category) return 'bg-gray-500'; // Varsayılan renk
+    if (!category) return 'bg-gray-50 dark:bg-gray-9000'; // Varsayılan renk
 
     switch (category.id) { // ID'ye göre renk ataması daha tutarlı olabilir
       case 1: return 'bg-red-500'; // Yemek
       case 2: return 'bg-teal-500'; // Market (Orjinalde #4ECDC4, teal'e yakın)
       case 3: return 'bg-sky-500'; // Su (Orjinalde #1A85FF, sky'a yakın)
       case 4: return 'bg-purple-500'; // Aktüel (Orjinalde #9649CB, purple'a yakın)
-      default: return 'bg-gray-500';
+      default: return 'bg-gray-50 dark:bg-gray-9000';
     }
   };
 

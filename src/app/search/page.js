@@ -98,15 +98,15 @@ function SearchContent() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Arama Başlığı */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center">
             {/* Geri Butonu */}
             <button 
               onClick={() => router.back()} 
-              className="mr-3 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              className="mr-3 p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
               aria-label="Geri"
             >
               <FiArrowLeft size={20} />
@@ -123,7 +123,7 @@ function SearchContent() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full bg-gray-100 border-0 rounded-full py-2 pl-10 pr-12 focus:ring-2 focus:ring-orange-500 focus:bg-white"
+                className="w-full bg-gray-100 dark:bg-gray-700 border-0 rounded-full py-2 pl-10 pr-12 focus:ring-2 focus:ring-orange-500 focus:bg-white dark:focus:bg-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Ne aramıştınız?"
                 autoFocus
               />
@@ -131,7 +131,7 @@ function SearchContent() {
               {query && (
                 <button 
                   onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <FiX />
                 </button>
@@ -141,7 +141,7 @@ function SearchContent() {
             {/* Filtre Butonu */}
             <button 
               onClick={goToFilters}
-              className="ml-3 p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              className="ml-3 p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
               aria-label="Filtrele"
             >
               <FiFilter size={20} />
@@ -149,12 +149,12 @@ function SearchContent() {
           </div>
           
           {/* Sekmeler: Restoranlar / Ürünler */}
-          <div className="flex mt-3 border-b">
+          <div className="flex mt-3 border-b dark:border-gray-700">
             <button
               className={`flex-1 py-2 px-4 text-center ${
                 activeTab === 'stores' 
                   ? 'text-orange-600 border-b-2 border-orange-600 font-medium' 
-                  : 'text-gray-600'
+                  : 'text-gray-600 dark:text-gray-400'
               }`}
               onClick={() => setActiveTab('stores')}
             >
@@ -164,7 +164,7 @@ function SearchContent() {
               className={`flex-1 py-2 px-4 text-center ${
                 activeTab === 'products' 
                   ? 'text-orange-600 border-b-2 border-orange-600 font-medium' 
-                  : 'text-gray-600'
+                  : 'text-gray-600 dark:text-gray-400'
               }`}
               onClick={() => setActiveTab('products')}
             >
@@ -175,7 +175,7 @@ function SearchContent() {
       </div>
       
       {/* Kategori ve Sıralama Filtreleri */}
-      <div className="bg-white shadow-sm mb-4 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 shadow-sm mb-4 overflow-hidden">
         <div className="container mx-auto px-4 py-3">
           {/* Kategori Kaydırma Listesi */}
           <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -186,7 +186,7 @@ function SearchContent() {
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${
                   selectedCategory === category
                     ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 {category}
@@ -195,8 +195,8 @@ function SearchContent() {
           </div>
           
           {/* Sıralama Seçenekleri */}
-          <div className="flex justify-between items-center mt-3 pt-3 border-t">
-            <div className="text-sm text-gray-500">
+          <div className="flex justify-between items-center mt-3 pt-3 border-t dark:border-gray-700">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {searchResults.length > 0 ? `${searchResults.length} sonuç bulundu` : ''}
             </div>
             

@@ -92,7 +92,7 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
         <div className="container mx-auto px-4 py-16">
@@ -212,7 +212,7 @@ export default function HelpPage() {
                     <div key={faq.id} className="border border-gray-200 rounded-lg">
                       <button
                         onClick={() => toggleFAQ(faq.id)}
-                        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
                       >
                         <span className="font-semibold text-gray-900">{faq.question}</span>
                         {openFAQ === faq.id ? (

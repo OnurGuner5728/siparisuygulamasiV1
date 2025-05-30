@@ -4,7 +4,7 @@ import { FiTarget, FiEye, FiHeart, FiUsers, FiTruck, FiSmartphone } from 'react-
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
         <div className="container mx-auto px-4 py-16">
@@ -205,7 +205,7 @@ export default function AboutPage() {
       </div>
 
       {/* Contact CTA */}
-      <div className="bg-gray-50 py-16">
+      <div className="bg-gray-50 dark:bg-gray-900 py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">

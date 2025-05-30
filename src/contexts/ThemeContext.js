@@ -29,6 +29,9 @@ export const ThemeProvider = ({ children }) => {
           }
         } catch (error) {
           console.error('❌ Tema ayarları yüklenirken hata:', error);
+          // Hata durumunda localStorage'dan yükle
+          const savedTheme = localStorage.getItem('theme') || 'light';
+          applyTheme(savedTheme);
         }
       } else {
         // Kullanıcı giriş yapmamışsa localStorage'dan tema yükle
@@ -58,9 +61,25 @@ export const ThemeProvider = ({ children }) => {
 
   const applySystemTheme = () => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const actualTheme = isDark ? 'dark' : 'light';
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(actualTheme);
+    
+    // Tailwind class-based dark mode kullanıyoruz
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // Meta theme-color tag'ini güncelle
+    updateMetaThemeColor(isDark ? 'dark' : 'light');
+    
+    console.log('🌓 Sistem teması uygulandı:', isDark ? 'dark' : 'light');
+  };
+
+  const updateMetaThemeColor = (actualTheme) => {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', actualTheme === 'dark' ? '#0a0a0a' : '#ffffff');
+    }
   };
 
   const applyTheme = (newTheme) => {
@@ -68,15 +87,22 @@ export const ThemeProvider = ({ children }) => {
     
     if (newTheme === 'auto') {
       applySystemTheme();
+    } else if (newTheme === 'dark') {
+      // Dark tema - Tailwind'in dark class'ını ekle
+      document.documentElement.classList.add('dark');
+      updateMetaThemeColor('dark');
     } else {
-      document.documentElement.classList.remove('light', 'dark');
-      document.documentElement.classList.add(newTheme);
+      // Light tema (varsayılan) - dark class'ını kaldır
+      document.documentElement.classList.remove('dark');
+      updateMetaThemeColor('light');
     }
 
     // Kullanıcı yoksa localStorage'a kaydet
     if (!user) {
       localStorage.setItem('theme', newTheme);
     }
+    
+    console.log('✅ Tema uygulandı:', newTheme);
   };
 
   const changeTheme = async (newTheme) => {
@@ -84,7 +110,11 @@ export const ThemeProvider = ({ children }) => {
       if (user) {
         // Kullanıcı giriş yapmışsa database'e kaydet
         await api.updateUserSettings(user.id, { theme: newTheme });
-        console.log('✅ Tema ayarı kaydedildi:', newTheme);
+        console.log('✅ Tema ayarı database\'e kaydedildi:', newTheme);
+      } else {
+        // Kullanıcı giriş yapmamışsa localStorage'a kaydet
+        localStorage.setItem('theme', newTheme);
+        console.log('✅ Tema ayarı localStorage\'a kaydedildi:', newTheme);
       }
       
       applyTheme(newTheme);
@@ -102,11 +132,53 @@ export const ThemeProvider = ({ children }) => {
     return theme;
   };
 
+  const isDarkMode = () => {
+    return getActualTheme() === 'dark';
+  };
+
+  const isLightMode = () => {
+    return getActualTheme() === 'light';
+  };
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case 'light':
+        return '☀️';
+      case 'dark':
+        return '🌙';
+      case 'auto':
+        return '🌓';
+      default:
+        return '☀️';
+    }
+  };
+
+  const getThemeLabel = () => {
+    switch (theme) {
+      case 'light':
+        return 'Açık Tema';
+      case 'dark':
+        return 'Koyu Tema';
+      case 'auto':
+        return 'Sistem Ayarı';
+      default:
+        return 'Açık Tema';
+    }
+  };
+
   const value = {
     theme,
     actualTheme: getActualTheme(),
     changeTheme,
-    loading
+    loading,
+    isDarkMode,
+    isLightMode,
+    getThemeIcon,
+    getThemeLabel,
+    // Tema durumu kontrolleri
+    isAuto: theme === 'auto',
+    isLight: theme === 'light',
+    isDark: theme === 'dark'
   };
 
   return (

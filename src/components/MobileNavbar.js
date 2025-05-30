@@ -102,9 +102,23 @@ export default function MobileNavbar({ onCartClick }) {
                 ? 'bg-orange-100 text-orange-600' 
                 : 'text-gray-500 hover:text-orange-500 hover:bg-orange-50'
             }`}>
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
-              </svg>
+              {user?.role === 'store' && user?.storeInfo?.logo_url && user.storeInfo.logo_url.trim() !== '' ? (
+                <img 
+                  src={user.storeInfo.logo_url} 
+                  alt={user.storeInfo.name || 'Mağaza'}
+                  className="w-6 h-6 rounded-full object-cover"
+                />
+              ) : user?.avatar_url ? (
+                <img 
+                  src={user.avatar_url} 
+                  alt={user?.name || 'Kullanıcı'}
+                  className="w-6 h-6 rounded-full object-cover"
+                />
+              ) : (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                </svg>
+              )}
             </div>
             <span className={`text-xs mt-1 text-center ${
               isActive('/profil') && !isActive('/profil/siparisler') ? 'text-orange-600 font-medium' : 'text-gray-500'

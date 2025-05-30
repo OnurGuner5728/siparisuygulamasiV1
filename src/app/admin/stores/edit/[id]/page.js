@@ -30,13 +30,7 @@ function EditStoreContent({ promiseParams }) {
     description: '',
     address: '',
     status: 'active',
-    approved: true,
-    module_permissions: { // enable_ prefix'i olmadan
-      yemek: false,
-      market: false,
-      su: false,
-      aktuel: false
-    },
+    is_approved: true,
     workingHours: { // workingHours olarak değiştirildi ve string format
       monday: '',
       tuesday: '',
@@ -46,12 +40,10 @@ function EditStoreContent({ promiseParams }) {
       saturday: '',
       sunday: ''
     },
-    delivery_settings: { // Teslimat ayarları için state eklendi
-      min_order_amount: 0,
-      delivery_fee: 0,
-      free_delivery_threshold: 0,
-      delivery_time_estimation: '', // Örneğin "30-45 dk"
-    },
+    delivery_fee: 0,
+    delivery_time_min: 30,
+    delivery_time_max: 60,
+    minimum_order_amount: 0,
     logo_url: '', // Logo URL'i için state eklendi
     banner_url: '', // Banner URL'i için state eklendi
     commission_rate: 0, // Komisyon oranı
@@ -135,20 +127,12 @@ function EditStoreContent({ promiseParams }) {
               description: storeData.description || '',
               address: storeData.address || '',
               status: storeData.status || 'active',
-              approved: storeData.is_approved !== undefined ? storeData.is_approved : true,
-              module_permissions: { // enable_ prefix'lerini kaldırarak state'e ata
-                yemek: storeData.module_permissions?.enable_yemek || false,
-                market: storeData.module_permissions?.enable_market || false,
-                su: storeData.module_permissions?.enable_su || false,
-                aktuel: storeData.module_permissions?.enable_aktuel || false
-              },
+              is_approved: storeData.is_approved !== undefined ? storeData.is_approved : true,
               workingHours: workingHoursData,
-              delivery_settings: { // Teslimat ayarları düzenle
-                min_order_amount: storeData.delivery_settings?.min_order_amount || 0,
-                delivery_fee: storeData.delivery_settings?.delivery_fee || 0,
-                free_delivery_threshold: storeData.delivery_settings?.free_delivery_threshold || 0,
-                delivery_time_estimation: storeData.delivery_settings?.delivery_time_estimation || '',
-              },
+              delivery_fee: storeData.delivery_fee || 0,
+              delivery_time_min: storeData.delivery_time_min || 30,
+              delivery_time_max: storeData.delivery_time_max || 60,
+              minimum_order_amount: storeData.minimum_order_amount || 0,
               logo_url: storeData.logo_url || '',
               banner_url: storeData.banner_url || '',
               commission_rate: storeData.commission_rate || 0,
@@ -203,30 +187,9 @@ function EditStoreContent({ promiseParams }) {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    if (name.startsWith('module-')) {
-      const moduleName = name.replace('module-', '');
-      setFormData(prev => ({
-        ...prev,
-        module_permissions: {
-          ...prev.module_permissions,
-          [moduleName]: checked
-        }
-      }));
-    } else if (name === 'approved') {
+    if (name === 'is_approved') {
       setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (name.includes('.')) { // delivery_settings için
-        const [parent, dayOrField, field] = name.split('.');
-        if (!field) { // delivery_settings.min_order_amount
-             setFormData(prev => ({
-                ...prev,
-                [parent]: {
-                    ...prev[parent],
-                    [dayOrField]: type === 'number' ? parseFloat(value) : value
-                }
-            }));
-        }
-    }
-    else {
+    } else {
       setFormData(prev => ({
         ...prev,
         [name]: type === 'number' ? parseFloat(value) : value
@@ -253,12 +216,6 @@ function EditStoreContent({ promiseParams }) {
         throw new Error('Lütfen geçerli bir telefon numarası girin.');
       }
       
-      // Supabase'e gönderilecek module_permissions objesini hazırla
-      const modulePermissionsForSupabase = {};
-      for (const key in formData.module_permissions) {
-        modulePermissionsForSupabase[`enable_${key}`] = formData.module_permissions[key];
-      }
-
       // WorkingHours'u temizle - boş string'leri "Kapalı" yap
       const cleanWorkingHours = {};
       for (const [day, value] of Object.entries(formData.workingHours)) {
@@ -267,8 +224,7 @@ function EditStoreContent({ promiseParams }) {
 
       const updateData = {
         ...formData,
-        module_permissions: modulePermissionsForSupabase,
-        workingHours: cleanWorkingHours,
+        workingHours: JSON.stringify(cleanWorkingHours),
         // category_id zaten formData içinde doğru isimle bulunuyor.
         // owner_id de formData içinde doğru isimle bulunuyor.
       };
@@ -520,13 +476,13 @@ function EditStoreContent({ promiseParams }) {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                id="approved"
-                name="approved"
-                checked={Boolean(formData.approved)}
+                id="is_approved"
+                name="is_approved"
+                checked={Boolean(formData.is_approved)}
                 onChange={handleChange}
                 className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
               />
-              <label htmlFor="approved" className="text-sm font-medium text-gray-700">
+              <label htmlFor="is_approved" className="text-sm font-medium text-gray-700">
                 Onaylandı
               </label>
             </div>
@@ -572,25 +528,6 @@ function EditStoreContent({ promiseParams }) {
                 Mağaza sahibinin komisyon ödemelerini yapabileceği ödeme sayfası linki
               </p>
             </div>
-          </div>
-
-          <h2 className="text-xl font-semibold mb-4 mt-8 text-gray-700">Modül İzinleri</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {Object.keys(formData.module_permissions).map(moduleName => (
-              <div key={moduleName} className="flex items-center">
-                <input
-                  type="checkbox"
-                  id={`module-${moduleName}`}
-                  name={`module-${moduleName}`}
-                  checked={Boolean(formData.module_permissions[moduleName])}
-                  onChange={handleChange}
-                  className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
-                />
-                <label htmlFor={`module-${moduleName}`} className="text-sm font-medium text-gray-700 capitalize">
-                  {moduleName}
-                </label>
-              </div>
-            ))}
           </div>
 
           <h2 className="text-xl font-semibold mb-4 mt-8 text-gray-700">Çalışma Saatleri</h2>
@@ -740,29 +677,29 @@ function EditStoreContent({ promiseParams }) {
           <h2 className="text-xl font-semibold mb-4 mt-8 text-gray-700">Teslimat Ayarları</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label htmlFor="delivery_settings.min_order_amount" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="minimum_order_amount" className="block text-sm font-medium text-gray-700 mb-1">
                 Minimum Sipariş Tutarı (TL)
               </label>
               <input
                 type="number"
-                id="delivery_settings.min_order_amount"
-                name="delivery_settings.min_order_amount"
-                value={formData.delivery_settings.min_order_amount}
+                id="minimum_order_amount"
+                name="minimum_order_amount"
+                value={formData.minimum_order_amount}
                 onChange={handleChange}
                 min="0"
                 step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-             <div>
-              <label htmlFor="delivery_settings.delivery_fee" className="block text-sm font-medium text-gray-700 mb-1">
+            <div>
+              <label htmlFor="delivery_fee" className="block text-sm font-medium text-gray-700 mb-1">
                 Teslimat Ücreti (TL)
               </label>
               <input
                 type="number"
-                id="delivery_settings.delivery_fee"
-                name="delivery_settings.delivery_fee"
-                value={formData.delivery_settings.delivery_fee}
+                id="delivery_fee"
+                name="delivery_fee"
+                value={formData.delivery_fee}
                 onChange={handleChange}
                 min="0"
                 step="0.01"
@@ -770,32 +707,33 @@ function EditStoreContent({ promiseParams }) {
               />
             </div>
             <div>
-              <label htmlFor="delivery_settings.free_delivery_threshold" className="block text-sm font-medium text-gray-700 mb-1">
-                Ücretsiz Teslimat Eşiği (TL)
+              <label htmlFor="delivery_time_min" className="block text-sm font-medium text-gray-700 mb-1">
+                Minimum Teslimat Süresi (dakika)
               </label>
               <input
                 type="number"
-                id="delivery_settings.free_delivery_threshold"
-                name="delivery_settings.free_delivery_threshold"
-                value={formData.delivery_settings.free_delivery_threshold}
+                id="delivery_time_min"
+                name="delivery_time_min"
+                value={formData.delivery_time_min}
                 onChange={handleChange}
                 min="0"
-                step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Örn: 30"
               />
             </div>
             <div>
-              <label htmlFor="delivery_settings.delivery_time_estimation" className="block text-sm font-medium text-gray-700 mb-1">
-                Tahmini Teslimat Süresi
+              <label htmlFor="delivery_time_max" className="block text-sm font-medium text-gray-700 mb-1">
+                Maksimum Teslimat Süresi (dakika)
               </label>
               <input
-                type="text"
-                id="delivery_settings.delivery_time_estimation"
-                name="delivery_settings.delivery_time_estimation"
-                value={formData.delivery_settings.delivery_time_estimation}
+                type="number"
+                id="delivery_time_max"
+                name="delivery_time_max"
+                value={formData.delivery_time_max}
                 onChange={handleChange}
+                min="0"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Örn: 30-45 dk"
+                placeholder="Örn: 60"
               />
             </div>
           </div>

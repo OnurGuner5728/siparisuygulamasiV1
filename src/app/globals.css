@@ -1,394 +1,266 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@tailwind base;
 
 /* Google Fonts import */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Nunito+Sans:wght@300;400;600;700&display=swap');
 
-:root {
-  /* Temel renk paletimiz */
-  --color-primary: #FF6B6B;
-  --color-primary-light: #FF8E8E;
-  --color-primary-dark: #E05151;
-  
-  --color-secondary: #4ECDC4;
-  --color-secondary-light: #7AD9D3;
-  --color-secondary-dark: #3AABA3;
-  
-  --color-accent: #FFB347;
-  --color-accent-light: #FFC575;
-  --color-accent-dark: #E09A3A;
-  
-  --color-success: #6BCB77;
-  --color-warning: #FFD166;
-  --color-danger: #EF476F;
-  --color-info: #4EA8DE;
-  
-  /* Gri tonları */
-  --color-gray-50: #F9FAFB;
-  --color-gray-100: #F3F4F6;
-  --color-gray-200: #E5E7EB;
-  --color-gray-300: #D1D5DB;
-  --color-gray-400: #9CA3AF;
-  --color-gray-500: #6B7280;
-  --color-gray-600: #4B5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1F2937;
-  --color-gray-900: #111827;
-  
-  /* Theme-specific colors */
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-/* Açık tema */
-.light {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --popover: #ffffff;
-  --popover-foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --primary: #FF6B6B;
-  --primary-foreground: #fafafa;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #0a0a0a;
-  --accent: #f4f4f5;
-  --accent-foreground: #0a0a0a;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --ring: #3b82f6;
-}
-
-/* Koyu tema */
-.dark {
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --muted: #262626;
-  --muted-foreground: #a1a1aa;
-  --popover: #0a0a0a;
-  --popover-foreground: #fafafa;
-  --card: #0a0a0a;
-  --card-foreground: #fafafa;
-  --border: #262626;
-  --input: #262626;
-  --primary: #FF6B6B;
-  --primary-foreground: #0a0a0a;
-  --secondary: #262626;
-  --secondary-foreground: #fafafa;
-  --accent: #262626;
-  --accent-foreground: #fafafa;
-  --destructive: #7c2d12;
-  --destructive-foreground: #fafafa;
-  --ring: #3b82f6;
-  
-  /* Karanlık mod için renk geçişleri */
-  --color-gray-50: #1F2937;
-  --color-gray-100: #1E293B;
-  --color-gray-200: #334155;
-  --color-gray-300: #475569;
-  --color-gray-400: #64748B;
-  --color-gray-500: #94A3B8;
-  --color-gray-600: #CBD5E1;
-  --color-gray-700: #E2E8F0;
-  --color-gray-800: #F1F5F9;
-  --color-gray-900: #F8FAFC;
-}
-
-/* Sistem ayarına göre tema */
-@media (prefers-color-scheme: dark) {
-  .auto {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --muted: #262626;
-    --muted-foreground: #a1a1aa;
-    --popover: #0a0a0a;
-    --popover-foreground: #fafafa;
-    --card: #0a0a0a;
-    --card-foreground: #fafafa;
-    --border: #262626;
-    --input: #262626;
-    --primary: #FF6B6B;
-    --primary-foreground: #0a0a0a;
-    --secondary: #262626;
-    --secondary-foreground: #fafafa;
-    --accent: #262626;
-    --accent-foreground: #fafafa;
-    --destructive: #7c2d12;
-    --destructive-foreground: #fafafa;
-    --ring: #3b82f6;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  .auto {
-    --background: #ffffff;
-    --foreground: #171717;
-    --muted: #f4f4f5;
-    --muted-foreground: #71717a;
-    --popover: #ffffff;
-    --popover-foreground: #171717;
-    --card: #ffffff;
-    --card-foreground: #171717;
-    --border: #e4e4e7;
-    --input: #e4e4e7;
-    --primary: #FF6B6B;
-    --primary-foreground: #fafafa;
-    --secondary: #f4f4f5;
-    --secondary-foreground: #0a0a0a;
-    --accent: #f4f4f5;
-    --accent-foreground: #0a0a0a;
-    --destructive: #ef4444;
-    --destructive-foreground: #fafafa;
-    --ring: #3b82f6;
-  }
-}
-
 @layer base {
+  * {
+    @apply transition-colors duration-200 ease-in-out;
+  }
+
+  html {
+    @apply h-full;
+  }
+
   body {
-    @apply font-sans text-gray-900 bg-white;
+    @apply h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200;
+    font-family: 'Nunito Sans', sans-serif;
     font-size: 16px;
     line-height: 1.5;
     overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading font-semibold;
+    font-family: 'Poppins', sans-serif;
+    @apply font-semibold text-gray-900 dark:text-gray-100;
     line-height: 1.2;
   }
 }
 
 @layer components {
-  /* Buton hover efektleri */
+  /* Buton stilleri - Dark mode uyumlu */
   .btn {
-    @apply px-4 py-2 rounded-full transition-all duration-300;
+    @apply px-4 py-2 rounded-lg transition-all duration-200 font-medium;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:scale-105 active:scale-100;
+    @apply bg-primary hover:bg-primary-dark text-white hover:shadow-lg hover:scale-105 active:scale-100;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 text-gray-800 hover:bg-gray-200 hover:shadow-md active:bg-gray-300;
+    @apply bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-md active:scale-95;
   }
 
-  /* Kart hover efektleri */
+  .btn-outline {
+    @apply border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800;
+  }
+
+  /* Kart stilleri - Dark mode uyumlu */
   .card {
-    @apply bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300;
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm transition-all duration-200;
   }
 
   .card:hover {
-    @apply shadow-lg -translate-y-1;
+    @apply shadow-md hover:-translate-y-1;
   }
 
-  /* Input stilleri */
+  .card-header {
+    @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700;
+  }
+
+  .card-body {
+    @apply p-6;
+  }
+
+  /* Input stilleri - Dark mode uyumlu */
   .input {
-    @apply bg-gray-100 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 border border-transparent;
+    @apply w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200;
   }
 
-  /* Badge stillleri */
+  .input:disabled {
+    @apply bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed;
+  }
+
+  /* Badge stilleri - Dark mode uyumlu */
   .badge {
     @apply inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 
-  .badge-orange {
-    @apply bg-orange-100 text-orange-600;
+  .badge-primary {
+    @apply bg-primary/10 text-primary-dark dark:text-primary-light;
   }
 
-  .badge-green {
-    @apply bg-green-100 text-green-600;
+  .badge-secondary {
+    @apply bg-secondary/10 text-secondary-dark dark:text-secondary-light;
   }
 
-  .badge-blue {
-    @apply bg-blue-100 text-blue-600;
+  .badge-success {
+    @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300;
   }
 
-  .badge-red {
-    @apply bg-red-100 text-red-600;
-  }
-}
-
-@layer utilities {
-  /* Existing animations */
-  @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+  .badge-warning {
+    @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300;
   }
 
-  .fade-in {
-    animation: fadeIn 0.3s ease-in forwards;
+  .badge-danger {
+    @apply bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300;
   }
 
-  @keyframes slideUp {
-    0% { transform: translateY(16px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
+  .badge-info {
+    @apply bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300;
   }
 
-  .slide-up {
-    animation: slideUp 0.5s ease-out forwards;
+  .badge-gray {
+    @apply bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300;
   }
 
-  /* New Enhanced Animations */
-  @keyframes fadeInUp {
-    0% { 
-      opacity: 0; 
-      transform: translateY(30px);
-    }
-    100% { 
-      opacity: 1; 
-      transform: translateY(0);
-    }
+  /* Navigasyon stilleri - Dark mode uyumlu */
+  .nav-link {
+    @apply text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light transition-colors duration-200;
   }
 
-  @keyframes slideInLeft {
-    0% { 
-      opacity: 0; 
-      transform: translateX(-30px);
-    }
-    100% { 
-      opacity: 1; 
-      transform: translateX(0);
-    }
+  .nav-link.active {
+    @apply text-primary dark:text-primary-light;
   }
 
-  @keyframes slideInUp {
-    0% { 
-      opacity: 0; 
-      transform: translateY(50px) scale(0.95);
-    }
-    100% { 
-      opacity: 1; 
-      transform: translateY(0) scale(1);
-    }
+  /* Form stilleri - Dark mode uyumlu */
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
   }
 
-  @keyframes float {
-    0%, 100% { 
-      transform: translateY(0px);
-    }
-    50% { 
-      transform: translateY(-10px);
-    }
+  .form-group {
+    @apply mb-4;
   }
 
-  @keyframes pulse-slow {
-    0%, 100% { 
-      opacity: 1;
-    }
-    50% { 
-      opacity: 0.5;
-    }
+  .form-error {
+    @apply text-red-600 dark:text-red-400 text-sm mt-1;
   }
 
-  @keyframes bounce-gentle {
-    0%, 100% { 
-      transform: translateY(0);
-    }
-    50% { 
-      transform: translateY(-5px);
-    }
+  .form-help {
+    @apply text-gray-500 dark:text-gray-400 text-sm mt-1;
   }
 
-  /* Animation Classes */
-  .animate-fadeInUp {
-    animation: fadeInUp 0.8s ease-out forwards;
-    opacity: 0;
+  /* Select stilleri - Dark mode uyumlu */
+  .select {
+    @apply w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200;
   }
 
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out forwards;
-    opacity: 0;
+  /* Checkbox ve Radio stilleri - Dark mode uyumlu */
+  .checkbox {
+    @apply w-4 h-4 text-primary bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary;
   }
 
-  .animate-slideInLeft {
-    animation: slideInLeft 0.6s ease-out forwards;
-    opacity: 0;
+  .radio {
+    @apply w-4 h-4 text-primary bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary;
   }
 
-  .animate-slideInUp {
-    animation: slideInUp 0.7s ease-out forwards;
-    opacity: 0;
+  /* Toggle Switch - Dark mode uyumlu */
+  .toggle {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200;
   }
 
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
+  .toggle.checked {
+    @apply bg-primary;
   }
 
-  .animate-pulse-slow {
-    animation: pulse-slow 2s ease-in-out infinite;
+  .toggle.unchecked {
+    @apply bg-gray-200 dark:bg-gray-700;
   }
 
-  .animate-bounce-gentle {
-    animation: bounce-gentle 2s ease-in-out infinite;
+  .toggle-thumb {
+    @apply inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200;
   }
 
-  /* Animation Delays */
-  .animation-delay-500 {
-    animation-delay: 0.5s;
+  .toggle-thumb.checked {
+    @apply translate-x-6;
   }
 
-  .animation-delay-1000 {
-    animation-delay: 1s;
+  .toggle-thumb.unchecked {
+    @apply translate-x-1;
   }
 
-  .animation-delay-1500 {
-    animation-delay: 1.5s;
+  /* Dropdown stilleri - Dark mode uyumlu */
+  .dropdown {
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1;
   }
 
-  .animation-delay-2000 {
-    animation-delay: 2s;
+  .dropdown-item {
+    @apply w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150;
   }
 
-  .animation-delay-2500 {
-    animation-delay: 2.5s;
+  /* Modal stilleri - Dark mode uyumlu */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
   }
 
-  .animation-delay-3000 {
-    animation-delay: 3s;
+  .modal {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4;
   }
 
-  /* Hover Effects */
-  .hover-float:hover {
-    transform: translateY(-5px);
-    transition: transform 0.3s ease-out;
+  .modal-header {
+    @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700;
   }
 
-  .hover-scale:hover {
-    transform: scale(1.05);
-    transition: transform 0.3s ease-out;
+  .modal-body {
+    @apply p-6;
   }
 
-  .hover-glow:hover {
-    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
-    transition: box-shadow 0.3s ease-out;
+  .modal-footer {
+    @apply px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3;
   }
 
-  /* Extra small breakpoint */
-  @media (min-width: 480px) {
-    .xs\:inline {
-      display: inline;
-    }
-    
-    .xs\:block {
-      display: block;
-    }
-    
-    .xs\:flex {
-      display: flex;
-    }
-    
-    .xs\:hidden {
-      display: none;
-    }
+  /* Alert stilleri - Dark mode uyumlu */
+  .alert {
+    @apply rounded-lg p-4 mb-4;
+  }
+
+  .alert-success {
+    @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800;
+  }
+
+  .alert-warning {
+    @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800;
+  }
+
+  .alert-danger {
+    @apply bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800;
+  }
+
+  .alert-info {
+    @apply bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800;
+  }
+
+  /* Loading spinner - Dark mode uyumlu */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-primary;
+  }
+
+  /* Divider - Dark mode uyumlu */
+  .divider {
+    @apply border-t border-gray-200 dark:border-gray-700;
+  }
+
+  /* Container stilleri */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Scrollbar stilleri - Dark mode uyumlu */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.400') transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
   }
 }
 
-/* Prevent auth button flash during hydration */
+/* Auth button hydration */
 .auth-buttons-hidden {
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
@@ -399,7 +271,6 @@
   transition: opacity 0.2s ease-in-out;
 }
 
-/* Hide auth buttons by default until JS takes over */
 .auth-buttons {
   opacity: 0;
 }
@@ -408,7 +279,7 @@ body.hydrated .auth-buttons {
   opacity: 1;
 }
 
-/* Mobil menü için z-index override */
+/* Mobile menu overlay */
 .mobile-menu-overlay {
   position: fixed !important;
   z-index: 99999 !important;

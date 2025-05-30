@@ -54,27 +54,6 @@ export default function EditAddress() {
         
         if (address) {
           // Veritabanından gelen adresi form formatına çevir
-          const fullAddressParts = address.full_address?.split(' - ') || ['', ''];
-          const addressPart = fullAddressParts[0] || '';
-          const directions = fullAddressParts[1] || '';
-          
-          // Adres parçalarını ayır (basit parsing)
-          const addressTokens = addressPart.split(' ');
-          let street = '', buildingNo = '', floor = '', apartmentNo = '';
-          
-          for (let i = 0; i < addressTokens.length; i++) {
-            const token = addressTokens[i];
-            if (token.startsWith('No:')) {
-              buildingNo = token.replace('No:', '');
-            } else if (token.startsWith('Kat:')) {
-              floor = token.replace('Kat:', '');
-            } else if (token.startsWith('Daire:')) {
-              apartmentNo = token.replace('Daire:', '');
-            } else if (!token.includes(':')) {
-              street += (street ? ' ' : '') + token;
-            }
-          }
-          
           setFormData({
             title: address.title || '',
             fullName: address.full_name || '',
@@ -83,11 +62,11 @@ export default function EditAddress() {
             city: address.city || '',
             district: address.district || '',
             neighborhood: address.neighborhood || '',
-            street: street,
-            buildingNo: buildingNo,
-            floor: floor,
-            apartmentNo: apartmentNo,
-            directions: directions,
+            street: address.street || '',
+            buildingNo: address.building_number || '',
+            floor: address.floor || '',
+            apartmentNo: address.apartment_number || '',
+            directions: address.directions || '',
             isDefault: address.is_default || false
           });
         } else {
@@ -180,7 +159,7 @@ export default function EditAddress() {
     try {
       setSaving(true);
       
-      // Adres verilerini hazırla
+      // Adres verilerini hazırla - yeni tablo yapısına uygun
       const fullAddress = `${formData.street} ${formData.buildingNo ? 'No:' + formData.buildingNo : ''} ${formData.floor ? 'Kat:' + formData.floor : ''} ${formData.apartmentNo ? 'Daire:' + formData.apartmentNo : ''}`.trim();
       
       const addressData = {
@@ -191,6 +170,11 @@ export default function EditAddress() {
         city: formData.city,
         district: formData.district,
         neighborhood: formData.neighborhood,
+        street: formData.street,
+        building_number: formData.buildingNo,
+        floor: formData.floor,
+        apartment_number: formData.apartmentNo,
+        directions: formData.directions,
         full_address: fullAddress + (formData.directions ? ` - ${formData.directions}` : ''),
         is_default: formData.isDefault
       };
