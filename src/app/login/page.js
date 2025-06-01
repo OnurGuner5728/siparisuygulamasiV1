@@ -27,7 +27,14 @@ function LoginContent() {
   // Zaten login olmuş kullanıcıları redirect et
   useEffect(() => {
     if (isAuthenticated) {
-      router.push(redirectTo);
+      // localStorage'dan redirect URL'i kontrol et
+      const storedRedirect = localStorage.getItem('redirectAfterLogin');
+      if (storedRedirect) {
+        localStorage.removeItem('redirectAfterLogin');
+        router.push(storedRedirect);
+      } else {
+        router.push(redirectTo);
+      }
     }
   }, [isAuthenticated, router, redirectTo]);
 
@@ -73,8 +80,14 @@ function LoginContent() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        // Başarılı giriş - redirect parametresine göre yönlendir
-        router.push(redirectTo);
+        // Başarılı giriş - localStorage'dan redirect kontrol et
+        const storedRedirect = localStorage.getItem('redirectAfterLogin');
+        if (storedRedirect) {
+          localStorage.removeItem('redirectAfterLogin');
+          router.push(storedRedirect);
+        } else {
+          router.push(redirectTo);
+        }
       } else {
         // Başarısız giriş
         setErrors({ form: result.message || 'Giriş yapılırken bir hata oluştu' });

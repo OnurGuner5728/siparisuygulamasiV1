@@ -106,21 +106,25 @@ function Header({ onCartClick }) {
   const currentUser = user || (loading ? backupUser : null);
   const currentIsAuthenticated = !!currentUser;
 
-  // Hard navigation function - FORCE REFRESH
-  const navigateTo = useCallback((href) => {
-    // Close menus first
+  // Unified portal navigation function - HEM MASAÜSTÜ HEM MOBİL
+  const handlePortalLinkClick = useCallback((href) => {
+    // Tüm menüleri kapat
     setIsMenuOpen(false);
     setIsUserMenuOpen(false);
     
-    // Force hard navigation - NO CLIENT SIDE ROUTING
-    window.location.href = href;
+    // Biraz daha uzun delay - kullanıcının tıklama şansı olsun
+    setTimeout(() => {
+      window.location.href = href;
+    }, 200);
   }, []);
 
-  // Link click handler - HARD NAVIGATION ONLY
+  // Regular link navigation (portal dışı)
   const handleLinkClick = useCallback((e, href) => {
     e.preventDefault();
-    navigateTo(href);
-  }, [navigateTo]);
+    setIsMenuOpen(false);
+    setIsUserMenuOpen(false);
+    window.location.href = href;
+  }, []);
 
   // Adres popup'ını açma fonksiyonu
   const openAddressPopup = useCallback(() => {
@@ -134,24 +138,13 @@ function Header({ onCartClick }) {
     setIsAddressPopupOpen(false);
   }, []);
 
-  // Menü dışına tıklandığında menüleri kapat
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isUserMenuOpen && !event.target.closest('.user-menu-container')) {
-        setIsUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isUserMenuOpen]);
+  // Menü dışına tıklandığında menüleri kapat - GEREKSİZ ÇÜNKÜ PORTAL ZATEN YAPIYOR
+  // useEffect kaldırıldı, portal overlay zaten handle ediyor
 
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className={`bg-white relative overflow-hidden shadow-lg py-2 sticky top-0 z-50 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+  return (<header className={`bg-white relative overflow-hidden shadow-lg py-2 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-2 left-10 w-6 h-6 bg-orange-100/50 rounded-full animate-bounce animation-delay-1000"></div>
@@ -314,15 +307,15 @@ function Header({ onCartClick }) {
       {/* User Menu Portal - Portal ile body'ye taşınıyor */}
       {isUserMenuOpen && typeof window !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-[10001]" 
+          className="fixed inset-0 z-[9999]" 
           onClick={() => setIsUserMenuOpen(false)}
         >
           <div 
-            className="absolute top-16 right-4 w-64 py-2 bg-white rounded-2xl shadow-xl border border-gray-100 backdrop-blur-sm"
+            className="absolute top-16 right-4 w-64 py-2 bg-white rounded-2xl shadow-xl border border-gray-100 backdrop-blur-sm z-[10000]"
             onClick={(e) => e.stopPropagation()}
           >
             {currentUser?.role === 'admin' && (
-              <a href="/admin" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => handleLinkClick(e, '/admin')}>
+              <a href="/admin" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/admin'); }}>
                 <div className="flex items-center space-x-3">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -365,7 +358,7 @@ function Header({ onCartClick }) {
                   <a 
                     href="/store" 
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500"
-                    onClick={(e) => handleLinkClick(e, '/store')}
+                    onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/store'); }}
                   >
                     Mağaza Paneli
                   </a>
@@ -373,7 +366,7 @@ function Header({ onCartClick }) {
                   <a 
                     href="/store" 
                     className="block px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"
-                    onClick={(e) => handleLinkClick(e, '/store')}
+                    onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/store'); }}
                   >
                     Mağaza Paneli (Onay Bekleniyor)
                   </a>
@@ -382,13 +375,13 @@ function Header({ onCartClick }) {
                 <a 
                   href="/store/profile" 
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500"
-                  onClick={(e) => handleLinkClick(e, '/store/profile')}
+                  onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/store/profile'); }}
                 >
                   Mağaza Profili
                 </a>
               </div>
             )}
-            <a href="/profil" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => handleLinkClick(e, '/profil')}>
+            <a href="/profil" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/profil'); }}>
               <div className="flex items-center space-x-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -396,15 +389,15 @@ function Header({ onCartClick }) {
                 <span>Profilim</span>
               </div>
             </a>
-            <a href="/profil/siparisler" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => handleLinkClick(e, '/profil/siparisler')}>
+            <a href="/profil/siparisler" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/profil/siparisler'); }}>
               <div className="flex items-center space-x-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
                 <span>Siparişlerim</span>
               </div>
             </a>
-            <a href="/profil/bildirimler" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => handleLinkClick(e, '/profil/bildirimler')}>
+            <a href="/profil/bildirimler" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/profil/bildirimler'); }}>
               <div className="flex items-center space-x-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h10a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -412,7 +405,7 @@ function Header({ onCartClick }) {
                 <span>Bildirimlerim</span>
               </div>
             </a>
-            <a href="/profil/adresler" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => handleLinkClick(e, '/profil/adresler')}>
+            <a href="/profil/adresler" className="block px-4 py-3 mx-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all duration-200" onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/profil/adresler'); }}>
               <div className="flex items-center space-x-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -437,9 +430,9 @@ function Header({ onCartClick }) {
       
       {/* Mobil Sidebar Overlay - Portal ile */}
       {isMenuOpen && typeof window !== 'undefined' && createPortal(
-        <div className="mobile-menu-overlay md:hidden overflow-hidden" style={{ position: 'fixed', zIndex: 10000 }}>
+        <div className="mobile-menu-overlay md:hidden overflow-hidden" style={{ position: 'fixed', zIndex: 9998, inset: 0 }}>
           {/* Tam sayfa sidebar - alt navbar hariç */}
-          <div className="absolute inset-0 bottom-16 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
+          <div className="absolute inset-0 bottom-16 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-[9999]">
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -611,7 +604,7 @@ function Header({ onCartClick }) {
                         <a 
                           href="/profil" 
                           className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
-                          onClick={(e) => handleLinkClick(e, '/profil')}
+                          onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/profil'); }}
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
@@ -621,10 +614,10 @@ function Header({ onCartClick }) {
                         <a 
                           href="/profil/siparisler" 
                           className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
-                          onClick={(e) => handleLinkClick(e, '/profil/siparisler')}
+                          onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/profil/siparisler'); }}
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                           </svg>
                           <span className="text-sm font-medium text-gray-700">Siparişlerim</span>
                         </a>
@@ -632,7 +625,7 @@ function Header({ onCartClick }) {
                           <a 
                             href="/admin" 
                             className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
-                            onClick={(e) => handleLinkClick(e, '/admin')}
+                            onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/admin'); }}
                           >
                             <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
@@ -645,7 +638,7 @@ function Header({ onCartClick }) {
                           <a 
                             href="/store" 
                             className="flex items-center space-x-3 p-3 rounded-lg border border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200"
-                            onClick={(e) => handleLinkClick(e, '/store')}
+                            onClick={(e) => { e.preventDefault(); handlePortalLinkClick('/store'); }}
                           >
                             <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
