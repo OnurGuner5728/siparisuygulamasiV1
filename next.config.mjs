@@ -21,7 +21,7 @@ const nextConfig = {
   },
   // Hydration mismatch hatalarını azaltmak için
   experimental: {
-    suppressHydrationWarning: true,
+    // suppressHydrationWarning artık experimental'da değil
   },
 };
 

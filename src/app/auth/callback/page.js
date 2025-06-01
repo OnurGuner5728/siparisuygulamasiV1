@@ -1,11 +1,10 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState('processing'); // processing, success, error
   const [message, setMessage] = useState('E-posta doğrulanıyor...');
 
@@ -121,5 +120,21 @@ export default function AuthCallback() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-4 flex items-center justify-center">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-auto shadow-2xl text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500 mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Doğrulanıyor...</h2>
+          <p className="text-gray-600">E-posta doğrulanıyor...</p>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 } 

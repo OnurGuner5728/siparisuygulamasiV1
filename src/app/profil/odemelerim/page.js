@@ -11,7 +11,6 @@ import {
   FiShield, 
   FiCheck, 
   FiStar,
-  FiBank,
   FiSmartphone
 } from 'react-icons/fi';
 import api from '@/lib/api';
@@ -226,7 +225,7 @@ function PaymentMethodCard({ payment, onDelete, onSetDefault, onEdit }) {
       case 'debit_card':
         return <FiCreditCard className="text-blue-500" size={24} />;
       case 'bank_account':
-        return <FiBank className="text-green-500" size={24} />;
+        return <FiCreditCard className="text-green-500" size={24} />;
       case 'digital_wallet':
         return <FiSmartphone className="text-purple-500" size={24} />;
       default:
