@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FiBell, FiCheck, FiX, FiEye, FiSettings } from 'react-icons/fi';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,6 @@ const NotificationDropdown = () => {
   const { user, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentToast, setCurrentToast] = useState(null);
-  const dropdownRef = useRef(null);
 
   // Real-time notifications hook
   const {
@@ -51,31 +51,6 @@ const NotificationDropdown = () => {
       Notification.requestPermission();
     }
   }, []);
-
-  // Dropdown dışına tıklandığında kapat
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleTouchOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleTouchOutside);
-      
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-        document.removeEventListener('touchstart', handleTouchOutside);
-      };
-    }
-  }, [isOpen]);
 
   // Okunmamış bildirim sayısı
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -163,11 +138,11 @@ const NotificationDropdown = () => {
 
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative">
         {/* Bildirim İkonu */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="relative p-2 text-gray-600 hover:text-orange-500 focus:outline-none focus:text-orange-500 transition-colors"
+          className="relative p-2 text-white hover:text-white/80 focus:outline-none focus:text-white/80 transition-colors"
           aria-label="Bildirimler"
         >
           <FiBell className="h-6 w-6" />
@@ -181,10 +156,18 @@ const NotificationDropdown = () => {
             <span className="absolute -top-1 -right-1 bg-red-500 rounded-full h-5 w-5 animate-ping"></span>
           )}
         </button>
+      </div>
 
-        {/* Dropdown Menu */}
-        {isOpen && (
-          <div className="absolute right-0 mt-2 w-80 sm:w-80 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-[10000] max-h-96 overflow-hidden">
+      {/* Notification Dropdown Portal - Portal ile body'ye taşınıyor */}
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[10002]" 
+          onClick={() => setIsOpen(false)}
+        >
+          <div 
+            className="absolute top-16 right-4 w-80 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
@@ -305,8 +288,9 @@ const NotificationDropdown = () => {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>,
+        document.body
+      )}
 
       {/* Toast Notification */}
       {currentToast && (

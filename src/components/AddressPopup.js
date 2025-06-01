@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '@/lib/api';
 
@@ -102,9 +103,9 @@ export default function AddressPopup({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  return (
+  const popup = (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[999999]"
       onClick={handleBackdropClick}
     >
       <div 
@@ -233,4 +234,7 @@ export default function AddressPopup({ isOpen, onClose }) {
       </div>
     </div>
   );
+
+  // Portal ile body'ye taşıyoruz
+  return typeof window !== 'undefined' ? createPortal(popup, document.body) : null;
 } 

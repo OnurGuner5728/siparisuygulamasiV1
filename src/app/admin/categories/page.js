@@ -1,12 +1,10 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '../../../contexts/AuthContext';
+import * as api from '../../../lib/api';
 import AuthGuard from '../../../components/AuthGuard';
-import api from '@/lib/api';
 
-export default function AdminCategories() {
+export default function AdminCategoriesPage() {
   return (
     <AuthGuard requiredRole="admin">
       <AdminCategoriesContent />
@@ -18,14 +16,15 @@ function AdminCategoriesContent() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [mainCategoryFilter, setMainCategoryFilter] = useState('all');
+  const [categoryTypeFilter, setCategoryTypeFilter] = useState('all'); // all, main, sub
   const [activeTab, setActiveTab] = useState('categories');
   const [newCategory, setNewCategory] = useState({
     name: '',
     description: '',
-    main_category: 'Yemek',
-    image: '',
-    status: 'active'
+    parent_id: null, // Ana kategori için null, alt kategori için parent ID
+    image_url: '',
+    is_active: true,
+    sort_order: 1
   });
   const [editingCategory, setEditingCategory] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -43,23 +42,23 @@ function AdminCategoriesContent() {
         setLoading(true);
         
         // Ana kategorileri getir
-        const mainCategoriesData = await api.getMainCategories();
+        const mainCategoriesData = await api.getMainCategories(true); // admin=true
         setMainCategories(mainCategoriesData);
         
-        // Kategorileri getir
-        const categoriesData = await api.getCategories();
-        // Image alanı yoksa boş string olarak ayarla
+        // Tüm kategorileri getir (ana + alt)
+        const categoriesData = await api.getCategories(true); // admin=true
         const categoriesWithImages = categoriesData.map(category => ({
           ...category,
-          image: category.image || '',
-          description: category.description || ''
+          image_url: category.image_url || '',
+          description: category.description || '',
+          // Ana kategori mi alt kategori mi belirleme
+          isMainCategory: category.parent_id === null,
+          parentName: category.parent_id ? 
+            mainCategoriesData.find(main => main.id === category.parent_id)?.name || 'Bilinmiyor' : 
+            null
         }));
         setCategories(categoriesWithImages);
 
-        // Modül izinlerini getir
-        // Bu örnek için varsayılan değerler kullanıyoruz, gerçek projede API'den gelecek
-        // const modulePermissionsData = await api.getModulePermissions();
-        // setModulePermissions(modulePermissionsData);
       } catch (error) {
         console.error('Kategori verileri yüklenirken hata oluştu:', error);
       } finally {
@@ -70,30 +69,48 @@ function AdminCategoriesContent() {
     fetchData();
   }, []);
 
-  // Ana kategoriler
-  const filteredMainCategories = mainCategories.filter(category => 
-    modulePermissions[category.name.toLowerCase()]
-  );
-
   // Arama ve filtreleme
   const filteredCategories = categories.filter(category => {
     const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           category.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesMainCategory = mainCategoryFilter === 'all' || category.main_category === mainCategoryFilter;
+    let matchesType = true;
+    if (categoryTypeFilter === 'main') {
+      matchesType = category.isMainCategory;
+    } else if (categoryTypeFilter === 'sub') {
+      matchesType = !category.isMainCategory;
+    }
     
-    return matchesSearch && matchesMainCategory;
+    return matchesSearch && matchesType;
   });
 
   // Kategori silme
   const handleDeleteCategory = async (categoryId) => {
     if (window.confirm('Bu kategoriyi silmek istediğinize emin misiniz?')) {
       try {
-        await api.deleteCategory(categoryId);
+        // API route üzerinden silme yap
+        const response = await fetch(`/api/admin/categories/${categoryId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Kategori silinemedi');
+        }
+
         setCategories(categories.filter(category => category.id !== categoryId));
+        
+        // Ana kategoriler listesinden de kaldır (eğer ana kategoriyse)
+        setMainCategories(mainCategories.filter(category => category.id !== categoryId));
+        
+        alert('Kategori başarıyla silindi!');
       } catch (error) {
         console.error('Kategori silinirken hata oluştu:', error);
-        alert('Kategori silinirken bir hata oluştu.');
+        alert('Kategori silinirken bir hata oluştu: ' + error.message);
       }
     }
   };
@@ -101,20 +118,30 @@ function AdminCategoriesContent() {
   // Kategori durumunu değiştirme
   const handleToggleStatus = async (categoryId) => {
     try {
-      // Önce güncellenecek kategoriyi bul
       const categoryToUpdate = categories.find(category => category.id === categoryId);
-      const newStatus = categoryToUpdate.status === 'active' ? 'inactive' : 'active';
+      const newStatus = !categoryToUpdate.is_active;
       
-      // API'yi çağır ve güncellemeyi gerçekleştir
-      await api.updateCategory(categoryId, { status: newStatus });
+      // API route üzerinden güncelleme yap
+      const response = await fetch(`/api/admin/categories/${categoryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          ...categoryToUpdate,
+          is_active: newStatus 
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Kategori durumu değiştirilemedi');
+      }
       
-      // Başarılı olursa UI'ı güncelle
       const updatedCategories = categories.map(category => {
         if (category.id === categoryId) {
-          return {
-            ...category,
-            status: newStatus
-          };
+          return { ...category, is_active: newStatus };
         }
         return category;
       });
@@ -122,20 +149,15 @@ function AdminCategoriesContent() {
       setCategories(updatedCategories);
     } catch (error) {
       console.error('Kategori durumu güncellenirken hata oluştu:', error);
-      alert('Kategori durumu değiştirilirken bir hata oluştu.');
+      alert('Kategori durumu değiştirilirken bir hata oluştu: ' + error.message);
     }
   };
 
   // Kategori durumunu formatla
-  const formatStatus = (status) => {
-    switch (status) {
-      case 'active':
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Aktif</span>;
-      case 'inactive':
-        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Pasif</span>;
-      default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Bilinmiyor</span>;
-    }
+  const formatStatus = (is_active) => {
+    return is_active ? 
+      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Aktif</span> :
+      <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Pasif</span>;
   };
 
   // Yeni kategori ekleme
@@ -143,26 +165,63 @@ function AdminCategoriesContent() {
     e.preventDefault();
     
     try {
-      // API'yi çağır ve yeni kategori ekle
-      const newCategoryData = await api.createCategory(newCategory);
+      const categoryData = {
+        name: newCategory.name,
+        description: newCategory.description,
+        parent_id: newCategory.parent_id,
+        image_url: newCategory.image_url,
+        is_active: newCategory.is_active,
+        sort_order: newCategory.sort_order
+      };
+
+      // API route üzerinden ekleme yap
+      const response = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(categoryData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Kategori oluşturulamadı');
+      }
+
+      const newCategoryData = result.data;
       
-      // Başarılı olursa kategorileri güncelle
-      setCategories([...categories, newCategoryData]);
+      // Ana kategori mi alt kategori mi belirle
+      const categoryWithMeta = {
+        ...newCategoryData,
+        isMainCategory: newCategoryData.parent_id === null,
+        parentName: newCategoryData.parent_id ? 
+          mainCategories.find(main => main.id === newCategoryData.parent_id)?.name || 'Bilinmiyor' : 
+          null
+      };
+      
+      setCategories([...categories, categoryWithMeta]);
+      
+      // Ana kategoriler listesini güncelle (eğer ana kategori eklendiyse)
+      if (newCategoryData.parent_id === null) {
+        setMainCategories([...mainCategories, newCategoryData]);
+      }
       
       // Formu sıfırla
       setNewCategory({
         name: '',
         description: '',
-        main_category: 'Yemek',
-        image: '',
-        status: 'active'
+        parent_id: null,
+        image_url: '',
+        is_active: true,
+        sort_order: 1
       });
       
-      // Kategoriler sekmesine geri dön
       setActiveTab('categories');
+      alert('Kategori başarıyla eklendi!');
     } catch (error) {
       console.error('Kategori eklenirken hata oluştu:', error);
-      alert('Kategori eklenirken bir hata oluştu.');
+      alert('Kategori eklenirken bir hata oluştu: ' + error.message);
     }
   };
 
@@ -171,23 +230,64 @@ function AdminCategoriesContent() {
     e.preventDefault();
     
     try {
-      // API'yi çağır ve kategoriyi güncelle
-      await api.updateCategory(editingCategory.id, editingCategory);
+      const updateData = {
+        name: editingCategory.name,
+        description: editingCategory.description,
+        parent_id: editingCategory.parent_id,
+        image_url: editingCategory.image_url,
+        is_active: editingCategory.is_active,
+        sort_order: editingCategory.sort_order
+      };
+
+      // API route üzerinden güncelleme yap
+      const response = await fetch(`/api/admin/categories/${editingCategory.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Kategori güncellenemedi');
+      }
+
+      const updatedCategoryData = result.data;
       
-      // Başarılı olursa UI'ı güncelle
       const updatedCategories = categories.map(category => {
         if (category.id === editingCategory.id) {
-          return editingCategory;
+          return {
+            ...updatedCategoryData,
+            isMainCategory: updatedCategoryData.parent_id === null,
+            parentName: updatedCategoryData.parent_id ? 
+              mainCategories.find(main => main.id === updatedCategoryData.parent_id)?.name || 'Bilinmiyor' : 
+              null
+          };
         }
         return category;
       });
       
       setCategories(updatedCategories);
+
+      // Ana kategoriler listesini güncelle
+      if (updatedCategoryData.parent_id === null) {
+        const updatedMainCategories = mainCategories.map(main => 
+          main.id === updatedCategoryData.id ? updatedCategoryData : main
+        );
+        if (!mainCategories.find(main => main.id === updatedCategoryData.id)) {
+          updatedMainCategories.push(updatedCategoryData);
+        }
+        setMainCategories(updatedMainCategories);
+      }
+      
       setEditingCategory(null);
       setActiveTab('categories');
+      alert('Kategori başarıyla güncellendi!');
     } catch (error) {
-      console.error('Kategori güncellenirken hata oluştu:', error);
-      alert('Kategori güncellenirken bir hata oluştu.');
+      console.error(`Kategori güncellenirken hata (ID: ${editingCategory.id}):`, error);
+      alert('Kategori güncellenirken bir hata oluştu: ' + error.message);
     }
   };
 
@@ -202,7 +302,6 @@ function AdminCategoriesContent() {
   // Modül izinlerini kaydet
   const saveModulePermissions = async () => {
     try {
-      // API'yi çağır ve modül izinlerini güncelle
       await api.updateModulePermissions(modulePermissions);
       alert('Modül yetkileri başarıyla kaydedildi!');
     } catch (error) {
@@ -233,7 +332,7 @@ function AdminCategoriesContent() {
 
     try {
       // Eski resmi sil (eğer varsa)
-      const currentImage = isEditMode ? editingCategory?.image : newCategory.image;
+      const currentImage = isEditMode ? editingCategory?.image_url : newCategory.image_url;
       if (currentImage) {
         try {
           await api.deleteImage(currentImage, 'categories');
@@ -246,9 +345,9 @@ function AdminCategoriesContent() {
       const imageUrl = await api.uploadImage(file, 'categories');
       
       if (isEditMode) {
-        setEditingCategory(prev => ({ ...prev, image: imageUrl }));
+        setEditingCategory(prev => ({ ...prev, image_url: imageUrl }));
       } else {
-        setNewCategory(prev => ({ ...prev, image: imageUrl }));
+        setNewCategory(prev => ({ ...prev, image_url: imageUrl }));
       }
       
       alert('Resim başarıyla yüklendi!');
@@ -273,7 +372,7 @@ function AdminCategoriesContent() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Kategori Yönetimi</h1>
-          <p className="text-gray-600 mt-1">Tüm kategorileri görüntüle, düzenle veya sil</p>
+          <p className="text-gray-600 mt-1">Ana kategorileri ve alt kategorileri görüntüle, düzenle veya sil</p>
         </div>
         <Link 
           href="/admin"
@@ -287,7 +386,7 @@ function AdminCategoriesContent() {
       </div>
 
       {/* Sekmeler */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+      <div className="bg-white shadow rounded-lg mb-6">
         <div className="px-6 py-4 border-b">
           <div className="flex space-x-4">
             <button
@@ -346,13 +445,12 @@ function AdminCategoriesContent() {
               <div>
                 <select
                   className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={mainCategoryFilter}
-                  onChange={(e) => setMainCategoryFilter(e.target.value)}
+                  value={categoryTypeFilter}
+                  onChange={(e) => setCategoryTypeFilter(e.target.value)}
                 >
-                  <option value="all">Tüm Ana Kategoriler</option>
-                  {filteredMainCategories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
+                  <option value="all">Tüm Kategoriler</option>
+                  <option value="main">Ana Kategoriler</option>
+                  <option value="sub">Alt Kategoriler</option>
                 </select>
               </div>
             </div>
@@ -365,10 +463,13 @@ function AdminCategoriesContent() {
                       Kategori
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ana Kategori
+                      Tür
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ürün Sayısı
+                      Üst Kategori
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Sıra
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Durum
@@ -383,33 +484,63 @@ function AdminCategoriesContent() {
                     <tr key={category.id} className="hover:bg-gray-50 dark:bg-gray-900">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            {category.image ? (
-                              <img className="h-10 w-10 rounded-md object-cover" src={category.image} alt={category.name} />
-                            ) : (
-                              <div className="h-10 w-10 rounded-md bg-gray-200 flex items-center justify-center">
-                                <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-4">
+                          {category.image_url && (
+                            <div className="flex-shrink-0 h-10 w-10 mr-3">
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={category.image_url}
+                                alt={category.name}
+                              />
+                            </div>
+                          )}
+                          <div>
                             <div className="text-sm font-medium text-gray-900">{category.name}</div>
-                            <div className="text-xs text-gray-500">{category.description}</div>
+                            <div className="text-sm text-gray-500">{category.description}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                          {category.main_category}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center w-fit ${
+                          category.isMainCategory 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {category.isMainCategory ? (
+                            <>
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                              </svg>
+                              Ana Kategori
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              </svg>
+                              Alt Kategori
+                            </>
+                          )}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{category.productsCount}</div>
+                        <div className="text-sm text-gray-900">
+                          {category.parentName ? (
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                              {category.parentName}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 italic">-</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {formatStatus(category.status)}
+                        <div className="text-sm text-gray-900">{category.sort_order}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {formatStatus(category.is_active)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
@@ -417,7 +548,7 @@ function AdminCategoriesContent() {
                             onClick={() => {
                               setEditingCategory({
                                 ...category,
-                                image: category.image || '',
+                                image_url: category.image_url || '',
                                 description: category.description || ''
                               });
                               setActiveTab('edit');
@@ -428,9 +559,9 @@ function AdminCategoriesContent() {
                           </button>
                           <button 
                             onClick={() => handleToggleStatus(category.id)}
-                            className={`${category.status === 'active' ? 'text-amber-600 hover:text-amber-900' : 'text-green-600 hover:text-green-900'}`}
+                            className={`${category.is_active ? 'text-amber-600 hover:text-amber-900' : 'text-green-600 hover:text-green-900'}`}
                           >
-                            {category.status === 'active' ? 'Pasif Yap' : 'Aktif Yap'}
+                            {category.is_active ? 'Pasif Yap' : 'Aktif Yap'}
                           </button>
                           <button 
                             onClick={() => handleDeleteCategory(category.id)}
@@ -469,32 +600,42 @@ function AdminCategoriesContent() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="mainCategory" className="block text-sm font-medium text-gray-700 mb-1">
-                    Ana Kategori
+                  <label htmlFor="parentCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                    Kategori Türü
                   </label>
                   <select
-                    id="mainCategory"
-                    value={newCategory.main_category}
-                    onChange={(e) => setNewCategory({ ...newCategory, main_category: e.target.value })}
+                    id="parentCategory"
+                    value={newCategory.parent_id || ''}
+                    onChange={(e) => setNewCategory({ 
+                      ...newCategory, 
+                      parent_id: e.target.value ? parseInt(e.target.value) : null 
+                    })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
                   >
-                    {filteredMainCategories.map((category) => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
+                    <option value="">
+                      🏷️ Ana Kategori Oluştur
+                    </option>
+                    {mainCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        📁 {category.name} - Alt Kategorisi
+                      </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ana kategori: Yemek, Market gibi temel kategoriler. Alt kategori: Pizza, Burger gibi alt kategoriler.
+                  </p>
                 </div>
-                <div>
+
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Kategori Resmi
                   </label>
                   
-                  {/* Mevcut Resim Gösterimi */}
-                  {newCategory.image && (
+                  {newCategory.image_url && (
                     <div className="mb-4 flex items-center space-x-4">
                       <div className="flex-shrink-0">
                         <img
-                          src={newCategory.image}
+                          src={newCategory.image_url}
                           alt="Kategori resmi"
                           className="h-16 w-16 object-cover rounded-lg border border-gray-300"
                         />
@@ -503,7 +644,7 @@ function AdminCategoriesContent() {
                         <p className="text-sm text-gray-600">Mevcut resim</p>
                         <button
                           type="button"
-                          onClick={() => setNewCategory({ ...newCategory, image: '' })}
+                          onClick={() => setNewCategory({ ...newCategory, image_url: '' })}
                           className="text-sm text-red-600 hover:text-red-800"
                         >
                           Resmi Kaldır
@@ -512,36 +653,57 @@ function AdminCategoriesContent() {
                     </div>
                   )}
                   
-                  {/* Dosya Yükleme */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
-                    <input
-                      type="file"
-                      id="category-image-upload"
-                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                      onChange={(e) => handleImageUpload(e, false)}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                    <label
-                      htmlFor="category-image-upload"
-                      className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50' : ''}`}
-                    >
-                      {uploadingImage ? (
-                        <div className="flex flex-col items-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
-                          <span className="text-sm text-gray-600">Yükleniyor...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <svg className="h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <span className="text-sm font-medium text-gray-700">Resim yükle</span>
-                          <span className="text-xs text-gray-500">PNG, JPG, GIF, WebP</span>
-                        </>
-                      )}
-                    </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="image-upload"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        >
+                          <span>{uploadingImage ? 'Yükleniyor...' : 'Dosya seç'}</span>
+                          <input
+                            id="image-upload"
+                            name="image-upload"
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, false)}
+                            disabled={uploadingImage}
+                          />
+                        </label>
+                        <p className="pl-1">veya sürükle bırak</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF en fazla 5MB</p>
+                    </div>
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="sort_order" className="block text-sm font-medium text-gray-700 mb-1">
+                    Sıra Numarası
+                  </label>
+                  <input
+                    type="number"
+                    id="sort_order"
+                    value={newCategory.sort_order}
+                    onChange={(e) => setNewCategory({ ...newCategory, sort_order: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    min="1"
+                  />
                 </div>
                 <div>
                   <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
@@ -549,12 +711,12 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="status"
-                    value={newCategory.status || 'active'}
-                    onChange={(e) => setNewCategory({ ...newCategory, status: e.target.value })}
+                    value={newCategory.is_active}
+                    onChange={(e) => setNewCategory({ ...newCategory, is_active: e.target.value === 'true' })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="active">Aktif</option>
-                    <option value="inactive">Pasif</option>
+                    <option value={true}>Aktif</option>
+                    <option value={false}>Pasif</option>
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -571,7 +733,8 @@ function AdminCategoriesContent() {
                   />
                 </div>
               </div>
-              <div className="flex justify-end">
+              
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setActiveTab('categories')}
@@ -593,7 +756,10 @@ function AdminCategoriesContent() {
         {/* Kategori Düzenleme Formu */}
         {activeTab === 'edit' && editingCategory && (
           <div className="p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Kategori Düzenle</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              {editingCategory.isMainCategory ? 'Ana Kategori' : 'Alt Kategori'} Düzenle
+            </h2>
+            
             <form onSubmit={handleEditCategory}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
@@ -611,33 +777,47 @@ function AdminCategoriesContent() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-mainCategory" className="block text-sm font-medium text-gray-700 mb-1">
-                    Ana Kategori
+                  <label htmlFor="edit-parentCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                    {editingCategory.isMainCategory ? 'Kategori Türü' : 'Üst Kategori'}
                   </label>
-                  <select
-                    id="edit-mainCategory"
-                    value={editingCategory.main_category || ''}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, main_category: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="">Ana kategori seçin</option>
-                    {filteredMainCategories.map((category) => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
-                    ))}
-                  </select>
+                  {editingCategory.isMainCategory ? (
+                    <div className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                      Ana Kategori (Üst kategorisi yoktur)
+                    </div>
+                  ) : (
+                    <select
+                      id="edit-parentCategory"
+                      value={editingCategory.parent_id || ''}
+                      onChange={(e) => setEditingCategory({ 
+                        ...editingCategory, 
+                        parent_id: e.target.value ? parseInt(e.target.value) : null 
+                      })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Ana kategoriye çevir</option>
+                      {mainCategories.filter(cat => cat.id !== editingCategory.id).map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-                <div>
+
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Kategori Resmi
                   </label>
                   
-                  {/* Mevcut Resim Gösterimi */}
-                  {editingCategory.image && (
+                  {editingCategory.image_url && (
                     <div className="mb-4 flex items-center space-x-4">
                       <div className="flex-shrink-0">
                         <img
-                          src={editingCategory.image}
+                          src={editingCategory.image_url}
                           alt="Kategori resmi"
                           className="h-16 w-16 object-cover rounded-lg border border-gray-300"
                         />
@@ -646,7 +826,7 @@ function AdminCategoriesContent() {
                         <p className="text-sm text-gray-600">Mevcut resim</p>
                         <button
                           type="button"
-                          onClick={() => setEditingCategory({ ...editingCategory, image: '' })}
+                          onClick={() => setEditingCategory({ ...editingCategory, image_url: '' })}
                           className="text-sm text-red-600 hover:text-red-800"
                         >
                           Resmi Kaldır
@@ -655,36 +835,57 @@ function AdminCategoriesContent() {
                     </div>
                   )}
                   
-                  {/* Dosya Yükleme */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
-                    <input
-                      type="file"
-                      id="edit-category-image-upload"
-                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                      onChange={(e) => handleImageUpload(e, true)}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                    <label
-                      htmlFor="edit-category-image-upload"
-                      className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50' : ''}`}
-                    >
-                      {uploadingImage ? (
-                        <div className="flex flex-col items-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
-                          <span className="text-sm text-gray-600">Yükleniyor...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <svg className="h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <span className="text-sm font-medium text-gray-700">Resim yükle</span>
-                          <span className="text-xs text-gray-500">PNG, JPG, GIF, WebP</span>
-                        </>
-                      )}
-                    </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="edit-image-upload"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        >
+                          <span>{uploadingImage ? 'Yükleniyor...' : 'Dosya seç'}</span>
+                          <input
+                            id="edit-image-upload"
+                            name="edit-image-upload"
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, true)}
+                            disabled={uploadingImage}
+                          />
+                        </label>
+                        <p className="pl-1">veya sürükle bırak</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF en fazla 5MB</p>
+                    </div>
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="edit-sort_order" className="block text-sm font-medium text-gray-700 mb-1">
+                    Sıra Numarası
+                  </label>
+                  <input
+                    type="number"
+                    id="edit-sort_order"
+                    value={editingCategory.sort_order}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, sort_order: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    min="1"
+                  />
                 </div>
                 <div>
                   <label htmlFor="edit-status" className="block text-sm font-medium text-gray-700 mb-1">
@@ -692,12 +893,12 @@ function AdminCategoriesContent() {
                   </label>
                   <select
                     id="edit-status"
-                    value={editingCategory.status || 'active'}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, status: e.target.value })}
+                    value={editingCategory.is_active}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, is_active: e.target.value === 'true' })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="active">Aktif</option>
-                    <option value="inactive">Pasif</option>
+                    <option value={true}>Aktif</option>
+                    <option value={false}>Pasif</option>
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -714,7 +915,8 @@ function AdminCategoriesContent() {
                   />
                 </div>
               </div>
-              <div className="flex justify-end">
+              
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -802,7 +1004,7 @@ function AdminCategoriesContent() {
                 onClick={saveModulePermissions}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                Yetkileri Kaydet
+                Modül Yetkilerini Kaydet
               </button>
             </div>
           </div>

@@ -167,7 +167,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="relative container mx-auto px-4 py-8">
+        <div className="relative container mx-auto px-4 py-4">
           <div className="text-center mb-6">
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 animate-fadeInUp">
               Lezzet Kapınızda!
@@ -237,7 +237,7 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
       </div>
 
-      {/* Ana Modüller - Görseldeki tasarıma uygun */}
+      {/* Ana Modüller - Görsel odaklı tasarım */}
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-4 md:space-y-6">
           {/* Üst kısım - Market ve Yemek büyük kartlar */}
@@ -245,30 +245,54 @@ export default function Home() {
             {/* Market Kartı */}
             {isModuleEnabled('market') && (
               <Link href="/market" className="group">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-32 md:h-40 flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1 md:mb-2">Market</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2 md:mb-3 text-sm md:text-base">Market siparişi ver!</p>
-                    <div className="flex items-center text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                      </svg>
-                      {storeCountByCategory[2] || 0} mağaza
+                <div className="relative bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02] h-40 md:h-48">
+                  {/* Background Image */}
+                  {categories.find(cat => cat.name.toLowerCase() === 'market')?.image_url ? (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'market')?.image_url})`,
+                      }}
+                    >
+                      {/* Overlay for text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Default gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-emerald-600"></div>
+                      {/* Pattern overlay */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-4 right-4 w-16 h-16 border-2 border-white/40 rounded-full"></div>
+                        <div className="absolute bottom-8 left-6 w-12 h-12 border-2 border-white/30 rounded-lg rotate-45"></div>
+                        <div className="absolute top-1/2 right-8 w-8 h-8 bg-white/20 rounded-full"></div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Content overlay */}
+                  <div className="relative z-10 h-full flex flex-col justify-between p-4 md:p-6">
+                    <div className="flex-1 flex items-center">
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="text-white">
+                      <h3 className="text-xl md:text-2xl font-bold mb-1 drop-shadow-lg">Market</h3>
+                      <p className="text-white/90 text-sm md:text-base mb-2 drop-shadow">Market siparişi ver!</p>
+                      <div className="flex items-center text-xs md:text-sm text-white/80">
+                        <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                        </svg>
+                        {storeCountByCategory[2] || 0} mağaza
+                      </div>
                     </div>
                   </div>
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-teal-100 dark:bg-teal-900/30 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
-                    {categories.find(cat => cat.name.toLowerCase() === 'market')?.image ? (
-                      <img
-                        src={categories.find(cat => cat.name.toLowerCase() === 'market')?.image}
-                        alt="Market"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-8 h-8 md:w-12 md:h-12 text-teal-600 dark:text-teal-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                      </svg>
-                    )}
-                  </div>
+                  
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               </Link>
             )}
@@ -276,31 +300,56 @@ export default function Home() {
             {/* Yemek Kartı */}
             {isModuleEnabled('yemek') && (
               <Link href="/yemek" className="group">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-32 md:h-40 flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1 md:mb-2">Yemek</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2 md:mb-3 text-sm md:text-base">Yemek siparişi ver!</p>
-                    <div className="flex items-center text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 3a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" />
-                      </svg>
-                      {storeCountByCategory[1] || 0} restoran
+                <div className="relative bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02] h-40 md:h-48">
+                  {/* Background Image */}
+                  {categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image_url ? (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image_url})`,
+                      }}
+                    >
+                      {/* Overlay for text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Default gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-600"></div>
+                      {/* Pattern overlay */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-6 left-4 w-14 h-14 border-2 border-white/40 rounded-full"></div>
+                        <div className="absolute bottom-6 right-6 w-10 h-10 border-2 border-white/30 rounded-lg rotate-12"></div>
+                        <div className="absolute top-1/3 right-4 w-6 h-6 bg-white/20 rounded-full"></div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Content overlay */}
+                  <div className="relative z-10 h-full flex flex-col justify-between p-4 md:p-6">
+                    <div className="flex-1 flex items-center">
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 3a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="text-white">
+                      <h3 className="text-xl md:text-2xl font-bold mb-1 drop-shadow-lg">Yemek</h3>
+                      <p className="text-white/90 text-sm md:text-base mb-2 drop-shadow">Yemek siparişi ver!</p>
+                      <div className="flex items-center text-xs md:text-sm text-white/80">
+                        <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 3a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" />
+                        </svg>
+                        {storeCountByCategory[1] || 0} restoran
+                      </div>
                     </div>
                   </div>
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
-                    {categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image ? (
-                      <img
-                        src={categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image}
-                        alt="Yemek"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-8 h-8 md:w-12 md:h-12 text-orange-600 dark:text-orange-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" />
-                      </svg>
-                    )}
-                  </div>
+                  
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               </Link>
             )}
@@ -315,24 +364,48 @@ export default function Home() {
             {/* Su ve Damacana Kartı */}
             {isModuleEnabled('su') && (
               <Link href="/su" className="group">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-28 md:h-32 flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-200 mb-1 md:mb-2">Su ve Damacana</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">Su siparişi ver!</p>
+                <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02] h-32 md:h-40">
+                  {/* Background Image */}
+                  {categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url ? (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url})`,
+                      }}
+                    >
+                      {/* Overlay for text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Default gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600"></div>
+                      {/* Pattern overlay */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-3 right-3 w-12 h-12 border-2 border-white/40 rounded-full"></div>
+                        <div className="absolute bottom-4 left-4 w-8 h-8 border-2 border-white/30 rounded-lg rotate-45"></div>
+                        <div className="absolute top-1/2 right-6 w-5 h-5 bg-white/20 rounded-full"></div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Content overlay */}
+                  <div className="relative z-10 h-full flex flex-col justify-between p-4 md:p-5">
+                    <div className="flex-1 flex items-center">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-2">
+                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="text-white">
+                      <h3 className="text-lg md:text-xl font-bold mb-1 drop-shadow-lg">Su ve Damacana</h3>
+                      <p className="text-white/90 text-sm drop-shadow">Su siparişi ver!</p>
+                    </div>
                   </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
-                    {categories.find(cat => cat.name.toLowerCase() === 'su')?.image ? (
-                      <img
-                        src={categories.find(cat => cat.name.toLowerCase() === 'su')?.image}
-                        alt="Su"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-8 h-8 md:w-10 md:h-10 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" />
-                      </svg>
-                    )}
-                  </div>
+                  
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               </Link>
             )}
@@ -340,24 +413,48 @@ export default function Home() {
             {/* Aktüel Kartı */}
             {isModuleEnabled('aktuel') && (
               <Link href="/aktuel" className="group">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 p-4 md:p-6 h-28 md:h-32 flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-200 mb-1 md:mb-2">Aktüel Ürünler</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">Güncel kampanyalar!</p>
+                <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02] h-32 md:h-40">
+                  {/* Background Image */}
+                  {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url ? (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url})`,
+                      }}
+                    >
+                      {/* Overlay for text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Default gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600"></div>
+                      {/* Pattern overlay */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-3 left-3 w-12 h-12 border-2 border-white/40 rounded-full"></div>
+                        <div className="absolute bottom-4 right-4 w-8 h-8 border-2 border-white/30 rounded-lg rotate-12"></div>
+                        <div className="absolute top-2/3 left-6 w-5 h-5 bg-white/20 rounded-full"></div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Content overlay */}
+                  <div className="relative z-10 h-full flex flex-col justify-between p-4 md:p-5">
+                    <div className="flex-1 flex items-center">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-2">
+                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="text-white">
+                      <h3 className="text-lg md:text-xl font-bold mb-1 drop-shadow-lg">Aktüel Ürünler</h3>
+                      <p className="text-white/90 text-sm drop-shadow">Güncel kampanyalar!</p>
+                    </div>
                   </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center ml-2 overflow-hidden">
-                    {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image ? (
-                      <img
-                        src={categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image}
-                        alt="Aktüel"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-8 h-8 md:w-10 md:h-10 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" />
-                      </svg>
-                    )}
-                  </div>
+                  
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               </Link>
             )}
