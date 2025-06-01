@@ -142,10 +142,10 @@ const NotificationDropdown = () => {
         {/* Bildirim İkonu */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="relative p-2 text-white hover:text-white/80 focus:outline-none focus:text-white/80 transition-colors"
+          className="relative p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
           aria-label="Bildirimler"
         >
-          <FiBell className="h-6 w-6" />
+          <FiBell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -169,12 +169,12 @@ const NotificationDropdown = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="px-4 py-3 border-b border-gray-200 bg-orange-50">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-900">
                   Bildirimler
                   {unreadCount > 0 && (
-                    <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                    <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
                       {unreadCount} yeni
                     </span>
                   )}
@@ -193,7 +193,7 @@ const NotificationDropdown = () => {
                         e.stopPropagation();
                         markAllAsRead();
                       }}
-                      className="text-xs text-blue-600 hover:text-blue-700 active:text-blue-800 font-medium transition-colors touch-manipulation"
+                      className="text-xs text-orange-600 hover:text-orange-700 active:text-orange-800 font-medium transition-colors touch-manipulation"
                       title="Tümünü Okundu İşaretle"
                       style={{ WebkitTapHighlightColor: 'transparent' }}
                     >
@@ -231,8 +231,8 @@ const NotificationDropdown = () => {
                   {notifications.slice(0, 5).map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors touch-manipulation select-none ${
-                        !notification.is_read ? 'bg-blue-50' : ''
+                      className={`p-4 hover:bg-orange-50 active:bg-orange-100 cursor-pointer transition-colors touch-manipulation select-none ${
+                        !notification.is_read ? 'bg-orange-50/50' : ''
                       }`}
                       onClick={(e) => {
                         e.preventDefault();
@@ -277,7 +277,7 @@ const NotificationDropdown = () => {
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+              <div className="px-4 py-3 border-t border-gray-200 bg-orange-50">
                 <Link
                   href="/profil/bildirimler"
                   className="block text-center text-sm text-orange-600 hover:text-orange-700 font-medium"

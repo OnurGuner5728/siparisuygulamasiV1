@@ -52,6 +52,8 @@ function Header({ onCartClick }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isAddressPopupOpen, setIsAddressPopupOpen] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   
   // Initial backup user'ı sync olarak al
   const [backupUser] = useState(() => getInitialBackupUser());
@@ -61,6 +63,44 @@ function Header({ onCartClick }) {
     setIsHydrated(true);
     document.body.classList.add('hydrated');
   }, []);
+
+  // Mobil scroll behavior
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Sadece mobilde scroll behavior aktif
+      if (window.innerWidth < 768) {
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+          // Aşağı kaydırıyor ve 100px'den fazla
+          setIsHeaderVisible(false);
+        } else if (currentScrollY < lastScrollY) {
+          // Yukarı kaydırıyor
+          setIsHeaderVisible(true);
+        }
+      } else {
+        // Desktop'ta her zaman görünür
+        setIsHeaderVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    const handleResize = () => {
+      // Ekran boyutu değiştiğinde header'ı göster
+      if (window.innerWidth >= 768) {
+        setIsHeaderVisible(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [lastScrollY]);
 
   // Kullanılacak user data - priorite sırası: user > backupUser (loading'de)
   const currentUser = user || (loading ? backupUser : null);
@@ -111,27 +151,27 @@ function Header({ onCartClick }) {
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className="bg-gradient-to-r from-orange-500 to-red-500 relative overflow-hidden shadow-lg border-b border-orange-300 py-2 sticky top-0 z-50 backdrop-blur-sm">
+  return (<header className={`bg-white relative overflow-hidden shadow-lg py-2 sticky top-0 z-50 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-2 left-10 w-6 h-6 bg-white/10 rounded-full animate-bounce animation-delay-1000"></div>
-        <div className="absolute top-8 right-20 w-4 h-4 bg-white/5 rounded-full animate-pulse animation-delay-2000"></div>
-        <div className="absolute bottom-4 left-1/4 w-3 h-3 bg-white/15 rounded-full animate-ping animation-delay-3000"></div>
-        <div className="absolute top-1/2 right-10 w-2 h-2 bg-white/20 rounded-full animate-bounce animation-delay-500"></div>
-        <div className="absolute bottom-8 right-1/3 w-2 h-2 bg-white/10 rounded-full animate-pulse animation-delay-1500"></div>
+        <div className="absolute top-2 left-10 w-6 h-6 bg-orange-100/50 rounded-full animate-bounce animation-delay-1000"></div>
+        <div className="absolute top-8 right-20 w-4 h-4 bg-orange-50/80 rounded-full animate-pulse animation-delay-2000"></div>
+        <div className="absolute bottom-4 left-1/4 w-3 h-3 bg-orange-100/60 rounded-full animate-ping animation-delay-3000"></div>
+        <div className="absolute top-1/2 right-10 w-2 h-2 bg-orange-100/70 rounded-full animate-bounce animation-delay-500"></div>
+        <div className="absolute bottom-8 right-1/3 w-2 h-2 bg-orange-100/50 rounded-full animate-pulse animation-delay-1500"></div>
       </div>
 
       {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50/30 rounded-full -translate-y-16 translate-x-16"></div>
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-50/30 rounded-full translate-y-12 -translate-x-12"></div>
 
       <div className="relative container mx-auto px-4 flex justify-between items-center">        <div className="flex items-center">          <a href="/" className="flex items-center space-x-2 text-2xl font-bold" onClick={(e) => handleLinkClick(e, '/')}
           >
-           {/* <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 shadow-lg transform hover:scale-105 transition-all duration-300 border border-white/30">
-              <span className="text-white font-black text-lg tracking-tight">es</span>
+           {/* <div className="bg-orange-100 backdrop-blur-sm rounded-2xl p-3 shadow-lg transform hover:scale-105 transition-all duration-300 border border-orange-200">
+              <span className="text-orange-500 font-black text-lg tracking-tight">es</span>
             </div>
             */}
-            <span className="hidden sm:inline text-white font-black tracking-tight drop-shadow-lg">
+            <span className="hidden sm:inline text-orange-500 font-black tracking-tight drop-shadow-lg">
               easysiparis
             </span>
           </a>        </div>
@@ -149,7 +189,7 @@ function Header({ onCartClick }) {
           {currentIsAuthenticated && (
             <button 
               onClick={openAddressPopup}
-              className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white hover:scale-105 transition-all duration-200 relative group border border-white/30"
+              className="p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 relative group border border-orange-200"
               aria-label="Hızlı Adres Değiştir"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -167,7 +207,7 @@ function Header({ onCartClick }) {
           {/* 
           <button 
             onClick={onCartClick}
-            className="relative p-3 rounded-2xl bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white hover:scale-105 transition-all duration-200 group border border-white/30"
+            className="relative p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 group border border-orange-200"
             aria-label="Sepetim"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -187,7 +227,7 @@ function Header({ onCartClick }) {
           {/* Mobil Menü Butonu */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white hover:scale-105 transition-all duration-200 border border-white/30"
+            className="p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
@@ -195,7 +235,7 @@ function Header({ onCartClick }) {
           </button>
         </div>
 
-    {/* Masaüstü Menü */}        <nav className="hidden md:flex space-x-1">          <a href="/" className="px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/')}          >            Ana Sayfa          </a>                    {isModuleEnabled('yemek') && (<a href="/yemek" className="px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/yemek')}            >              Yemek            </a>)}                    {isModuleEnabled('market') && (<a href="/market" className="px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/market')}            >              Market            </a>)}                    {isModuleEnabled('su') && (<a href="/su" className="px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/su')}            >              Su            </a>)}                    {isModuleEnabled('aktuel') && (<a href="/aktuel" className="px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/aktuel')}            >              Aktüel            </a>)}        </nav>
+    {/* Masaüstü Menü */}        <nav className="hidden md:flex space-x-1">          <a href="/" className="px-4 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/')}          >            Ana Sayfa          </a>                    {isModuleEnabled('yemek') && (<a href="/yemek" className="px-4 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/yemek')}            >              Yemek            </a>)}                    {isModuleEnabled('market') && (<a href="/market" className="px-4 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/market')}            >              Market            </a>)}                    {isModuleEnabled('su') && (<a href="/su" className="px-4 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/su')}            >              Su            </a>)}                    {isModuleEnabled('aktuel') && (<a href="/aktuel" className="px-4 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/aktuel')}            >              Aktüel            </a>)}        </nav>
 
     {/* Kullanıcı İşlemleri */}        <div className="hidden md:flex items-center space-x-3">          {/* Bildirimler - sadece giriş yapmış kullanıcılar için */}          {currentIsAuthenticated && <NotificationDropdown />}
           
@@ -203,7 +243,7 @@ function Header({ onCartClick }) {
           {currentIsAuthenticated && (
             <button 
               onClick={openAddressPopup}
-              className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white hover:scale-105 transition-all duration-200 relative group border border-white/30"
+              className="p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 relative group border border-orange-200"
               aria-label="Hızlı Adres Değiştir"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -218,7 +258,7 @@ function Header({ onCartClick }) {
           )}
                     
           {/* Sepet ikonu masaüstünde görünür */}
-          <button onClick={onCartClick} className="bg-white/20 backdrop-blur-sm text-white p-3 rounded-2xl hover:bg-white/30 hover:scale-105 transition-all duration-200 relative group border border-white/30" aria-label="Sepetim"          >
+          <button onClick={onCartClick} className="bg-orange-100 backdrop-blur-sm text-orange-500 p-3 rounded-2xl hover:bg-orange-200 hover:scale-105 transition-all duration-200 relative group border border-orange-200" aria-label="Sepetim"          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
@@ -229,39 +269,39 @@ function Header({ onCartClick }) {
             </div>
           </button>
 
-      {/* Auth buttons with hydration control */}          <div className={authButtonClass}>            {!currentIsAuthenticated ? (<>                <a href="/login" className="px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/login')}                >                  Giriş Yap                </a>                <a href="/register" className="bg-white/20 backdrop-blur-sm text-white px-6 py-2 rounded-xl hover:bg-white/30 hover:scale-105 transition-all duration-200 font-medium border border-white/30" onClick={(e) => handleLinkClick(e, '/register')}                >                  Kayıt Ol                </a>              </>) : (
-        <div className="relative user-menu-container">                <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center px-3 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 font-medium transition-all duration-200 backdrop-blur-sm"                >
+      {/* Auth buttons with hydration control */}          <div className={authButtonClass}>            {!currentIsAuthenticated ? (<>                <a href="/login" className="px-4 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm" onClick={(e) => handleLinkClick(e, '/login')}                >                  Giriş Yap                </a>                <a href="/register" className="bg-orange-100 backdrop-blur-sm text-orange-500 px-6 py-2 rounded-xl hover:bg-orange-200 hover:scale-105 transition-all duration-200 font-medium border border-orange-200" onClick={(e) => handleLinkClick(e, '/register')}                >                  Kayıt Ol                </a>              </>) : (
+        <div className="relative user-menu-container">                <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center px-3 py-2 rounded-xl text-orange-600 hover:text-orange-500 hover:bg-orange-100 font-medium transition-all duration-200 backdrop-blur-sm"                >
                   {/* Mağaza sahibi ise logo göster, normal kullanıcı ise avatar göster */}
                   {currentUser?.role === 'store' && currentUser?.storeInfo?.logo_url && currentUser.storeInfo.logo_url.trim() !== '' ? (
                     <div className="flex items-center">
                       <img 
                         src={currentUser.storeInfo.logo_url} 
                         alt={currentUser.storeInfo.name || 'Mağaza'}
-                        className="h-8 w-8 rounded-full object-cover mr-2 border border-white/30"
+                        className="h-8 w-8 rounded-full object-cover mr-2 border border-orange-200"
                       />
-                      <span className="hidden sm:inline text-white">{currentUser.storeInfo.name || currentUser?.name || 'Mağaza'}</span>
-                      <span className="sm:hidden text-white">{currentUser?.name || 'Kullanıcı'}</span>
+                      <span className="hidden sm:inline text-orange-500">{currentUser.storeInfo.name || currentUser?.name || 'Mağaza'}</span>
+                      <span className="sm:hidden text-orange-500">{currentUser?.name || 'Kullanıcı'}</span>
                     </div>
                   ) : currentUser?.avatar_url ? (
                     <div className="flex items-center">
                       <img 
                         src={currentUser.avatar_url} 
                         alt={currentUser?.name || 'Kullanıcı'}
-                        className="h-8 w-8 rounded-full object-cover mr-2 border border-white/30"
+                        className="h-8 w-8 rounded-full object-cover mr-2 border border-orange-200"
                       />
-                      <span className="text-white">{currentUser?.name || 'Kullanıcı'}</span>
+                      <span className="text-orange-500">{currentUser?.name || 'Kullanıcı'}</span>
                     </div>
                   ) : (
                     <div className="flex items-center">
                       <span className="mr-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                         </svg>
                       </span>
-                      <span className="text-white">{currentUser?.name || 'Kullanıcı'}</span>
+                      <span className="text-orange-500">{currentUser?.name || 'Kullanıcı'}</span>
                     </div>
                   )}
-                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-1 transition-transform text-white ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ml-1 transition-transform text-orange-500 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
