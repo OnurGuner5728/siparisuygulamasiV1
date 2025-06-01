@@ -25,6 +25,7 @@ import swrConfig from '../lib/swrConfig';
 import ServiceWorkerManager from '../components/ServiceWorkerManager';
 import useCacheManager from '../hooks/useCacheManager';
 import DebugPanel from '../components/DebugPanel';
+import AuthRouter from '../components/AuthRouter';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -43,6 +44,9 @@ export default function RootLayout({ children }) {
     setIsCartOpen(false);
   }, [pathname]);
 
+  // Splash ve onboarding sayfalarında header/footer gösterme
+  const hideNavigation = pathname === '/splash' || pathname === '/onboarding';
+
   return (
     <html lang="tr">
       <body className={inter.className} suppressHydrationWarning={true}>
@@ -57,22 +61,24 @@ export default function RootLayout({ children }) {
                       <FileProvider>
                         <ToastProvider>
                           <CartProvider>
-                        <div className="enhanced-gradient min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-                          <HeaderWrapper onCartClick={handleCartOpen} />
-                          <main className="flex-1 mb-16 md:mb-0">
-                            {children}
-                          </main>
-                          <Footer />
-                          <MobileNavbar onCartClick={handleCartOpen} />
-                          <CartSidebar 
-                            isOpen={isCartOpen} 
-                            onClose={handleCartClose} 
-                          />
-                          <NotificationContainer />
-                          <ToastContainer />
-                          <ServiceWorkerManager />
-                          <DebugPanel />
-                        </div>
+                            <AuthRouter>
+                              <div className="enhanced-gradient min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+                                {!hideNavigation && <HeaderWrapper onCartClick={handleCartOpen} />}
+                                <main className={`flex-1 ${!hideNavigation ? 'mb-16 md:mb-0' : ''}`}>
+                                  {children}
+                                </main>
+                                {!hideNavigation && <Footer />}
+                                {!hideNavigation && <MobileNavbar onCartClick={handleCartOpen} />}
+                                <CartSidebar 
+                                  isOpen={isCartOpen} 
+                                  onClose={handleCartClose} 
+                                />
+                                <NotificationContainer />
+                                <ToastContainer />
+                                <ServiceWorkerManager />
+                                <DebugPanel />
+                              </div>
+                            </AuthRouter>
                           </CartProvider>
                         </ToastProvider>
                       </FileProvider>

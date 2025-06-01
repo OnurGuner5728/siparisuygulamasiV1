@@ -18,14 +18,25 @@ export default function SplashScreen() {
     const timeout2 = setTimeout(() => setShowLogo(true), 800);
     const timeout3 = setTimeout(() => setShowText(true), 1200);
     
-    // Belirli bir süre sonra yönlendir - giriş yapılmışsa ana sayfaya, yapılmamışsa onboarding'e
+    // 3 saniye sonra otomatik yönlendirme
     const timeout4 = setTimeout(() => {
       if (!authLoading) {
         if (isAuthenticated) {
-          router.push('/'); // Giriş yapılmışsa ana sayfaya
+          // Giriş yapılmışsa ana sayfaya
+          router.push('/');
         } else {
-          router.push('/onboarding'); // Giriş yapılmamışsa onboarding'e
+          // Giriş yapılmamışsa onboarding'e
+          // Onboarding görülmüş mü kontrol et
+          const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+          if (hasSeenOnboarding === 'true') {
+            router.push('/login');
+          } else {
+            router.push('/onboarding');
+          }
         }
+        
+        // Splash görüldüğünü işaretle
+        localStorage.setItem('hasSeenSplash', 'true');
       }
     }, 3000);
     

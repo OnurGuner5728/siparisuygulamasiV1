@@ -71,7 +71,8 @@ export default function Onboarding() {
         setIsAnimating(false);
       }, 300);
     } else {
-      // Son adımdan sonra giriş sayfasına yönlendir
+      // Son adımdan sonra onboarding tamamlandığını işaretle ve giriş sayfasına yönlendir
+      localStorage.setItem('hasSeenOnboarding', 'true');
       router.push('/login');
     }
   };
@@ -91,6 +92,7 @@ export default function Onboarding() {
   
   // Atla fonksiyonu
   const handleSkip = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
     router.push('/login');
   };
   
