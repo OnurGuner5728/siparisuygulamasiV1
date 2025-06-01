@@ -13,6 +13,8 @@ const NotificationDropdown = () => {
   const { user, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentToast, setCurrentToast] = useState(null);
+  const buttonRef = useRef(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Real-time notifications hook
   const {
@@ -44,6 +46,19 @@ const NotificationDropdown = () => {
       }
     }
   });
+
+  // Dropdown açıldığında butonun pozisyonunu hesapla
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const scrollY = window.scrollY;
+      
+      setDropdownPosition({
+        top: rect.bottom + scrollY + 8, // 8px gap
+        right: window.innerWidth - rect.right
+      });
+    }
+  }, [isOpen]);
 
   // Browser notification izni iste
   useEffect(() => {
@@ -144,6 +159,7 @@ const NotificationDropdown = () => {
           onClick={() => setIsOpen(!isOpen)}
           className="relative p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
           aria-label="Bildirimler"
+          ref={buttonRef}
         >
           <FiBell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -165,7 +181,11 @@ const NotificationDropdown = () => {
           onClick={() => setIsOpen(false)}
         >
           <div 
-            className="absolute top-16 right-4 w-80 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden"
+            className="absolute w-80 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              right: `${dropdownPosition.right}px`,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -292,13 +312,14 @@ const NotificationDropdown = () => {
         document.body
       )}
 
-      {/* Toast Notification */}
-      {currentToast && (
+      {/* Toast Notification - Portal ile body'ye taşınıyor */}
+      {currentToast && typeof window !== 'undefined' && createPortal(
         <ToastNotification
           notification={currentToast}
           onClose={() => setCurrentToast(null)}
           duration={8000}
-        />
+        />,
+        document.body
       )}
     </>
   );

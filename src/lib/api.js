@@ -2804,6 +2804,7 @@ export default {
   getStores,
   getStoreById,
   getStoreByOwnerId,
+  getStoreByUserId,
   getStoresByCategory,
   createStore,
   updateStore,

@@ -144,7 +144,7 @@ function Header({ onCartClick }) {
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className={`bg-white relative overflow-hidden shadow-lg py-2 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+  return (<header className={`bg-white  overflow-hidden shadow-lg py-2 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-2 left-10 w-6 h-6 bg-orange-100/50 rounded-full animate-bounce animation-delay-1000"></div>
@@ -307,11 +307,16 @@ function Header({ onCartClick }) {
       {/* User Menu Portal - Portal ile body'ye taşınıyor */}
       {isUserMenuOpen && typeof window !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-[9999]" 
-          onClick={() => setIsUserMenuOpen(false)}
+          className="fixed inset-0 z-[9999]"
+          onClick={(e) => {
+            // Eğer tıklanan menu değilse kapat
+            if (!e.target.closest('.user-dropdown-menu')) {
+              setTimeout(() => setIsUserMenuOpen(false), 100);
+            }
+          }}
         >
           <div 
-            className="absolute top-16 right-4 w-64 py-2 bg-white rounded-2xl shadow-xl border border-gray-100 backdrop-blur-sm z-[10000]"
+            className="user-dropdown-menu absolute top-16 right-4 w-64 py-2 bg-white rounded-2xl shadow-xl border border-gray-100 backdrop-blur-sm z-[10000]"
             onClick={(e) => e.stopPropagation()}
           >
             {currentUser?.role === 'admin' && (

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { FiX, FiCheck, FiBell, FiAlertCircle, FiTruck, FiShoppingBag, FiUsers, FiClock } from 'react-icons/fi';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
+  const { user } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -29,6 +31,35 @@ const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
         onClose && onClose();
       }, 300);
     }, 150);
+  };
+
+  const handleToastClick = () => {
+    try {
+      // Bildirim tipine göre yönlendirme (NotificationDropdown'daki aynı mantık)
+      if (notification.type === 'store_registered') {
+        // Mağaza kayıt bildirimi - admin/stores sayfasına yönlendir
+        window.location.href = '/admin/stores';
+      } else if (notification.type === 'store_approved' || notification.type === 'store_approval_revoked') {
+        // Mağaza onay bildirimi - mağaza paneline yönlendir (eğer store kullanıcısıysa)
+        if (user?.role === 'store') {
+          window.location.href = '/store';
+        }
+      } else if (notification.data?.order_id) {
+        // Sipariş bildirimi - sipariş detayına yönlendir
+        const orderId = notification.data.order_id;
+        if (user?.role === 'store') {
+          window.location.href = `/store/orders/${orderId}`;
+        } else {
+          window.location.href = `/profil/siparisler/${orderId}`;
+        }
+      }
+      
+      // Toast'ı kapat
+      handleClose();
+      
+    } catch (error) {
+      console.error('Toast bildirim işlenirken hata:', error);
+    }
   };
 
   const getToastConfig = (type) => {
@@ -118,7 +149,15 @@ const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
         ? 'translate-x-0 translate-y-0 opacity-100 scale-100' 
         : 'translate-x-full translate-y-4 opacity-0 scale-95'
     }`}>
-      <div className="relative bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden backdrop-blur-sm">
+      <div 
+        className="relative bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden backdrop-blur-sm cursor-pointer hover:shadow-3xl transition-shadow duration-200"
+        onClick={handleToastClick}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          handleToastClick();
+        }}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+      >
         {/* Colored top border */}
         <div className={`h-1 ${config.bg}`}></div>
         
@@ -165,13 +204,25 @@ const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
                       )}
                     </div>
                   )}
+
+                  {/* Tıklama ipucu */}
+                  <div className="mt-2 text-xs text-gray-400 flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                    </svg>
+                    Detayları görmek için tıklayın
+                  </div>
                 </div>
                 
                 {/* Close button */}
                 <button
-                  onClick={handleClose}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Toast click'ini engelle
+                    handleClose();
+                  }}
                   onTouchEnd={(e) => {
                     e.preventDefault();
+                    e.stopPropagation(); // Toast click'ini engelle
                     handleClose();
                   }}
                   className="flex-shrink-0 text-gray-400 hover:text-gray-600 active:text-gray-800 transition-colors duration-200 rounded-full p-1 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
