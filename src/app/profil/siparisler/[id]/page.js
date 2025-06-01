@@ -34,7 +34,7 @@ function OrderDetailContent({ promiseParams }) {
         
         if (orderData) {
           // Kullanıcının kendi siparişi mi veya store sahibinin mağaza siparişi mi kontrol et
-          const isCustomerOrder = orderData.customer_id === user?.id;
+          const isCustomerOrder = orderData.user_id === user?.id;
           const isStoreOwnerOrder = user?.role === 'store' && orderData.store?.owner_id === user?.id;
           
           if (!isCustomerOrder && !isStoreOwnerOrder) {
@@ -60,8 +60,10 @@ function OrderDetailContent({ promiseParams }) {
   const formatStatus = (status) => {
     const statusConfig = {
       pending: { text: 'Beklemede', bg: 'bg-yellow-100', color: 'text-yellow-800' },
-      processing: { text: 'Hazırlanıyor', bg: 'bg-blue-100', color: 'text-blue-800' },
-      shipped: { text: 'Yolda', bg: 'bg-orange-100', color: 'text-orange-800' },
+      confirmed: { text: 'Onaylandı', bg: 'bg-blue-100', color: 'text-blue-800' },
+      preparing: { text: 'Hazırlanıyor', bg: 'bg-blue-100', color: 'text-blue-800' },
+      ready: { text: 'Hazır', bg: 'bg-purple-100', color: 'text-purple-800' },
+      delivering: { text: 'Yolda', bg: 'bg-orange-100', color: 'text-orange-800' },
       delivered: { text: 'Teslim Edildi', bg: 'bg-green-100', color: 'text-green-800' },
       cancelled: { text: 'İptal Edildi', bg: 'bg-red-100', color: 'text-red-800' }
     };
@@ -173,16 +175,16 @@ function OrderDetailContent({ promiseParams }) {
                   <p className="text-sm text-gray-600">Ödeme Durumu</p>
                   <div>{formatPaymentStatus(order.payment_status)}</div>
                 </div>
-                {order.delivery_date && (
+                {order.actual_delivery_time && (
                   <div>
                     <p className="text-sm text-gray-600">Teslim Tarihi</p>
-                    <p className="font-medium">{new Date(order.delivery_date).toLocaleString('tr-TR')}</p>
+                    <p className="font-medium">{new Date(order.actual_delivery_time).toLocaleString('tr-TR')}</p>
                   </div>
                 )}
-                {order.estimated_delivery && (
+                {order.estimated_delivery_time && (
                   <div>
                     <p className="text-sm text-gray-600">Tahmini Teslimat</p>
-                    <p className="font-medium">{order.estimated_delivery}</p>
+                    <p className="font-medium">{order.estimated_delivery_time}</p>
                   </div>
                 )}
               </div>
@@ -193,28 +195,28 @@ function OrderDetailContent({ promiseParams }) {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Sipariş Ürünleri</h2>
               
               <div className="space-y-4">
-                {order.order_items?.map((item) => (
+                {order.items?.map((item) => (
                   <div key={item.id} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
                     <div className="flex items-center">
                       {item.product?.image && (
                         <img 
                           src={item.product.image} 
-                          alt={item.name}
+                          alt={item.product?.name || 'Ürün'}
                           className="w-12 h-12 object-cover rounded-md mr-4"
                         />
                       )}
                       <div>
-                        <h3 className="font-medium text-gray-900">{item.name}</h3>
+                        <h3 className="font-medium text-gray-900">{item.product?.name || 'Ürün'}</h3>
                         {item.notes && (
                           <p className="text-sm text-gray-500">Not: {item.notes}</p>
                         )}
                         <p className="text-sm text-gray-600">
-                          {item.quantity} x {item.price.toFixed(2)} TL
+                          {item.quantity} x {Number(item.unit_price || 0).toFixed(2)} TL
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">{item.total.toFixed(2)} TL</p>
+                      <p className="font-medium text-gray-900">{Number(item.total_price || 0).toFixed(2)} TL</p>
                     </div>
                   </div>
                 ))}
@@ -225,28 +227,28 @@ function OrderDetailContent({ promiseParams }) {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Ara Toplam</span>
-                    <span>{order.subtotal.toFixed(2)} TL</span>
+                    <span>{Number(order.subtotal || 0).toFixed(2)} TL</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Teslimat Ücreti</span>
-                    <span>{order.delivery_fee.toFixed(2)} TL</span>
+                    <span>{Number(order.delivery_fee || 0).toFixed(2)} TL</span>
                   </div>
-                  {order.discount > 0 && (
+                  {Number(order.discount_amount || 0) > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
                       <span>İndirim</span>
-                      <span>-{order.discount.toFixed(2)} TL</span>
+                      <span>-{Number(order.discount_amount || 0).toFixed(2)} TL</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-semibold pt-2 border-t border-gray-200">
                     <span>Toplam</span>
-                    <span>{order.total.toFixed(2)} TL</span>
+                    <span>{Number(order.total_amount || 0).toFixed(2)} TL</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Durum Geçmişi */}
-            {order.status_history && order.status_history.length > 0 && (
+            {order.status_history && Array.isArray(order.status_history) && order.status_history.length > 0 && (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Sipariş Geçmişi</h2>
                 
@@ -279,14 +281,28 @@ function OrderDetailContent({ promiseParams }) {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Teslimat Adresi</h2>
                 <div className="space-y-2 text-sm">
-                  <p className="font-medium">{order.delivery_address.full_name}</p>
-                  <p>{order.delivery_address.phone}</p>
-                  <p className="text-gray-600">
-                    {order.delivery_address.neighborhood}, {order.delivery_address.full_address}
-                  </p>
-                  <p className="text-gray-600">
-                    {order.delivery_address.district} / {order.delivery_address.city}
-                  </p>
+                  {(() => {
+                    try {
+                      const address = typeof order.delivery_address === 'string' 
+                        ? JSON.parse(order.delivery_address) 
+                        : order.delivery_address;
+                      return (
+                        <>
+                          <p className="font-medium">{address.full_name || address.fullName || 'Bilinmiyor'}</p>
+                          <p>{address.phone || 'Telefon belirtilmemiş'}</p>
+                          <p className="text-gray-600">
+                            {address.neighborhood || address.street || ''}
+                            {address.full_address || address.fullAddress ? `, ${address.full_address || address.fullAddress}` : ''}
+                          </p>
+                          <p className="text-gray-600">
+                            {address.district || ''} / {address.city || ''}
+                          </p>
+                        </>
+                      );
+                    } catch (e) {
+                      return <p className="text-gray-500">Adres bilgisi görüntülenemiyor</p>;
+                    }
+                  })()}
                 </div>
               </div>
             )}
@@ -321,8 +337,36 @@ function OrderDetailContent({ promiseParams }) {
                   </Link>
                 )}
                 
-                {(order.status === 'pending' || order.status === 'processing') && (                  
-                  <button                     className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md"                    onClick={async () => {                      if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {                        try {                          await api.updateOrder(order.id, { status: 'cancelled' });                                                 setOrder({ ...order, status: 'cancelled' });                        } catch (error) {                          console.error('Sipariş iptal edilirken hata:', error);                          alert('Sipariş iptal edilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');                        }                      }                    }}                  >                    Siparişi İptal Et                  </button>                )}
+                {(order.status === 'pending' || order.status === 'confirmed' || order.status === 'preparing') && (
+                  <button 
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md"
+                    onClick={async () => {
+                      if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
+                        try {
+                          const now = new Date().toISOString();
+                          const updates = {
+                            status: 'cancelled',
+                            cancelled_at: now,
+                            cancellation_reason: 'Müşteri tarafından iptal edildi',
+                            status_history: {
+                              status: 'cancelled',
+                              timestamp: now,
+                              note: 'Sipariş müşteri tarafından iptal edildi'
+                            }
+                          };
+                          
+                          await api.updateOrder(order.id, updates);
+                          setOrder({ ...order, status: 'cancelled' });
+                        } catch (error) {
+                          console.error('Sipariş iptal edilirken hata:', error);
+                          alert('Sipariş iptal edilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+                        }
+                      }
+                    }}
+                  >
+                    Siparişi İptal Et
+                  </button>
+                )}
                 
                 <Link 
                   href={`tel:${order.store?.phone || '+90 212 123 45 67'}`}

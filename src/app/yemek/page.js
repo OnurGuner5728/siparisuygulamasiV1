@@ -36,124 +36,38 @@ function YemekPageContent() {
   });
 
   useEffect(() => {
-    let isCancelled = false;
-    
     async function fetchData() {
+      setLoading(true);
       try {
-        setLoading(true);
+        // Kategorileri al
+        const categoriesData = await api.getCategories(true);
+        const yemekCategory = categoriesData.find(cat => cat.slug === 'yemek');
         
-        // Cache kontrolü
-        const cacheKey = `yemek_data_${YEMEK_CATEGORY_NAME}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-        const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
-        const CACHE_DURATION = 2 * 60 * 1000; // 2 dakika
-        
-        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
-          const parsed = JSON.parse(cachedData);
-          if (!isCancelled) {
-            setRestaurants(parsed.restaurants);
-            setFilteredRestaurants(parsed.restaurants);
-            setYemekCategoryId(parsed.categoryId);
-            setCampaigns(parsed.campaigns);
-            setLoading(false);
-          }
-          return;
+        if (yemekCategory) {
+          setYemekCategoryId(yemekCategory.id);
+          
+          // Restoranları al - filtreleri API'ye gönder
+          const storesData = await api.getStores({ 
+            category_id: yemekCategory.id,
+            rating: filters.rating,
+            isOpen: filters.isOpen
+          });
+          setRestaurants(storesData);
         }
-        
-        // Ana kategorileri çek ve Yemek kategorisinin ID'sini bul
-        const mainCategories = await api.getMainCategories();
-        const yemekCategory = mainCategories.find(cat => cat.name === YEMEK_CATEGORY_NAME);
-        
-        if (!yemekCategory) {
-          console.error('\"Yemek\" kategorisi bulunamadı.');
-          if (!isCancelled) {
-          setRestaurants([]);
-          setFilteredRestaurants([]);
-          setCampaigns([]);
-          setLoading(false);
-          }
-          return;
-        }
-        
-        if (isCancelled) return;
-        setYemekCategoryId(yemekCategory.id);
-
-        // Paralel olarak mağazalar ve kampanyaları getir
-        const [storesData, allCampaigns] = await Promise.all([
-          api.getStores({ category_id: yemekCategory.id }),
-          api.getCampaigns()
-        ]);
-        
-        if (isCancelled) return;
-        
-        // Sadece onaylanmış mağazaları filtrele
-        const yemekStores = storesData.filter(store => store.is_approved);
-
-        // Yemek kategorisine ait kampanyaları filtrele
-        const yemekCampaigns = allCampaigns.filter(campaign => {
-          if (campaign.main_category_id === yemekCategory.id || campaign.category_id === yemekCategory.id) {
-            return true;
-          }
-          if (campaign.store_id && yemekStores.some(store => store.id === campaign.store_id)) {
-            return true;
-          }
-          return false;
-        });
-        
-        setRestaurants(yemekStores);
-        setFilteredRestaurants(yemekStores);
-        setCampaigns(yemekCampaigns);
-        
-        // Cache'e kaydet
-        const dataToCache = {
-          restaurants: yemekStores,
-          categoryId: yemekCategory.id,
-          campaigns: yemekCampaigns
-        };
-        sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
-        sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-        
       } catch (error) {
-        if (!isCancelled) {
-        console.error('Veri yüklenirken bir hata oluştu:', error);
-        }
-      } finally {
-        if (!isCancelled) {
-        setLoading(false);
-        }
+        console.error('Yemek sayfası verileri yüklenirken hata:', error);
+        setRestaurants([]);
       }
+      setLoading(false);
     }
     
     fetchData();
-    
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+  }, [filters]); // filters dependency eklendi
 
-  // Filtre değiştiğinde restoranları filtrele
+  // Filtre işlemini kaldırdık çünkü artık API'de yapılıyor
   useEffect(() => {
-    if (!restaurants.length) return;
-    
-    let result = restaurants;
-    
-    // if (filters.cuisine) { // Mutfak filtresi şimdilik kaldırıldı
-    //   result = result.filter(restaurant => restaurant.cuisine === filters.cuisine);
-    // }
-
-    if (filters.rating > 0) {
-      result = result.filter(restaurant => restaurant.rating >= filters.rating);
-    }
-
-    if (filters.isOpen) {
-      // stores tablosunda is_open alanı var mı kontrol edilmeli.
-      // api.getStores içinde çalışma saatlerine göre bu dinamik olarak hesaplanabilir.
-      // Şimdilik is_open alanı olduğunu varsayıyorum.
-      result = result.filter(restaurant => restaurant.is_open);
-    }
-
-    setFilteredRestaurants(result);
-  }, [filters, restaurants]);
+    setFilteredRestaurants(restaurants);
+  }, [restaurants]);
 
   // Mutfak tiplerini (tags) restaurants dizisinden çıkart
   // const cuisineTypes = restaurants.length 
@@ -183,14 +97,9 @@ function YemekPageContent() {
       <div className="bg-white dark:bg-gray-800">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-          <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yemek</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yemek</h1>
             </div>
-            <button className="p-2 text-gray-600 dark:text-gray-400">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -307,21 +216,12 @@ function YemekPageContent() {
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{restaurant.name}</h3>
                     <p className="text-gray-600 mb-4">{restaurant.description || 'Lezzetli yemekleri keşfedin'}</p>
                     
-                    {/* Category Tags */}
-                    {restaurant.tags && restaurant.tags.length > 0 && (
+                    {/* Restaurant Type */}
+                    {restaurant.type && (
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {restaurant.tags.slice(0, 4).map((tag, index) => (
-                          <span 
-                            key={index}
-                            className={`px-4 py-2 text-sm font-medium rounded-full ${
-                              index === 0 
-                                ? 'bg-orange-500 text-white' 
-                                : 'bg-gray-100 text-gray-600'
-                            }`}
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                        <span className="bg-orange-500 text-white px-4 py-2 text-sm font-medium rounded-full">
+                          {restaurant.type}
+                        </span>
                       </div>
                     )}
 

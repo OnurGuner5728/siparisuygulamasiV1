@@ -134,16 +134,36 @@ const NotificationSystem = ({ userRole = 'user', storeId = null, showAll = false
                   {formatTime(notification.created_at)}
                 </span>
                 <button
-                  onClick={() => notification.is_read ? markAsUnread(notification.id) : markAsRead(notification.id)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    notification.is_read ? markAsUnread(notification.id) : markAsRead(notification.id);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    notification.is_read ? markAsUnread(notification.id) : markAsRead(notification.id);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 active:text-gray-800 transition-colors touch-manipulation p-1 rounded-full hover:bg-gray-100"
                   title={notification.is_read ? 'Okunmadı işaretle' : 'Okundu işaretle'}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {notification.is_read ? <FiEyeOff size={16} /> : <FiEye size={16} />}
                 </button>
                 <button
-                  onClick={() => deleteNotification(notification.id)}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteNotification(notification.id);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteNotification(notification.id);
+                  }}
+                  className="text-gray-400 hover:text-red-500 active:text-red-700 transition-colors touch-manipulation p-1 rounded-full hover:bg-red-50"
                   title="Bildirimi sil"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <FiX size={16} />
                 </button>
@@ -236,8 +256,18 @@ const NotificationSystem = ({ userRole = 'user', storeId = null, showAll = false
         
         {unreadCount > 0 && (
           <button
-            onClick={markAllAsRead}
-            className="text-sm bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors duration-200"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              markAllAsRead();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              markAllAsRead();
+            }}
+            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors touch-manipulation"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             Tümünü Okundu İşaretle
           </button>

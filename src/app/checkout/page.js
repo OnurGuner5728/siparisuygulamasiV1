@@ -31,7 +31,7 @@ function CheckoutContent() {
   
   const [activeStep, setActiveStep] = useState(1);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('online');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cardInfo, setCardInfo] = useState({
     cardNumber: '',
     cardName: '',
@@ -142,12 +142,8 @@ function CheckoutContent() {
     if (activeStep === 1 && selectedAddress) {
       setActiveStep(2);
     } else if (activeStep === 2) {
-      if (paymentMethod === 'cash') {
-        // Kapıda ödeme seçilmişse, doğrudan siparişi tamamla
-        handleCompleteOrder();
-      } else if (validateCardInfo()) {
-        handleCompleteOrder();
-      }
+      // Sadece kapıda ödeme mevcut olduğu için doğrudan siparişi tamamla
+      handleCompleteOrder();
     }
   };
 
@@ -230,16 +226,16 @@ function CheckoutContent() {
       
       // Sipariş verisi oluştur
       const orderData = {
-        customer_id: user.id,
+        user_id: user.id,
         store_id: storeId,
         subtotal: calculateSubtotal(),
         delivery_fee: calculateDeliveryFee(),
-        total: calculateTotal(),
-        discount: 0,
+        total_amount: calculateTotal(),
+        discount_amount: 0,
         payment_method: paymentMethod === 'online' ? 'credit_card' : 'cash',
-        delivery_address_id: selectedAddress,
-        estimated_delivery: '30-45 dakika',
-        delivery_note: ''
+        delivery_address: JSON.stringify(address),
+        estimated_delivery_time: '30-45 dakika',
+        delivery_notes: ''
       };
       
       console.log('📋 OrderData:', orderData);
@@ -251,6 +247,23 @@ function CheckoutContent() {
       
       if (result.error) {
         throw new Error(result.error.message || 'Sipariş oluşturulamadı');
+      }
+      
+      // Mağaza sahibine yeni sipariş bildirimi gönder
+      try {
+        const store = await api.getStoreById(storeId);
+        if (store && store.owner_id) {
+          await api.createNewOrderNotification(
+            result.data.id,
+            store.owner_id,
+            user.name || user.email,
+            calculateTotal()
+          );
+          console.log('✅ Mağaza sahibine bildirim gönderildi');
+        }
+      } catch (notificationError) {
+        console.error('❌ Mağaza bildirimi gönderilirken hata:', notificationError);
+        // Bildirim hatası sipariş işlemini etkilemesin
       }
       
       setOrderNumber(result.data.id);
@@ -417,91 +430,31 @@ function CheckoutContent() {
               
               <div className="space-y-4">
                 <div 
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    paymentMethod === 'online' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                  onClick={() => setPaymentMethod('online')}
+                  className={`border rounded-lg p-4 transition-colors bg-gray-100 border-gray-300 cursor-not-allowed opacity-60`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <svg className="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                       <div>
-                        <h3 className="font-medium">Kredi/Banka Kartı</h3>
-                        <p className="text-sm text-gray-500">Güvenli ödeme</p>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-gray-500">Kredi/Banka Kartı</h3>
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">
+                            Yakında
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-400">Güvenli ödeme (Geliştiriliyor)</p>
                       </div>
                     </div>
                     <input
                       type="radio"
-                      className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      checked={paymentMethod === 'online'}
-                      onChange={() => setPaymentMethod('online')}
+                      className="w-5 h-5 text-gray-400 border-gray-300 cursor-not-allowed"
+                      checked={false}
+                      disabled={true}
+                      readOnly
                     />
                   </div>
-                  
-                  {paymentMethod === 'online' && (
-                    <div className="mt-4 border-t pt-4">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Kart Numarası
-                          </label>
-                          <input
-                            type="text"
-                            name="cardNumber"
-                            value={cardInfo.cardNumber}
-                            onChange={handleCardInfoChange}
-                            placeholder="0000 0000 0000 0000"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Kart Üzerindeki İsim
-                          </label>
-                          <input
-                            type="text"
-                            name="cardName"
-                            value={cardInfo.cardName}
-                            onChange={handleCardInfoChange}
-                            placeholder="Ad Soyad"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Son Kullanma
-                            </label>
-                            <input
-                              type="text"
-                              name="expiryDate"
-                              value={cardInfo.expiryDate}
-                              onChange={handleCardInfoChange}
-                              placeholder="AA/YY"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              CVV
-                            </label>
-                            <input
-                              type="text"
-                              name="cvv"
-                              value={cardInfo.cvv}
-                              onChange={handleCardInfoChange}
-                              placeholder="000"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
                 
                 <div 

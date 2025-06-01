@@ -60,11 +60,22 @@ const NotificationDropdown = () => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+    const handleTouchOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
     };
-  }, []);
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleTouchOutside);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleTouchOutside);
+      };
+    }
+  }, [isOpen]);
 
   // Okunmamış bildirim sayısı
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -74,6 +85,15 @@ const NotificationDropdown = () => {
       await api.markNotificationAsRead(notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await api.markAllNotificationsAsRead(user.id);
+      console.log('Tüm bildirimler okundu olarak işaretlendi');
+    } catch (error) {
+      console.error('Tüm bildirimleri okundu işaretlerken hata:', error);
     }
   };
 
@@ -113,18 +133,6 @@ const NotificationDropdown = () => {
       // Bildirimi okundu olarak işaretle
       await api.markNotificationAsRead(notification.id);
       
-      // Bildirimi güncelle
-      setNotifications(prev => 
-        prev.map(n => 
-          n.id === notification.id 
-            ? { ...n, is_read: true, read_at: new Date().toISOString() }
-            : n
-        )
-      );
-      
-      // Okunmamış sayısını güncelle
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      
       // Bildirim tipine göre yönlendirme
       if (notification.type === 'store_registered') {
         // Mağaza kayıt bildirimi - admin/stores sayfasına yönlendir
@@ -136,7 +144,12 @@ const NotificationDropdown = () => {
         }
       } else if (notification.data?.order_id) {
         // Sipariş bildirimi - sipariş detayına yönlendir
-        window.location.href = `/orders/${notification.data.order_id}`;
+        const orderId = notification.data.order_id;
+        if (user?.role === 'store') {
+          window.location.href = `/store/orders/${orderId}`;
+        } else {
+          window.location.href = `/profil/siparisler/${orderId}`;
+        }
       }
       
     } catch (error) {
@@ -171,7 +184,7 @@ const NotificationDropdown = () => {
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-80 sm:w-80 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-80 sm:w-80 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-[10000] max-h-96 overflow-hidden">
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
@@ -184,6 +197,28 @@ const NotificationDropdown = () => {
                   )}
                 </h3>
                 <div className="flex items-center space-x-2">
+                  {/* Tümünü Okundu İşaretle */}
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        markAllAsRead();
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        markAllAsRead();
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 active:text-blue-800 font-medium transition-colors touch-manipulation"
+                      title="Tümünü Okundu İşaretle"
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                  )}
                   {/* Tümünü Gör */}
                   <Link
                     href="/profil/bildirimler"
@@ -213,12 +248,20 @@ const NotificationDropdown = () => {
                   {notifications.slice(0, 5).map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                      className={`p-4 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors touch-manipulation select-none ${
                         !notification.is_read ? 'bg-blue-50' : ''
                       }`}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleNotificationClick(notification);
                       }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNotificationClick(notification);
+                      }}
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
                     >
                       <div className="flex items-start space-x-3">
                         <span className="text-lg flex-shrink-0">
@@ -270,7 +313,7 @@ const NotificationDropdown = () => {
         <ToastNotification
           notification={currentToast}
           onClose={() => setCurrentToast(null)}
-          duration={6000}
+          duration={8000}
         />
       )}
     </>

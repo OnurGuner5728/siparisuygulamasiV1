@@ -129,12 +129,9 @@ export default function HelpPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Telefon Desteği</h3>
               <p className="text-gray-600 mb-4">7/24 müşteri hizmetleri</p>
-              <a 
-                href="tel:+902121234567"
-                className="bg-orange-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors duration-200"
-              >
-                (0212) 123 45 67
-              </a>
+              <div className="bg-orange-500 text-white px-6 py-2 rounded-lg font-semibold">
+                0*** *** ** **
+              </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6 text-center">
@@ -143,12 +140,9 @@ export default function HelpPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">E-posta Desteği</h3>
               <p className="text-gray-600 mb-4">24 saat içinde yanıt</p>
-              <a 
-                href="mailto:destek@easysiparis.com"
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-200"
-              >
-                E-posta Gönder
-              </a>
+              <div className="bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold">
+                ****@*****.com
+              </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6 text-center">

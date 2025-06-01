@@ -286,15 +286,16 @@ export default function CookiePolicyPage() {
                   </section>
 
                   <section className="mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">7. İletişim</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">15. İletişim</h2>
                     <p className="text-gray-700 mb-4">
-                      Çerez politikası hakkında sorularınız için bizimle iletişime geçebilirsiniz:
+                      Çerez politikası hakkında sorularınız için:
                     </p>
                     <div className="bg-gray-100 p-6 rounded-lg">
-                      <p className="text-gray-700 mb-2"><strong>E-posta:</strong> cerez@easysiparis.com</p>
-                      <p className="text-gray-700 mb-2"><strong>Telefon:</strong> +90 (212) 123 45 67</p>
+                      <p className="text-gray-700 mb-2"><strong>KVKK Sorumlusu:</strong> **** ******</p>
+                      <p className="text-gray-700 mb-2"><strong>E-posta:</strong> ****@*****.com</p>
+                      <p className="text-gray-700 mb-2"><strong>Telefon:</strong> 0*** *** ** **</p>
                       <p className="text-gray-700">
-                        <strong>Adres:</strong> Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul
+                        <strong>Adres:</strong> ***** Mahallesi, ***** Caddesi No: ***/*, *****, *****
                       </p>
                     </div>
                   </section>

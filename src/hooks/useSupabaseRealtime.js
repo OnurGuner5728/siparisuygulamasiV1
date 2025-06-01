@@ -62,17 +62,29 @@ export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
       subscriptionRef.current.unsubscribe();
     }
 
+    // Filter string'ini doğru formatta oluştur
+    let filterString = undefined;
+    if (Object.entries(filters).length > 0) {
+      const filterParts = Object.entries(filters)
+        .filter(([key, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => `${key}=eq.${value}`);
+      
+      if (filterParts.length > 0) {
+        filterString = filterParts.join(' and ');
+      }
+    }
+
+    console.log(`Setting up subscription for ${table} with filter:`, filterString);
+
     let channel = supabase
-      .channel(`${table}_changes`)
+      .channel(`${table}_changes_${Date.now()}`) // Unique channel name
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: table,
-          filter: Object.entries(filters).length > 0 
-            ? Object.entries(filters).map(([key, value]) => `${key}=eq.${value}`).join(',')
-            : undefined
+          filter: filterString
         },
         (payload) => {
           console.log(`Real-time change in ${table}:`, payload);
@@ -117,6 +129,11 @@ export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
       )
       .subscribe((status) => {
         console.log(`Subscription status for ${table}:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log(`✅ Successfully subscribed to ${table} changes`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`❌ Error subscribing to ${table} changes`);
+        }
       });
 
     subscriptionRef.current = channel;

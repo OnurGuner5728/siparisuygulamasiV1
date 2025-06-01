@@ -67,7 +67,7 @@ function StoreOrdersContent() {
         const populatedOrders = await Promise.all(
           ordersData.map(async (order) => {
             try {
-              const customer = await api.getUserById(order.customer_id);
+              const customer = await api.getUserById(order.user_id);
               return {
                 ...order,
                 customerName: customer ? customer.name || customer.email : 'Bilinmiyor',
@@ -136,19 +136,21 @@ function StoreOrdersContent() {
       
       const statusNote = {
         pending: 'Sipariş beklemede',
-        processing: 'Sipariş hazırlanıyor',
-        shipped: 'Sipariş yolda',
+        confirmed: 'Sipariş onaylandı',
+        preparing: 'Sipariş hazırlanıyor',
+        ready: 'Sipariş hazır',
+        delivering: 'Sipariş yolda',
         delivered: 'Sipariş teslim edildi',
         cancelled: 'Sipariş iptal edildi'
       };
 
       const updates = {
         status: newStatus,
-        status_history: [{
+        status_history: {
           status: newStatus,
           timestamp: now,
           note: statusNote[newStatus] || 'Durum güncellendi'
-        }]
+        }
       };
 
       if (newStatus === 'delivered') {
@@ -161,7 +163,7 @@ function StoreOrdersContent() {
       const order = orders.find(o => o.id === orderId);
       if (order) {
         try {
-          await api.createOrderStatusNotification(orderId, newStatus, order.customer_id);
+          await api.createOrderStatusNotification(orderId, newStatus, order.user_id);
           console.log('Müşteriye bildirim gönderildi:', newStatus);
         } catch (notificationError) {
           console.error('Bildirim gönderilirken hata:', notificationError);
@@ -184,9 +186,13 @@ function StoreOrdersContent() {
     switch (status) {
       case 'pending':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Beklemede</span>;
-      case 'processing':
+      case 'confirmed':
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Onaylandı</span>;
+      case 'preparing':
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Hazırlanıyor</span>;
-      case 'shipped':
+      case 'ready':
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Hazır</span>;
+      case 'delivering':
         return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
@@ -249,8 +255,10 @@ function StoreOrdersContent() {
             >
               <option value="all">Tüm Durumlar</option>
               <option value="pending">Beklemede</option>
-              <option value="processing">Hazırlanıyor</option>
-              <option value="shipped">Yolda</option>
+              <option value="confirmed">Onaylandı</option>
+              <option value="preparing">Hazırlanıyor</option>
+              <option value="ready">Hazır</option>
+              <option value="delivering">Yolda</option>
               <option value="delivered">Teslim Edildi</option>
               <option value="cancelled">İptal Edildi</option>
             </select>
@@ -304,7 +312,7 @@ function StoreOrdersContent() {
                         <div className="text-sm text-gray-500">{new Date(order.order_date || order.created_at).toLocaleTimeString('tr-TR')}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{order.total.toFixed(2)} TL</div>
+                        <div className="text-sm font-medium text-gray-900">{Number(order.total_amount || 0).toFixed(2)} TL</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {formatStatus(order.status)}
@@ -347,7 +355,15 @@ function StoreOrdersContent() {
                                   </button>
                                   
                                   <button
-                                    onClick={() => handleChangeStatus(order.id, 'processing')}
+                                    onClick={() => handleChangeStatus(order.id, 'confirmed')}
+                                    className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition-all duration-150"
+                                  >
+                                    <div className="w-2 h-2 bg-blue-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                    Onaylandı
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleChangeStatus(order.id, 'preparing')}
                                     className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition-all duration-150"
                                   >
                                     <div className="w-2 h-2 bg-blue-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
@@ -355,7 +371,15 @@ function StoreOrdersContent() {
                                   </button>
                                   
                                   <button
-                                    onClick={() => handleChangeStatus(order.id, 'shipped')}
+                                    onClick={() => handleChangeStatus(order.id, 'ready')}
+                                    className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-800 transition-all duration-150"
+                                  >
+                                    <div className="w-2 h-2 bg-purple-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>
+                                    Hazır
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleChangeStatus(order.id, 'delivering')}
                                     className="group flex w-full items-center px-3 py-2 text-xs text-gray-700 hover:bg-orange-50 hover:text-orange-800 transition-all duration-150"
                                   >
                                     <div className="w-2 h-2 bg-orange-400 rounded-full mr-2 group-hover:scale-110 transition-transform"></div>

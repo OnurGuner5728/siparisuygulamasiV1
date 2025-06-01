@@ -83,7 +83,11 @@ function StoreOrderDetailContent() {
           ...orderData,
           items: orderItems || [],
           customer: customerInfo,
-          statusHistory: orderData.status_history || []
+          statusHistory: orderData.status_history ? 
+            (Array.isArray(orderData.status_history) ? 
+              orderData.status_history : 
+              JSON.parse(orderData.status_history)
+            ) : []
         };
         
         setOrder(completeOrder);
@@ -106,14 +110,53 @@ function StoreOrderDetailContent() {
     if (!order || !orderId) return;
     
     try {
+      const now = new Date().toISOString();
+      
+      const statusNote = {
+        pending: 'Sipariş beklemede',
+        confirmed: 'Sipariş onaylandı',
+        preparing: 'Sipariş hazırlanıyor',
+        ready: 'Sipariş hazır',
+        delivering: 'Sipariş yolda',
+        delivered: 'Sipariş teslim edildi',
+        cancelled: 'Sipariş iptal edildi'
+      };
+
+      const updates = {
+        status: newStatus,
+        status_history: {
+          status: newStatus,
+          timestamp: now,
+          note: statusNote[newStatus] || 'Durum güncellendi'
+        }
+      };
+
+      if (newStatus === 'delivered') {
+        updates.actual_delivery_time = now;
+        // Kapıda ödeme ise teslim edildiğinde ödeme durumunu güncelle
+        if (order.payment_method === 'cash') {
+          updates.payment_status = 'paid';
+        }
+      }
+
       // API üzerinden sipariş durumunu güncelle
-      await api.updateOrder(orderId, { status: newStatus });
+      await api.updateOrder(orderId, updates);
+      
+      // Müşteriye bildirim gönder
+      try {
+        await api.createOrderStatusNotification(orderId, newStatus, order.user_id);
+        console.log('Müşteriye bildirim gönderildi:', newStatus);
+      } catch (notificationError) {
+        console.error('Bildirim gönderilirken hata:', notificationError);
+      }
       
       // Yeni durum geçmişi oluştur
       const statusMap = {
-        'pending': 'Onay Bekliyor',
+        'pending': 'Beklemede',
+        'confirmed': 'Onaylandı',
         'preparing': 'Hazırlanıyor',
-        'on_the_way': 'Yola Çıktı',
+        'ready': 'Hazır',
+        'delivering': 'Yolda',
         'delivered': 'Teslim Edildi',
         'cancelled': 'İptal Edildi'
       };
@@ -122,7 +165,7 @@ function StoreOrderDetailContent() {
         ...(order.statusHistory || []),
         { 
           status: newStatus, 
-          date: new Date().toISOString(), 
+          date: now, 
           note: `Durum "${statusMap[newStatus] || newStatus}" olarak güncellendi` 
         }
       ];
@@ -136,7 +179,7 @@ function StoreOrderDetailContent() {
       
     } catch (error) {
       console.error('Sipariş durumu güncellenirken hata:', error);
-      alert('Sipariş durumu güncellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+      alert('Sipariş durumu güncellenirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 
@@ -144,14 +187,19 @@ function StoreOrderDetailContent() {
   const formatStatus = (status) => {
     switch (status) {
       case 'pending':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Onay Bekliyor</span>;
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Beklemede</span>;
+      case 'confirmed':
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Onaylandı</span>;
       case 'preparing':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Hazırlanıyor</span>;
-      case 'on_the_way':
+      case 'ready':
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Hazır</span>;
+      case 'delivering':
         return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Yolda</span>;
       case 'delivered':
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Teslim Edildi</span>;
-            case 'cancelled':        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">İptal Edildi</span>;
+      case 'cancelled':
+        return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">İptal Edildi</span>;
       default:
         return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Bilinmiyor</span>;
     }
@@ -270,21 +318,37 @@ function StoreOrderDetailContent() {
             <div className="mt-4 md:mt-0 flex flex-col md:flex-row gap-2">
               {order.status === 'pending' && (
                 <button 
-                  onClick={() => handleChangeStatus('preparing')}
+                  onClick={() => handleChangeStatus('confirmed')}
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
                 >
                   Kabul Et
                 </button>
               )}
+              {order.status === 'confirmed' && (
+                <button 
+                  onClick={() => handleChangeStatus('preparing')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                >
+                  Hazırlanıyor İşaretle
+                </button>
+              )}
               {order.status === 'preparing' && (
                 <button 
-                  onClick={() => handleChangeStatus('on_the_way')}
+                  onClick={() => handleChangeStatus('ready')}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                >
+                  Hazır İşaretle
+                </button>
+              )}
+              {order.status === 'ready' && (
+                <button 
+                  onClick={() => handleChangeStatus('delivering')}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
                 >
                   Yola Çıktı İşaretle
                 </button>
               )}
-              {order.status === 'on_the_way' && (
+              {order.status === 'delivering' && (
                 <button 
                   onClick={() => handleChangeStatus('delivered')}
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
@@ -292,7 +356,7 @@ function StoreOrderDetailContent() {
                   Teslim Edildi İşaretle
                 </button>
               )}
-              {(order.status === 'pending' || order.status === 'preparing') && (
+              {(order.status === 'pending' || order.status === 'confirmed' || order.status === 'preparing') && (
                 <button 
                   onClick={() => {
                     if (window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
@@ -335,17 +399,21 @@ function StoreOrderDetailContent() {
                   {order.items && order.items.map((item, index) => (
                     <tr key={item.id || index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{item.product_name || item.name}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.name || item.product?.name || 'Ürün adı bulunamadı'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{(item.price || 0).toFixed(2)} TL</div>
+                        <div className="text-sm text-gray-900">
+                          {Number(item.unit_price || item.price || 0).toFixed(2)} TL
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">x{item.quantity}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {((item.price || 0) * (item.quantity || 1)).toFixed(2)} TL
+                          {Number(item.total_price || item.total || (item.unit_price * item.quantity) || 0).toFixed(2)} TL
                         </div>
                       </td>
                     </tr>
@@ -358,7 +426,7 @@ function StoreOrderDetailContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {(order.subtotal || 0).toFixed(2)} TL
+                        {Number(order.subtotal || 0).toFixed(2)} TL
                       </div>
                     </td>
                   </tr>
@@ -368,7 +436,7 @@ function StoreOrderDetailContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {(order.delivery_fee || 0).toFixed(2)} TL
+                        {Number(order.delivery_fee || 0).toFixed(2)} TL
                       </div>
                     </td>
                   </tr>
@@ -378,7 +446,7 @@ function StoreOrderDetailContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-lg font-bold text-gray-900">
-                        {(order.total || 0).toFixed(2)} TL
+                        {Number(order.total_amount || order.total || 0).toFixed(2)} TL
                       </div>
                     </td>
                   </tr>
@@ -411,11 +479,51 @@ function StoreOrderDetailContent() {
               <div className="bg-gray-50 p-4 rounded-md">
                 <div className="text-sm text-gray-600 mb-2">
                   <span className="font-medium">Adres: </span>
-                  {order.delivery_address || 'Adres bilgisi bulunamadı'}
+                  {(() => {
+                    try {
+                      if (typeof order.delivery_address === 'string') {
+                        const address = JSON.parse(order.delivery_address);
+                        return `${address.full_name || ''} - ${address.city || ''}, ${address.district || ''}, ${address.neighborhood || ''}, ${address.street || ''} No:${address.building_number || ''} ${address.floor ? `Kat:${address.floor}` : ''} ${address.apartment_number ? `Daire:${address.apartment_number}` : ''} ${address.directions ? ` - ${address.directions}` : ''}`.trim();
+                      } else if (typeof order.delivery_address === 'object' && order.delivery_address) {
+                        const address = order.delivery_address;
+                        return `${address.full_name || ''} - ${address.city || ''}, ${address.district || ''}, ${address.neighborhood || ''}, ${address.street || ''} No:${address.building_number || ''} ${address.floor ? `Kat:${address.floor}` : ''} ${address.apartment_number ? `Daire:${address.apartment_number}` : ''} ${address.directions ? ` - ${address.directions}` : ''}`.trim();
+                      }
+                      return order.delivery_address || 'Adres bilgisi bulunamadı';
+                    } catch (e) {
+                      return order.delivery_address || 'Adres bilgisi bulunamadı';
+                    }
+                  })()}
                 </div>
+                {(() => {
+                  try {
+                    if (typeof order.delivery_address === 'string') {
+                      const address = JSON.parse(order.delivery_address);
+                      if (address.phone) {
+                        return (
+                          <div className="text-sm text-gray-600 mb-2">
+                            <span className="font-medium">Telefon: </span>{address.phone}
+                          </div>
+                        );
+                      }
+                    } else if (typeof order.delivery_address === 'object' && order.delivery_address?.phone) {
+                      return (
+                        <div className="text-sm text-gray-600 mb-2">
+                          <span className="font-medium">Telefon: </span>{order.delivery_address.phone}
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // JSON parse hatası, devam et
+                  }
+                  return null;
+                })()}
                 <div className="text-sm text-gray-600">
                   <span className="font-medium">Teslimat Notu: </span>
-                  {order.delivery_note || 'Not belirtilmemiş'}
+                  {order.delivery_notes || order.delivery_note || 'Not belirtilmemiş'}
+                </div>
+                <div className="text-sm text-gray-600 mt-2">
+                  <span className="font-medium">Tahmini Teslimat: </span>
+                  {order.estimated_delivery_time || 'Belirtilmemiş'}
                 </div>
               </div>
             </div>

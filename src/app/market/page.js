@@ -32,124 +32,65 @@ function MarketPageContent() {
   });
 
   useEffect(() => {
-    let isCancelled = false;
-    
     async function fetchData() {
+      setLoading(true);
       try {
-        setLoading(true);
-
-        const cacheKey = `market_data_${MARKET_CATEGORY_NAME}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-        const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
-        const CACHE_DURATION = 2 * 60 * 1000;
+        // Kategorileri al
+        const categoriesData = await api.getCategories(true);
+        const marketCategory = categoriesData.find(cat => cat.slug === 'market');
         
-        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
-          const parsed = JSON.parse(cachedData);
-          if (!isCancelled) {
-            setMarkets(parsed.markets);
-            setFilteredMarkets(parsed.markets);
-            setMarketCategoryId(parsed.categoryId);
-            setSubCategories(parsed.subCategories);
-            setMarketTypes(parsed.marketTypes);
-            setCampaigns(parsed.campaigns);
-            setLoading(false);
-          }
-          return;
+        if (marketCategory) {
+          setMarketCategoryId(marketCategory.id);
+          
+          // Alt kategorileri al
+          const subCategoriesData = await api.getSubcategoriesByParentId(marketCategory.id);
+          setSubCategories(subCategoriesData);
+          
+          // Marketleri al - filtreleri API'ye gönder
+          const storesData = await api.getStores({ 
+            category_id: marketCategory.id,
+            isOpen: filters.isOpen
+          });
+          setMarkets(storesData);
         }
-
-        const mainCategories = await api.getMainCategories();
-        const marketCategory = mainCategories.find(cat => cat.name === MARKET_CATEGORY_NAME);
-
-        if (!marketCategory) {
-          console.error(`'${MARKET_CATEGORY_NAME}' kategorisi bulunamadı.`);
-          if (!isCancelled) {
-          setMarkets([]);
-          setFilteredMarkets([]);
-          setCampaigns([]);
-          setLoading(false);
-          }
-          return;
-        }
-
-        if (isCancelled) return;
-        setMarketCategoryId(marketCategory.id);
-
-        const [storesData, allCampaignsData, subCategoriesData] = await Promise.all([
-          api.getStores({ 
-            category_id: marketCategory.id, 
-            status: 'active' 
-          }),
-          api.getCampaigns(),
-          api.getCategories({ parent_category_id: marketCategory.id })
-        ]);
-        
-        if (isCancelled) return;
-        
-        const approvedMarkets = (storesData || []).filter(store => store.is_approved);
-        const uniqueMarketTypes = [...new Set(approvedMarkets.map(store => store.type).filter(Boolean))];
-        const marketCampaigns = (allCampaignsData || []).filter(campaign => {
-          if (campaign.category_id === marketCategory.id || campaign.main_category_id === marketCategory.id) return true;
-          if (campaign.store_id && approvedMarkets.some(store => store.id === campaign.store_id)) return true;
-          return false;
-        });
-
-        setMarkets(approvedMarkets);
-        setFilteredMarkets(approvedMarkets);
-        setSubCategories(subCategoriesData || []);
-        setMarketTypes(uniqueMarketTypes);
-        setCampaigns(marketCampaigns);
-
-        const dataToCache = {
-          markets: approvedMarkets,
-          categoryId: marketCategory.id,
-          subCategories: subCategoriesData || [],
-          marketTypes: uniqueMarketTypes,
-          campaigns: marketCampaigns
-        };
-        sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
-        sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-
       } catch (error) {
-        if (!isCancelled) {
-        console.error('Market verileri yüklenirken bir hata oluştu:', error);
-        }
-      } finally {
-        if (!isCancelled) {
-        setLoading(false);
-        }
+        console.error('Market sayfası verileri yüklenirken hata:', error);
+        setMarkets([]);
       }
+      setLoading(false);
     }
     
     fetchData();
-    
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+  }, [filters.isOpen]); // sadece isOpen filtresi API'ye gönderiliyor
 
+  // Market türlerini hesapla
+  useEffect(() => {
+    if (markets.length > 0) {
+      const uniqueTypes = [...new Set(markets.map(market => market.type).filter(Boolean))];
+      setMarketTypes(uniqueTypes);
+    }
+  }, [markets]);
+
+  // Diğer filtreler frontend'de yapılıyor
   useEffect(() => {
     if (!markets.length) return;
-
+    
     let result = markets;
-
+    
+    // Store type filtresi
     if (filters.storeType) {
-      result = result.filter(market => market.type === filters.storeType);
-    }
-
-    if (filters.minOrder > 0) {
-      result = result.filter(market => (market.min_order_amount || 0) <= filters.minOrder);
-    }
-
-    if (filters.isOpen) {
-      result = result.filter(market => market.is_open);
-    }
-
-    if (filters.subCategory) {
       result = result.filter(market => 
-        market.tags && market.tags.map(tag => tag.toLowerCase()).includes(filters.subCategory.toLowerCase())
+        market.type && market.type.toLowerCase().includes(filters.storeType.toLowerCase())
       );
     }
-
+    
+    // SubCategory filtresi
+    if (filters.subCategory) {
+      result = result.filter(market => 
+        market.subcategories && market.subcategories.includes(filters.subCategory)
+      );
+    }
+    
     setFilteredMarkets(result);
   }, [filters, markets]);
 
@@ -177,11 +118,6 @@ function MarketPageContent() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Market</h1>
             </div>
-            <button className="p-2 text-gray-600 dark:text-gray-400">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -315,21 +251,13 @@ function MarketPageContent() {
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{market.name}</h3>
                     <p className="text-gray-600 mb-4">{market.description || 'İhtiyacınız olan her şey burada'}</p>
                     
-                    {/* Market Type & Tags */}
+                    {/* Market Type */}
                     <div className="flex flex-wrap gap-2 mb-4">
                       {market.type && (
                         <span className="bg-green-500 text-white px-4 py-2 text-sm font-medium rounded-full">
                           {market.type}
                         </span>
                       )}
-                      {market.tags && market.tags.slice(0, 3).map((tag, index) => (
-                        <span 
-                          key={index}
-                          className="bg-gray-100 text-gray-600 px-4 py-2 text-sm font-medium rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))}
                     </div>
 
                     {/* Market Stats */}

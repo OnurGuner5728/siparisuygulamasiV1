@@ -18,6 +18,9 @@ export default function StorePanel() {
 function StorePanelContent() {
   const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [stats, setStats] = useState({
     totalOrders: 0,
     activeOrders: 0,
@@ -36,6 +39,14 @@ function StorePanelContent() {
     const loadStoreStats = async () => {
       try {
         if (user?.storeInfo?.id) {
+          // Bildirimleri yükle
+          const storeNotifications = await api.getNotifications({ 
+            user_id: user.id,
+            type: 'new_order'
+          });
+          setNotifications(storeNotifications);
+          setUnreadCount(storeNotifications.filter(n => !n.is_read).length);
+          
           // Database'den komisyon özetini al
           let commissionSummary = null;
           try {
@@ -79,7 +90,7 @@ function StorePanelContent() {
             // Komisyon özeti bulunamazsa fallback hesaplama kullan
             const orders = await api.getAllOrders({ store_id: user.storeInfo.id });
             
-            const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+            const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || order.total || 0), 0);
             const activeOrders = orders.filter(order => 
               order.status === 'pending' || order.status === 'processing'
             ).length;
@@ -93,7 +104,7 @@ function StorePanelContent() {
               return orderDate.getTime() === today.getTime();
             });
             
-            const todaysRevenue = todaysOrders.reduce((sum, order) => sum + order.total, 0);
+            const todaysRevenue = todaysOrders.reduce((sum, order) => sum + (order.total_amount || order.total || 0), 0);
             const commissionRate = user.storeInfo.commission_rate || 0;
             const commissionAmount = (totalRevenue * commissionRate) / 100;
             const todayCommission = (todaysRevenue * commissionRate) / 100;
@@ -139,6 +150,36 @@ function StorePanelContent() {
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value);
+  };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Bildirimi okundu olarak işaretle
+      if (!notification.is_read) {
+        await api.markNotificationAsRead(notification.id);
+        setNotifications(prev => 
+          prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+      
+      // Sipariş detayına git
+      if (notification.data?.order_id) {
+        window.location.href = `/store/orders/${notification.data.order_id}`;
+      }
+    } catch (error) {
+      console.error('Bildirim işlenirken hata:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await api.markAllNotificationsAsRead(user.id);
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Tüm bildirimler okundu işaretlenirken hata:', error);
+    }
   };
 
   if (loading) {
@@ -304,6 +345,88 @@ function StorePanelContent() {
         </div>
       </div>
 
+      {/* Bildirimler */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">
+            Bildirimler
+            {unreadCount > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+            >
+              {showNotifications ? 'Gizle' : 'Göster'}
+            </button>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm"
+              >
+                Tümünü Okundu İşaretle
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {showNotifications && (
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                    notification.is_read 
+                      ? 'bg-gray-50 border-gray-200 hover:bg-gray-100' 
+                      : 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-blue-600">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                        </div>
+                        <h3 className="font-medium text-gray-900">{notification.title}</h3>
+                        {!notification.is_read && (
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-500">
+                          {new Date(notification.created_at).toLocaleString('tr-TR')}
+                        </span>
+                        {notification.data?.order_id && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            Sipariş #{notification.data.order_id.substring(0, 8)}...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 010-15c0 2.5 1 5 3 7.5h-3z" />
+                </svg>
+                <p>Henüz bildirim yok</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Komisyon Özeti */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Komisyon Özeti</h2>
@@ -463,7 +586,7 @@ function StorePanelContent() {
                       {order.user_name || 'Müşteri'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(order.total)}
+                      {formatCurrency(order.total_amount || order.total || 0)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(order.order_date).toLocaleDateString('tr-TR')}

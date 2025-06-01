@@ -30,121 +30,55 @@ function SuPageContent() {
   });
 
   useEffect(() => {
-    let isCancelled = false;
-    
     async function fetchData() {
+      setLoading(true);
       try {
-        setLoading(true);
+        // Kategorileri al
+        const categoriesData = await api.getCategories(true);
+        const suCategory = categoriesData.find(cat => cat.slug === 'su');
         
-        // Cache kontrolü
-        const cacheKey = `su_data_${SU_CATEGORY_NAME}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-        const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
-        const CACHE_DURATION = 2 * 60 * 1000;
-        
-        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
-          const parsed = JSON.parse(cachedData);
-          if (!isCancelled) {
-            setWaterVendors(parsed.vendors);
-            setFilteredVendors(parsed.vendors);
-            setSuCategoryId(parsed.categoryId);
-            setAvailableBrands(parsed.brands);
-            setCampaigns(parsed.campaigns);
-            setLoading(false);
-          }
-          return;
+        if (suCategory) {
+          setSuCategoryId(suCategory.id);
+          
+          // Su satıcılarını al - filtreleri API'ye gönder
+          const storesData = await api.getStores({ 
+            category_id: suCategory.id,
+            isOpen: filters.isOpen
+          });
+          setWaterVendors(storesData);
         }
-        
-        const mainCategories = await api.getMainCategories();
-        const suCategory = mainCategories.find(cat => cat.name === SU_CATEGORY_NAME);
-
-        if (!suCategory) {
-          console.error(`'${SU_CATEGORY_NAME}' kategorisi bulunamadı.`);
-          if (!isCancelled) {
-          setWaterVendors([]);
-          setFilteredVendors([]);
-          setCampaigns([]);
-          setLoading(false);
-          }
-          return;
-        }
-        
-        if (isCancelled) return;
-        setSuCategoryId(suCategory.id);
-
-        const [storesData, allCampaignsData] = await Promise.all([
-          api.getStores({ 
-            category_id: suCategory.id, 
-            status: 'active' 
-          }),
-          api.getCampaigns(),
-        ]);
-
-        if (isCancelled) return;
-        
-        const approvedVendors = (storesData || []).filter(store => store.is_approved);
-        setWaterVendors(approvedVendors);
-        setFilteredVendors(approvedVendors);
-
-        const brands = [...new Set(approvedVendors.flatMap(store => store.tags || []).filter(Boolean))];
-        setAvailableBrands(brands);
-
-        const suCampaigns = (allCampaignsData || []).filter(campaign => {
-          if (campaign.category_id === suCategory.id || campaign.main_category_id === suCategory.id) return true;
-          if (campaign.store_id && approvedVendors.some(store => store.id === campaign.store_id)) return true;
-          return false;
-        });
-        setCampaigns(suCampaigns);
-        
-        // Cache'e kaydet
-        const dataToCache = {
-          vendors: approvedVendors,
-          categoryId: suCategory.id,
-          brands: brands,
-          campaigns: suCampaigns
-        };
-        sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
-        sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-
       } catch (error) {
-        if (!isCancelled) {
-        console.error('Su verileri yüklenirken bir hata oluştu:', error);
-        }
-      } finally {
-        if (!isCancelled) {
-        setLoading(false);
-        }
+        console.error('Su sayfası verileri yüklenirken hata:', error);
+        setWaterVendors([]);
       }
+      setLoading(false);
     }
     
     fetchData();
-    
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+  }, [filters.isOpen]); // sadece isOpen filtresi API'ye gönderiliyor
 
+  // Mevcut markaları hesapla
+  useEffect(() => {
+    if (waterVendors.length > 0) {
+      // tags yerine type alanını kullan
+      const brands = [...new Set(waterVendors.map(vendor => vendor.type).filter(Boolean))];
+      setAvailableBrands(brands);
+    }
+  }, [waterVendors]);
+
+  // Diğer filtreler frontend'de yapılıyor
   useEffect(() => {
     if (!waterVendors.length) return;
+    
     let result = waterVendors;
-
+    
+    // Brand filtresi - type alanını kullan
     if (filters.brand) {
-      result = result.filter(vendor => vendor.tags && vendor.tags.includes(filters.brand));
+      result = result.filter(vendor => 
+        vendor.type && vendor.type.toLowerCase().includes(filters.brand.toLowerCase())
+      );
     }
-
-    if (filters.deliveryTimeMax > 0) {
-      result = result.filter(vendor => {
-        if (!vendor.delivery_time_estimation) return false;
-        const timeParts = vendor.delivery_time_estimation.split('-');
-        const maxTime = parseInt(timeParts[timeParts.length - 1]);
-        return !isNaN(maxTime) && maxTime <= filters.deliveryTimeMax;
-      });
-    }
-
-    if (filters.isOpen) {
-      result = result.filter(vendor => vendor.is_open);
-    }
-
+    
     setFilteredVendors(result);
   }, [filters, waterVendors]);
 
@@ -172,11 +106,6 @@ function SuPageContent() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Su</h1>
             </div>
-            <button className="p-2 text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -288,21 +217,12 @@ function SuPageContent() {
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{vendor.name}</h3>
                     <p className="text-gray-600 mb-4">{vendor.description || 'Temiz ve sağlıklı su çözümleri'}</p>
                     
-                    {/* Water Brands */}
-                    {vendor.tags && vendor.tags.length > 0 && (
+                    {/* Water Types */}
+                    {vendor.type && (
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {vendor.tags.slice(0, 4).map((tag, index) => (
-                          <span 
-                            key={index}
-                            className={`px-4 py-2 text-sm font-medium rounded-full ${
-                              index === 0 
-                                ? 'bg-sky-500 text-white' 
-                                : 'bg-gray-100 text-gray-600'
-                            }`}
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                        <span className="bg-sky-500 text-white px-4 py-2 text-sm font-medium rounded-full">
+                          {vendor.type}
+                        </span>
                       </div>
                     )}
 

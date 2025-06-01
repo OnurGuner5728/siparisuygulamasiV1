@@ -84,7 +84,7 @@ export default function ContactPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                     <FiUser className="inline-block mr-2" />
@@ -101,6 +101,7 @@ export default function ContactPage() {
                     placeholder="Adınız ve soyadınız"
                   />
                 </div>
+
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                     <FiPhone className="inline-block mr-2" />
@@ -113,7 +114,7 @@ export default function ContactPage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                    placeholder="0555 123 45 67"
+                    placeholder="0*** *** ** **"
                   />
                 </div>
               </div>
@@ -131,7 +132,7 @@ export default function ContactPage() {
                   onChange={handleInputChange}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder="ornek@email.com"
+                  placeholder="****@*****.com"
                 />
               </div>
 
@@ -213,8 +214,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Telefon</h3>
-                    <p className="text-gray-600">+90 (212) 123 45 67</p>
-                    <p className="text-gray-600">+90 (532) 123 45 67</p>
+                    <p className="text-gray-600">0*** *** ** **</p>
+                    <p className="text-gray-600">0*** *** ** **</p>
                   </div>
                 </div>
 
@@ -224,8 +225,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">E-posta</h3>
-                    <p className="text-gray-600">info@easysiparis.com</p>
-                    <p className="text-gray-600">destek@easysiparis.com</p>
+                    <p className="text-gray-600">****@*****.com</p>
+                    <p className="text-gray-600">******@*****.com</p>
                   </div>
                 </div>
 
@@ -236,9 +237,9 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Adres</h3>
                     <p className="text-gray-600">
-                      Atatürk Mahallesi, Cumhuriyet Caddesi<br />
-                      No: 123/5, Bahçelievler<br />
-                      İstanbul, Türkiye
+                      ***** Mahallesi, ***** Caddesi<br />
+                      No: ***/*, *****<br />
+                      *****, Türkiye
                     </p>
                   </div>
                 </div>
@@ -314,12 +315,9 @@ export default function ContactPage() {
                 Acil durumlar için 7/24 müşteri hizmetlerimiz hizmetinizde
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="tel:+905321234567"
-                  className="bg-white bg-opacity-20 hover:bg-opacity-30 transition-all duration-200 px-6 py-3 rounded-lg font-semibold text-center"
-                >
+                <div className="bg-white bg-opacity-20 hover:bg-opacity-30 transition-all duration-200 px-6 py-3 rounded-lg font-semibold text-center">
                   Acil Durum Hattı
-                </a>
+                </div>
                 <a 
                   href="/yardim"
                   className="border border-white border-opacity-50 hover:bg-white hover:bg-opacity-10 transition-all duration-200 px-6 py-3 rounded-lg font-semibold text-center"

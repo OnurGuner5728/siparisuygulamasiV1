@@ -1,101 +1,194 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiX, FiCheck, FiBell, FiAlertCircle } from 'react-icons/fi';
+import { FiX, FiCheck, FiBell, FiAlertCircle, FiTruck, FiShoppingBag, FiUsers, FiClock } from 'react-icons/fi';
 
-const ToastNotification = ({ notification, onClose, duration = 5000 }) => {
+const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     if (notification) {
-      setIsVisible(true);
+      // Smooth entrance animation
+      setTimeout(() => setIsVisible(true), 100);
       
       // Auto close after duration
       const timer = setTimeout(() => {
-        setIsVisible(false);
-        setTimeout(() => {
-          onClose && onClose();
-        }, 300); // Animation duration
+        handleClose();
       }, duration);
 
       return () => clearTimeout(timer);
     }
-  }, [notification, duration, onClose]);
+  }, [notification, duration]);
 
-  const getToastStyle = (type) => {
-    const styles = {
-      order_confirmed: 'bg-green-500 border-green-600',
-      order_preparing: 'bg-yellow-500 border-yellow-600',
-      order_shipped: 'bg-blue-500 border-blue-600',
-      order_delivered: 'bg-green-500 border-green-600',
-      order_cancelled: 'bg-red-500 border-red-600',
-      new_order: 'bg-orange-500 border-orange-600',
-      store_registered: 'bg-purple-500 border-purple-600',
-      system: 'bg-gray-500 border-gray-600'
-    };
-    return styles[type] || 'bg-blue-500 border-blue-600';
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        onClose && onClose();
+      }, 300);
+    }, 150);
   };
 
-  const getIcon = (type) => {
-    const icons = {
-      order_confirmed: <FiCheck className="w-5 h-5" />,
-      order_preparing: <FiBell className="w-5 h-5" />,
-      order_shipped: <FiBell className="w-5 h-5" />,
-      order_delivered: <FiCheck className="w-5 h-5" />,
-      order_cancelled: <FiX className="w-5 h-5" />,
-      new_order: <FiBell className="w-5 h-5" />,
-      store_registered: <FiBell className="w-5 h-5" />,
-      system: <FiAlertCircle className="w-5 h-5" />
+  const getToastConfig = (type) => {
+    const configs = {
+      order_confirmed: {
+        bg: 'bg-green-500',
+        icon: FiCheck,
+        iconBg: 'bg-green-100',
+        iconColor: 'text-green-600',
+        emoji: '✅'
+      },
+      order_preparing: {
+        bg: 'bg-yellow-500',
+        icon: FiClock,
+        iconBg: 'bg-yellow-100',
+        iconColor: 'text-yellow-600',
+        emoji: '👨‍🍳'
+      },
+      order_shipped: {
+        bg: 'bg-blue-500',
+        icon: FiTruck,
+        iconBg: 'bg-blue-100',
+        iconColor: 'text-blue-600',
+        emoji: '🚚'
+      },
+      order_delivered: {
+        bg: 'bg-green-500',
+        icon: FiShoppingBag,
+        iconBg: 'bg-green-100',
+        iconColor: 'text-green-600',
+        emoji: '📦'
+      },
+      order_cancelled: {
+        bg: 'bg-red-500',
+        icon: FiX,
+        iconBg: 'bg-red-100',
+        iconColor: 'text-red-600',
+        emoji: '❌'
+      },
+      new_order: {
+        bg: 'bg-orange-500',
+        icon: FiBell,
+        iconBg: 'bg-orange-100',
+        iconColor: 'text-orange-600',
+        emoji: '🔔'
+      },
+      store_registered: {
+        bg: 'bg-purple-500',
+        icon: FiUsers,
+        iconBg: 'bg-purple-100',
+        iconColor: 'text-purple-600',
+        emoji: '🏪'
+      },
+      store_approved: {
+        bg: 'bg-green-500',
+        icon: FiCheck,
+        iconBg: 'bg-green-100',
+        iconColor: 'text-green-600',
+        emoji: '✅'
+      },
+      store_approval_revoked: {
+        bg: 'bg-red-500',
+        icon: FiX,
+        iconBg: 'bg-red-100',
+        iconColor: 'text-red-600',
+        emoji: '❌'
+      },
+      system: {
+        bg: 'bg-gray-500',
+        icon: FiAlertCircle,
+        iconBg: 'bg-gray-100',
+        iconColor: 'text-gray-600',
+        emoji: 'ℹ️'
+      }
     };
-    return icons[type] || <FiBell className="w-5 h-5" />;
+    return configs[type] || configs.system;
   };
 
   if (!notification) return null;
 
+  const config = getToastConfig(notification.type);
+  const IconComponent = config.icon;
+
   return (
-    <div className={`fixed top-4 right-4 z-50 transform transition-all duration-300 ${
-      isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+    <div className={`fixed top-4 right-4 left-4 sm:top-6 sm:right-6 sm:left-auto z-[9999] max-w-sm w-full sm:w-auto mx-auto sm:mx-0 transition-all duration-500 ease-out transform ${
+      isVisible && !isExiting 
+        ? 'translate-x-0 translate-y-0 opacity-100 scale-100' 
+        : 'translate-x-full translate-y-4 opacity-0 scale-95'
     }`}>
-      <div className={`max-w-sm w-full bg-white rounded-lg shadow-lg border-l-4 ${getToastStyle(notification.type)} overflow-hidden`}>
+      <div className="relative bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden backdrop-blur-sm">
+        {/* Colored top border */}
+        <div className={`h-1 ${config.bg}`}></div>
+        
         <div className="p-4">
-          <div className="flex items-start">
-            <div className={`flex-shrink-0 text-white`}>
-              {getIcon(notification.type)}
+          <div className="flex items-start space-x-3">
+            {/* Icon */}
+            <div className={`flex-shrink-0 w-10 h-10 ${config.iconBg} rounded-full flex items-center justify-center`}>
+              <span className="text-lg">{config.emoji}</span>
             </div>
-            <div className="ml-3 w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900">
-                {notification.title}
-              </p>
-              <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                {notification.message}
-              </p>
-              {notification.data?.order_id && (
-                <p className="mt-1 text-xs text-gray-400">
-                  Sipariş No: {notification.data.order_id}
-                </p>
-              )}
-            </div>
-            <div className="ml-4 flex-shrink-0 flex">
-              <button
-                className="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
-                onClick={() => {
-                  setIsVisible(false);
-                  setTimeout(() => {
-                    onClose && onClose();
-                  }, 300);
-                }}
-              >
-                <span className="sr-only">Kapat</span>
-                <FiX className="h-5 w-5" />
-              </button>
+            
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 pr-2">
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">
+                    {notification.title}
+                  </h4>
+                  <p className="mt-1 text-sm text-gray-600 leading-relaxed line-clamp-3">
+                    {notification.message}
+                  </p>
+                  
+                  {/* Additional info */}
+                  {notification.data && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {notification.data.order_id && (
+                        <span className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-md">
+                          #{notification.data.order_id.substring(0, 8)}
+                        </span>
+                      )}
+                      {notification.data.store_name && (
+                        <span className="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md">
+                          {notification.data.store_name}
+                        </span>
+                      )}
+                      {notification.data.customer_name && (
+                        <span className="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-md">
+                          {notification.data.customer_name}
+                        </span>
+                      )}
+                      {notification.data.total_amount && (
+                        <span className="inline-flex items-center px-2 py-1 bg-orange-50 text-orange-700 text-xs font-medium rounded-md">
+                          {Number(notification.data.total_amount).toFixed(2)} TL
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Close button */}
+                <button
+                  onClick={handleClose}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    handleClose();
+                  }}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 active:text-gray-800 transition-colors duration-200 rounded-full p-1 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
+                  aria-label="Bildirimi kapat"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Progress bar */}
-        <div className="h-1 bg-gray-200">
+        <div className="h-1 bg-gray-100">
           <div 
-            className={`h-full ${getToastStyle(notification.type)} transition-all ease-linear`}
+            className={`h-full ${config.bg} transition-all ease-linear progress-bar`}
             style={{
               animation: `shrink ${duration}ms linear forwards`
             }}
@@ -112,6 +205,13 @@ const ToastNotification = ({ notification, onClose, duration = 5000 }) => {
             width: 0%;
           }
         }
+        
+        .line-clamp-3 {
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
+        }
       `}</style>
     </div>
   );
@@ -120,22 +220,36 @@ const ToastNotification = ({ notification, onClose, duration = 5000 }) => {
 // Toast Container - Multiple toasts'ları yönetmek için
 export const ToastContainer = ({ toasts, onRemoveToast }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {toasts.map((toast, index) => (
-        <div 
-          key={toast.id} 
-          style={{ 
-            transform: `translateY(${index * 10}px)`,
-            zIndex: 50 - index 
-          }}
-        >
-          <ToastNotification
-            notification={toast}
-            onClose={() => onRemoveToast(toast.id)}
-            duration={5000}
-          />
-        </div>
-      ))}
+    <div className="fixed top-6 right-6 z-[9999] space-y-3 pointer-events-none">
+      <div className="pointer-events-auto">
+        {toasts.map((toast, index) => (
+          <div 
+            key={toast.id} 
+            className="transition-all duration-300 ease-out"
+            style={{ 
+              transform: `translateY(${index * 8}px)`,
+              zIndex: 9999 - index,
+              marginBottom: index < toasts.length - 1 ? '12px' : '0'
+            }}
+          >
+            <ToastNotification
+              notification={toast}
+              onClose={() => onRemoveToast(toast.id)}
+              duration={6000}
+            />
+          </div>
+        ))}
+      </div>
+      
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .fixed {
+            top: 1rem;
+            right: 1rem;
+            left: 1rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };

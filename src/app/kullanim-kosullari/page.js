@@ -223,10 +223,10 @@ export default function TermsPage() {
                 Bu kullanım koşulları hakkında sorularınız için bizimle iletişime geçebilirsiniz:
               </p>
               <div className="bg-gray-100 p-6 rounded-lg">
-                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> hukuk@easysiparis.com</p>
-                <p className="text-gray-700 mb-2"><strong>Telefon:</strong> +90 (212) 123 45 67</p>
+                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> ****@*****.com</p>
+                <p className="text-gray-700 mb-2"><strong>Telefon:</strong> 0*** *** ** **</p>
                 <p className="text-gray-700">
-                  <strong>Adres:</strong> Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul
+                  <strong>Adres:</strong> ***** Mahallesi, ***** Caddesi No: ***/*, *****, *****
                 </p>
               </div>
             </section>

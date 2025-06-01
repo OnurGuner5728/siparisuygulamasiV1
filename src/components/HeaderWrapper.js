@@ -111,7 +111,7 @@ function Header({ onCartClick }) {
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className="bg-white shadow-lg border-b border-gray-100 py-3 sticky top-0 z-50 backdrop-blur-sm bg-white/95">      <div className="container mx-auto px-4 flex justify-between items-center">        <div className="flex items-center">          <a href="/" className="flex items-center space-x-2 text-2xl font-bold" onClick={(e) => handleLinkClick(e, '/')}
+  return (<header className="bg-white shadow-lg border-b border-gray-100 py-2 sticky top-0 z-50 backdrop-blur-sm bg-white/95">      <div className="container mx-auto px-4 flex justify-between items-center">        <div className="flex items-center">          <a href="/" className="flex items-center space-x-2 text-2xl font-bold" onClick={(e) => handleLinkClick(e, '/')}
           >
             <div className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl p-3 shadow-lg transform hover:scale-105 transition-all duration-300">
               <span className="text-white font-black text-lg tracking-tight">es</span>
@@ -122,7 +122,7 @@ function Header({ onCartClick }) {
           </a>        </div>
 
     {/* Mobil Sağ Butonlar */}
-        <div className="md:hidden flex items-center space-x-2">
+        <div className="flex md:hidden items-center space-x-2">
           {/* Bildirim ikonu - sadece giriş yapmış kullanıcılar için */}
           {currentIsAuthenticated && (
             <div className="relative">
@@ -148,8 +148,31 @@ function Header({ onCartClick }) {
             </button>
           )}
           
+          {/* Sepet ikonu - mobilde de görünür */}
+          <button 
+            onClick={onCartClick}
+            className="relative p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 hover:scale-105 transition-all duration-200 group"
+            aria-label="Sepetim"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                {totalItems}
+              </span>
+            )}
+            {/* Tooltip */}
+            <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Sepetim
+            </div>
+          </button>
+          
           {/* Mobil Menü Butonu */}
-          <button className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200" onClick={() => setIsMenuOpen(!isMenuOpen)}          >
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 hover:scale-105 transition-all duration-200"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
             </svg>

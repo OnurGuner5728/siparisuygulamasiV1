@@ -81,7 +81,10 @@ function OrdersList() {
   
   // Fiyat formatla
   const formatPrice = (price) => {
-    return price.toFixed(2).replace('.', ',') + ' TL';
+    if (price === null || price === undefined || isNaN(price)) {
+      return '0,00 TL';
+    }
+    return Number(price).toFixed(2).replace('.', ',') + ' TL';
   };
   
   // Tarih formatla
@@ -205,7 +208,7 @@ function OrdersList() {
                       
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t pt-4 mt-4">
                         <div>
-                          <div className="text-lg font-medium text-gray-900">{formatPrice(order.total)}</div>
+                          <div className="text-lg font-medium text-gray-900">{formatPrice(order.total_amount)}</div>
                           <div className="text-sm text-gray-500">
                             {order.order_items?.length || 0} ürün
                           </div>

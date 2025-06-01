@@ -24,7 +24,7 @@ export default function AboutPage() {
       </div>
 
       {/* Mission, Vision, Values */}
-      <div className="py-16">
+      <div className="bg-white py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <div className="text-center">
@@ -62,7 +62,7 @@ export default function AboutPage() {
       </div>
 
       {/* Services */}
-      <div className="bg-white py-16">
+      <div className="bg-gray-50 dark:bg-gray-900 py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -88,25 +88,23 @@ export default function AboutPage() {
 
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2a1 1 0 000 2h6a1 1 0 100-2H7zm6 7a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H10zm-4 1a1 1 0 011-1h.01a1 1 0 110 2H7a1 1 0 01-1-1zm1-4a1 1 0 100 2h.01a1 1 0 100-2H7zm2 0a1 1 0 100 2h.01a1 1 0 100-2H9zm2 0a1 1 0 100 2h.01a1 1 0 100-2H11z" clipRule="evenodd" />
-                </svg>
+                <FiTruck className="text-green-500 text-2xl" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Market Alışverişi</h3>
               <p className="text-gray-600 text-sm">
-                Günlük ihtiyaçlarınızı marketlerden hızlıca temin edin
+                Günlük ihtiyaçlarınızı kapınıza kadar getiriyoruz
               </p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Su Teslimatı</h3>
               <p className="text-gray-600 text-sm">
-                Temiz içme suyu ve damacana teslimatı hizmeti
+                Temiz içme suyu ve damacana servisi
               </p>
             </div>
 
@@ -118,44 +116,60 @@ export default function AboutPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Aktüel Ürünler</h3>
               <p className="text-gray-600 text-sm">
-                Kampanyalı ve indirimli ürünleri keşfedin
+                Kampanyalı ürünler ve özel fırsatlar
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-500 py-16">
+      {/* Why Choose Us */}
+      <div className="bg-white py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center text-white">
-            <div>
-              <FiUsers className="text-4xl mx-auto mb-4" />
-              <div className="text-3xl font-bold mb-2">50K+</div>
-              <div className="text-orange-100">Aktif Kullanıcı</div>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Neden easysiparis?
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Müşterilerimizin bizi tercih etme nedenleri
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <FiTruck className="text-orange-500 text-2xl" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Hızlı Teslimat</h3>
+              <p className="text-gray-600 text-sm">
+                Ortalama 30 dakikada kapınızda
+              </p>
             </div>
-            <div>
-              <FiTruck className="text-4xl mx-auto mb-4" />
-              <div className="text-3xl font-bold mb-2">100K+</div>
-              <div className="text-orange-100">Teslim Edilen Sipariş</div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <FiUsers className="text-green-500 text-2xl" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">7/24 Destek</h3>
+              <p className="text-gray-600 text-sm">
+                Her zaman yanınızdayız
+              </p>
             </div>
-            <div>
-              <FiSmartphone className="text-4xl mx-auto mb-4" />
-              <div className="text-3xl font-bold mb-2">1000+</div>
-              <div className="text-orange-100">Partner İş Yeri</div>
-            </div>
-            <div>
-              <svg className="w-10 h-10 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-              </svg>
-              <div className="text-3xl font-bold mb-2">25+</div>
-              <div className="text-orange-100">Hizmet Verdiğimiz Şehir</div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <FiSmartphone className="text-blue-500 text-2xl" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Kolay Kullanım</h3>
+              <p className="text-gray-600 text-sm">
+                Basit ve kullanıcı dostu arayüz
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Team Section */}
+      {/* Team */}
       <div className="bg-white py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -170,20 +184,20 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
               <div className="w-32 h-32 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-                AY
+                **
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Ahmet Yılmaz</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">**** ******</h3>
               <p className="text-orange-500 font-medium mb-2">Kurucu & CEO</p>
               <p className="text-gray-600 text-sm">
-                15 yıllık teknoloji deneyimi ile easysiparis'i hayata geçiren vizyoner lider
+                Yıllık teknoloji deneyimi ile easysiparis'i hayata geçiren vizyoner lider
               </p>
             </div>
 
             <div className="text-center">
               <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-                SD
+                **
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Seda Demir</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">**** ******</h3>
               <p className="text-orange-500 font-medium mb-2">CTO</p>
               <p className="text-gray-600 text-sm">
                 Güçlü teknik altyapı ve yenilikçi çözümlerden sorumlu teknoloji lideri
@@ -192,9 +206,9 @@ export default function AboutPage() {
 
             <div className="text-center">
               <div className="w-32 h-32 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-                MK
+                **
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Mehmet Kaya</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">**** ******</h3>
               <p className="text-orange-500 font-medium mb-2">Operasyon Müdürü</p>
               <p className="text-gray-600 text-sm">
                 Sorunsuz teslimat ve müşteri deneyiminden sorumlu operasyon uzmanı
@@ -221,12 +235,9 @@ export default function AboutPage() {
               >
                 İletişim Formu
               </a>
-              <a 
-                href="tel:+902121234567" 
-                className="border border-orange-500 text-orange-500 px-8 py-3 rounded-lg font-semibold hover:bg-orange-500 hover:text-white transition-all duration-200"
-              >
-                (0212) 123 45 67
-              </a>
+              <div className="border border-orange-500 text-orange-500 px-8 py-3 rounded-lg font-semibold">
+                0*** *** ** **
+              </div>
             </div>
           </div>
         </div>

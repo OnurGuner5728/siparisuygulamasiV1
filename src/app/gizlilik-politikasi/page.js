@@ -14,7 +14,7 @@ export default function PrivacyPage() {
               Kişisel Verilerinizin Korunması
             </p>
             <p className="text-lg text-orange-100">
-              Son güncellenme: 20 Ocak 2025
+              Son güncellenme: 01 Haziran 2025
             </p>
           </div>
         </div>
@@ -316,18 +316,18 @@ export default function PrivacyPage() {
                 Gizlilik politikası hakkında sorularınız için:
               </p>
               <div className="bg-gray-100 p-6 rounded-lg">
-                <p className="text-gray-700 mb-2"><strong>KVKK Sorumlusu:</strong> Ahmet Yılmaz</p>
-                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> kvkk@easysiparis.com</p>
-                <p className="text-gray-700 mb-2"><strong>Telefon:</strong> +90 (212) 123 45 67</p>
+                <p className="text-gray-700 mb-2"><strong>KVKK Sorumlusu:</strong> **** ******</p>
+                <p className="text-gray-700 mb-2"><strong>E-posta:</strong> ****@*****.com</p>
+                <p className="text-gray-700 mb-2"><strong>Telefon:</strong> 0*** *** ** **</p>
                 <p className="text-gray-700">
-                  <strong>Adres:</strong> Atatürk Mahallesi, Cumhuriyet Caddesi No: 123/5, Bahçelievler, İstanbul
+                  <strong>Adres:</strong> ***** Mahallesi, ***** Caddesi No: ***/*, *****, *****
                 </p>
               </div>
             </section>
 
             <div className="border-t border-gray-200 pt-8 mt-12">
               <p className="text-gray-600 text-center">
-                Bu gizlilik politikası 20 Ocak 2025 tarihinde güncellenmiştir ve bu tarihten itibaren yürürlüktedir.
+                Bu gizlilik politikası 01 Haziran 2025 tarihinde güncellenmiştir ve bu tarihten itibaren yürürlüktedir.
               </p>
             </div>
           </div>

@@ -22,6 +22,16 @@ export const getStores = async (filters = {}, useAdmin = false) => {
     query = query.eq('owner_id', filters.owner_id);
   }
   
+  // Rating filtresi
+  if (filters.rating && filters.rating > 0) {
+    query = query.gte('rating', filters.rating);
+  }
+  
+  // Açık olanlar filtresi için is_active = true ve status = 'active' kontrolü
+  if (filters.isOpen) {
+    query = query.eq('is_active', true).eq('status', 'active');
+  }
+  
   // Sonuçları sırala
   query = query.order('name');
   
@@ -31,7 +41,14 @@ export const getStores = async (filters = {}, useAdmin = false) => {
     console.error('Mağazaları getirirken hata:', error);
     return [];
   }
-  return data || [];
+  
+  // is_open alanını dinamik olarak hesapla
+  const storesWithOpenStatus = (data || []).map(store => ({
+    ...store,
+    is_open: store.is_active && store.status === 'active'
+  }));
+  
+  return storesWithOpenStatus;
 };
 
 export const getStoreById = async (storeId) => {
@@ -367,38 +384,23 @@ export const deleteProductOption = async (optionId) => {
 };
 
 // Orders (Siparişler)
-export const getAllOrders = async (filters = {}) => {
-  let query = supabase
-    .from('orders')
-    .select(`
-      *,
-      user:users!user_id(id, name, email, phone),
-      store:stores(id, name, category_id)
-    `);
+export const getAllOrders = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        user:users!orders_user_id_fkey(id, name, email, phone),
+        store:stores!orders_store_id_fkey(id, name, email, phone, category_id)
+      `)
+      .order('created_at', { ascending: false });
 
-  if (filters.user_id) {
-    query = query.eq('user_id', filters.user_id);
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Tüm siparişler yüklenirken hata:', error);
+    throw error;
   }
-  if (filters.store_id) {
-    query = query.eq('store_id', filters.store_id);
-  }
-  if (filters.status) {
-    query = query.eq('status', filters.status);
-  }
-  if (filters.start_date) {
-    query = query.gte('created_at', filters.start_date);
-  }
-  if (filters.end_date) {
-    query = query.lte('created_at', filters.end_date);
-  }
-
-  const { data, error } = await query.order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Siparişleri getirirken hata:', error);
-    return [];
-  }
-  return data || [];
 };
 
 export const getUserOrders = async (userId) => {
@@ -420,85 +422,197 @@ export const getUserOrders = async (userId) => {
 };
 
 export const getOrderById = async (orderId) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      user:users!user_id(name, email, phone, avatar_url),
-      store:stores(name, email, phone, address, city),
-      items:order_items(
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
         *,
-        product:products(name, image, category)
-      )
-    `)
-    .eq('id', orderId)
-    .single();
+        user:users!orders_user_id_fkey(id, name, email, phone),
+        store:stores!orders_store_id_fkey(id, name, email, phone, address)
+      `)
+      .eq('id', orderId)
+      .single();
 
-  if (error) {
-    console.error(`Sipariş bilgisini getirirken hata (ID: ${orderId}):`, error);
-    return null;
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Sipariş ${orderId} yüklenirken hata:`, error);
+    throw error;
   }
-  return data;
 };
 
-export const createOrder = async (orderData) => {
+export const createOrder = async (orderData, orderItems = []) => {
   if (!orderData.user_id) {
     console.error('Sipariş oluşturmak için user_id gereklidir');
     return { success: false, error: 'User ID gereklidir' };
   }
 
-  const { data, error } = await supabase
-    .from('orders')
-    .insert({
-      store_id: orderData.store_id,
-      user_id: orderData.user_id,
-      order_number: orderData.order_number,
-      status: orderData.status || 'pending',
-      payment_status: orderData.payment_status || 'pending',
-      payment_method: orderData.payment_method,
-      subtotal: orderData.subtotal,
-      tax_amount: orderData.tax_amount || 0,
-      delivery_fee: orderData.delivery_fee || 0,
-      discount_amount: orderData.discount_amount || 0,
-      total_amount: orderData.total_amount,
-      currency: orderData.currency || 'TRY',
-      delivery_address: orderData.delivery_address,
-      delivery_notes: orderData.delivery_notes,
-      estimated_delivery_time: orderData.estimated_delivery_time,
-      notes: orderData.notes,
-      order_date: orderData.order_date || new Date().toISOString()
-    })
-    .select()
-    .single();
+  try {
+    // Sipariş numarası oluştur
+    const orderNumber = 'ES' + Date.now() + Math.floor(Math.random() * 1000);
 
-  if (error) {
-    console.error('Sipariş oluştururken hata:', error);
-    return { success: false, error };
-  }
+    // Siparişi oluştur
+    const { data: orderData_result, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        order_number: orderNumber,
+        store_id: orderData.store_id,
+        user_id: orderData.user_id,
+        status: orderData.status || 'pending',
+        payment_status: orderData.payment_status || 'pending',
+        payment_method: orderData.payment_method,
+        subtotal: orderData.subtotal,
+        tax_amount: orderData.tax_amount || 0,
+        delivery_fee: orderData.delivery_fee || 0,
+        discount_amount: orderData.discount_amount || 0,
+        total_amount: orderData.total_amount,
+        currency: orderData.currency || 'TRY',
+        delivery_address: orderData.delivery_address,
+        delivery_notes: orderData.delivery_notes,
+        estimated_delivery_time: orderData.estimated_delivery_time,
+        notes: orderData.notes,
+        order_date: orderData.order_date || new Date().toISOString()
+      })
+      .select()
+      .single();
 
-  // Kullanıcı bilgilerini güncelle
-  if (data) {
+    if (orderError) {
+      console.error('Sipariş oluştururken hata:', orderError);
+      return { success: false, error: orderError.message };
+    }
+
+    // Sipariş öğelerini ekle
+    if (orderItems && orderItems.length > 0) {
+      const orderItemsToInsert = await Promise.all(orderItems.map(async (item) => {
+        // Ürün bilgilerini al
+        let productName = item.name;
+        let productPrice = item.price;
+        
+        if (!productName || !productPrice) {
+          try {
+            const product = await getProductById(item.product_id);
+            if (product) {
+              productName = productName || product.name;
+              productPrice = productPrice || product.price;
+            }
+          } catch (e) {
+            console.warn('Ürün bilgisi alınamadı:', item.product_id);
+          }
+        }
+        
+        return {
+          order_id: orderData_result.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          name: productName,
+          price: productPrice,
+          unit_price: item.price, // price yerine unit_price kullan
+          total_price: item.total || (item.price * item.quantity), // total yerine total_price kullan
+          total: item.total || (item.price * item.quantity),
+          notes: item.notes || ''
+        };
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsToInsert);
+
+      if (itemsError) {
+        console.error('Sipariş öğeleri eklenirken hata:', itemsError);
+        // Siparişi geri al
+        await supabase.from('orders').delete().eq('id', orderData_result.id);
+        return { success: false, error: itemsError.message };
+      }
+    }
+
+    // Kullanıcı bilgilerini güncelle
     await supabase
       .from('users')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', orderData.user_id);
-  }
 
-  return { success: true, data };
+    // Komisyon özetini güncelle
+    try {
+      await updateStoreCommissionSummary(orderData.store_id);
+      console.log('Yeni sipariş için komisyon özeti güncellendi:', orderData.store_id);
+    } catch (commissionError) {
+      console.warn('Komisyon özeti güncellenirken hata:', commissionError);
+      // Komisyon güncelleme hatası sipariş oluşturmayı engellemez
+    }
+
+    return { success: true, data: orderData_result };
+  } catch (err) {
+    console.error('Sipariş oluşturma sırasında beklenmedik hata:', err);
+    return { success: false, error: 'Beklenmedik hata oluştu' };
+  }
 };
 
 export const updateOrder = async (orderId, updates) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .update(updates)
-    .eq('id', orderId)
-    .select()
-    .single();
-  if (error) {
+  try {
+    // delivery_date alanını actual_delivery_time olarak düzelt
+    if (updates.delivery_date) {
+      updates.actual_delivery_time = updates.delivery_date;
+      delete updates.delivery_date;
+    }
+
+    // Eğer status_history güncellenmek isteniyorsa, önce mevcut veriyi al
+    if (updates.status_history) {
+      // Mevcut sipariş verilerini al
+      const { data: currentOrder } = await supabase
+        .from('orders')
+        .select('status_history')
+        .eq('id', orderId)
+        .single();
+        
+      let existingHistory = [];
+      if (currentOrder?.status_history) {
+        try {
+          existingHistory = Array.isArray(currentOrder.status_history) 
+            ? currentOrder.status_history 
+            : JSON.parse(currentOrder.status_history);
+        } catch (e) {
+          console.warn('Status history parse edilemedi:', e);
+          existingHistory = [];
+        }
+      }
+      
+      // Yeni history item'ı ekle
+      const newHistoryItem = Array.isArray(updates.status_history) 
+        ? updates.status_history[0] 
+        : updates.status_history;
+        
+      existingHistory.push(newHistoryItem);
+      updates.status_history = JSON.stringify(existingHistory);
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', orderId)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error(`Sipariş güncellenirken hata (ID: ${orderId}):`, error);
+      throw new Error(error.message || 'Sipariş güncellenemedi');
+    }
+    
+    // Eğer sipariş durumu "delivered" veya "cancelled" olmuşsa komisyon özetini güncelle
+    if (updates.status && (updates.status === 'delivered' || updates.status === 'cancelled')) {
+      try {
+        await updateStoreCommissionSummary(data.store_id);
+        console.log('Komisyon özeti güncellendi:', data.store_id);
+      } catch (commissionError) {
+        console.warn('Komisyon özeti güncellenirken hata:', commissionError);
+        // Komisyon güncelleme hatası sipariş güncellemesini engellemez
+      }
+    }
+    
+    return data;
+  } catch (error) {
     console.error(`Sipariş güncellenirken hata (ID: ${orderId}):`, error);
     throw error;
   }
-  return data;
 };
 
 // Campaigns (Kampanyalar)
@@ -1120,7 +1234,7 @@ export const getCategoryById = async (categoryId) => {
     console.error(`Kategori bilgisini getirirken hata (ID: ${categoryId}):`, error);
     return null;
   }
-  return data;
+    return data;
 };
 
 export const createCategory = async (categoryData) => {
@@ -1627,30 +1741,26 @@ export const searchProducts = async (searchParams) => {
 // Commission (Komisyon) API fonksiyonları
 export const getStoreCommissionSummary = async (storeId) => {
   try {
-    if (!storeId) {
-      console.warn('getStoreCommissionSummary: storeId parametresi eksik');
-      return null;
-    }
-
     const { data, error } = await supabase
       .from('store_commission_summary')
       .select('*')
       .eq('store_id', storeId)
+      .order('period_end', { ascending: false })
+      .limit(1)
       .single();
-      
+
     if (error) {
-      // Eğer kayıt bulunamadıysa, bu normal bir durum olabilir
       if (error.code === 'PGRST116') {
         console.log(`Mağaza komisyon özeti bulunamadı (Store ID: ${storeId}). Özet tablosu güncellenecek.`);
         return null;
       }
-      console.warn(`Mağaza komisyon özeti getirirken hata (Store ID: ${storeId}):`, error.message || error);
-      return null;
+      throw error;
     }
+
     return data;
   } catch (error) {
-    console.error('Komisyon özeti getirirken beklenmeyen hata:', error.message || error);
-    return null;
+    console.error('Mağaza komisyon özeti getirilirken hata:', error);
+    throw error;
   }
 };
 
@@ -1780,37 +1890,32 @@ export const getAllCommissionSummaries = async () => {
 
 // Notifications (Bildirimler)
 export const getNotifications = async (filters = {}) => {
-  let query = supabase
-    .from('notifications')
-    .select('*');
-    
-  // Filtreleri uygula
-  if (filters.user_id) {
-    query = query.eq('user_id', filters.user_id);
+  try {
+    let query = supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (filters.user_id) {
+      query = query.eq('user_id', filters.user_id);
+    }
+
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+
+    if (filters.is_read !== undefined) {
+      query = query.eq('is_read', filters.is_read);
+    }
+
+    const { data, error } = await query.limit(50);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Bildirimler getirilirken hata:', error);
+    throw error;
   }
-  
-  if (filters.store_id) {
-    query = query.eq('store_id', filters.store_id);
-  }
-  
-  if (filters.type) {
-    query = query.eq('type', filters.type);
-  }
-  
-  if (filters.is_read !== undefined) {
-    query = query.eq('is_read', filters.is_read);
-  }
-  
-  // Tarihe göre sırala (en yeni önce)
-  query = query.order('created_at', { ascending: false });
-  
-  const { data, error } = await query;
-  
-  if (error) {
-    console.error('Bildirimleri getirirken hata:', error);
-    return [];
-  }
-  return data || [];
 };
 
 // Yeni bildirim oluştur
@@ -1934,21 +2039,18 @@ export const sendPushNotification = async (userId, pushData) => {
 };
 
 export const markNotificationAsRead = async (notificationId) => {
-  const { data, error } = await supabase
-    .from('notifications')
-    .update({ 
-      is_read: true,
-      read_at: new Date().toISOString()
-    })
-    .eq('id', notificationId)
-    .select()
-    .single();
-    
-  if (error) {
-    console.error(`Bildirim okundu işaretlenirken hata (ID: ${notificationId}):`, error);
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Bildirim okundu işaretlenirken hata:', error);
     throw error;
   }
-  return data;
 };
 
 export const markNotificationAsUnread = async (notificationId) => {
@@ -1970,20 +2072,19 @@ export const markNotificationAsUnread = async (notificationId) => {
 };
 
 export const markAllNotificationsAsRead = async (userId) => {
-  const { data, error } = await supabase
-    .from('notifications')
-    .update({ 
-      is_read: true,
-      read_at: new Date().toISOString()
-    })
-    .eq('user_id', userId)
-    .eq('is_read', false);
-    
-  if (error) {
-    console.error(`Tüm bildirimler okundu işaretlenirken hata (User ID: ${userId}):`, error);
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Tüm bildirimler okundu işaretlenirken hata:', error);
     throw error;
   }
-  return data;
 };
 
 export const deleteNotification = async (notificationId) => {
@@ -2014,74 +2115,70 @@ export const getUnreadNotificationCount = async (userId) => {
 };
 
 export const createOrderStatusNotification = async (orderId, status, userId) => {
-  const statusMessages = {
-    pending: {
-      title: 'Siparişiniz Beklemede',
-      message: 'Siparişiniz alındı ve onay bekliyor.',
-      type: 'order_pending'
-    },
-    processing: {
-      title: 'Siparişiniz Hazırlanıyor',
-      message: 'Siparişiniz onaylandı ve şu anda hazırlanıyor.',
-      type: 'order_processing'
-    },
-    shipped: {
-      title: 'Kurye Yola Çıktı',
-      message: 'Siparişiniz kurye tarafından teslim edilmek üzere yola çıktı.',
-      type: 'order_shipped'
-    },
-    delivered: {
-      title: 'Siparişiniz Teslim Edildi',
-      message: 'Siparişiniz başarıyla teslim edildi. Afiyet olsun!',
-      type: 'order_delivered'
-    },
-    cancelled: {
-      title: 'Siparişiniz İptal Edildi',
-      message: 'Siparişiniz iptal edildi. Ödeme iadesi yapılacaktır.',
-      type: 'order_cancelled'
-    }
-  };
-
-  const statusConfig = statusMessages[status];
-  if (!statusConfig) {
-    console.error(`Geçersiz sipariş durumu: ${status}`);
-    return;
-  }
-
   try {
-    const result = await createNotification({
-      user_id: userId,
-      type: statusConfig.type,
-      title: statusConfig.title,
-      message: statusConfig.message,
-      data: { order_id: orderId },
-      is_read: false
-    });
-    
-    console.log(`✅ Sipariş durumu bildirimi gönderildi: ${status} -> ${userId}`);
-    return result;
+    const statusMessages = {
+      pending: 'Siparişiniz beklemede',
+      confirmed: 'Siparişiniz onaylandı',
+      preparing: 'Siparişiniz hazırlanıyor',
+      ready: 'Siparişiniz hazır! Kurye yola çıkacak',
+      delivering: 'Siparişiniz yolda',
+      delivered: 'Siparişiniz teslim edildi',
+      cancelled: 'Siparişiniz iptal edildi'
+    };
+
+    const statusTitles = {
+      pending: 'Sipariş Alındı',
+      confirmed: 'Sipariş Onaylandı', 
+      preparing: 'Sipariş Hazırlanıyor',
+      ready: 'Sipariş Hazır',
+      delivering: 'Sipariş Yolda',
+      delivered: 'Sipariş Teslim Edildi',
+      cancelled: 'Sipariş İptal Edildi'
+    };
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: userId,
+        type: 'order_status',
+        title: statusTitles[status] || 'Sipariş Durumu Güncellendi',
+        message: statusMessages[status] || 'Sipariş durumunuz güncellendi',
+        data: {
+          order_id: orderId,
+          status: status
+        },
+        is_read: false
+      }]);
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('❌ Sipariş durumu bildirimi oluştururken hata:', error);
+    console.error('Sipariş durumu bildirimi oluşturulurken hata:', error);
     throw error;
   }
 };
 
 export const createNewOrderNotification = async (orderId, storeOwnerId, customerName, totalAmount) => {
   try {
-    return await createNotification({
-      user_id: storeOwnerId,
-      type: 'new_order',
-      title: 'Yeni Sipariş Geldi',
-      message: `${customerName} adlı müşteriden yeni bir sipariş geldi. Toplam tutar: ${totalAmount.toFixed(2)} TL`,
-      data: { 
-        order_id: orderId, 
-        customer_name: customerName, 
-        amount: totalAmount 
-      },
-      is_read: false
-    });
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: storeOwnerId,
+        type: 'new_order',
+        title: 'Yeni Sipariş Aldınız!',
+        message: `${customerName} adlı müşteriden ${Number(totalAmount).toFixed(2)} TL tutarında yeni bir sipariş geldi.`,
+        data: {
+          order_id: orderId,
+          customer_name: customerName,
+          total_amount: totalAmount
+        },
+        is_read: false
+      }]);
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Yeni sipariş bildirimi oluştururken hata:', error);
+    console.error('Yeni sipariş bildirimi oluşturulurken hata:', error);
     throw error;
   }
 };
@@ -2675,15 +2772,50 @@ export const updateUserAvatar = async (userId, avatarFile) => {
   }
 };
 
+// Sipariş öğelerini getir
+export const getOrderItems = async (orderId) => {
+  try {
+    const { data, error } = await supabase
+      .from('order_items')
+      .select(`
+        *,
+        product:products(id, name, image, price)
+      `)
+      .eq('order_id', orderId);
+
+    if (error) throw error;
+    
+    // Eğer order_items.name null ise product.name'i kullan
+    const processedData = (data || []).map(item => ({
+      ...item,
+      name: item.name || item.product?.name || 'Ürün adı bulunamadı',
+      price: item.price || item.unit_price || item.product?.price || 0,
+      total: item.total || item.total_price || (item.quantity * (item.unit_price || item.price || 0))
+    }));
+
+    return processedData;
+  } catch (error) {
+    console.error('Sipariş öğeleri getirilirken hata:', error);
+    throw error;
+  }
+};
+
 export default {
   getStores,
   getStoreById,
   getStoreByOwnerId,
-  getStoreByUserId,
   getStoresByCategory,
+  createStore,
+  updateStore,
+  updateStoreStatus,
+  deleteStore,
+  
   getProducts,
-  getProductById,
   getProductsByStoreId,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
   getProductOptions,
   getProductWithOptions,
   createProductOptionGroup,
@@ -2692,19 +2824,27 @@ export default {
   updateProductOption,
   deleteProductOptionGroup,
   deleteProductOption,
+  
   getAllOrders,
   getUserOrders,
   getOrderById,
+  getOrderItems,
   createOrder,
   updateOrder,
+  
   getCampaigns,
   getCampaignById,
   getCampaignByCode,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+  
   getUserProfile,
   getUserAddresses,
   createAddress,
   updateAddress,
   deleteAddress,
+  
   getStoreReviews,
   getReviews,
   getUserReviews,
@@ -2712,12 +2852,15 @@ export default {
   updateReview,
   deleteReview,
   getUserReviewForStore,
+  getUserReviews,
   updateStoreRating,
+  
   getUserCartItems,
   clearCartCache,
   addToCart,
   updateCartItem,
   removeFromCart,
+  
   getCategories,
   getMainCategories,
   getAllSubcategories,
@@ -2726,31 +2869,29 @@ export default {
   createCategory,
   updateCategory,
   deleteCategory,
-  createProduct,
-  updateProduct,
-  deleteProduct,
+  
+  getModulePermissions,
   updateModulePermissions,
+  isModuleEnabled,
+  
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
-  createStore,
-  updateStore,
-  updateStoreStatus,
-  deleteStore,
+  
   getStoreIdByProductId,
-  getModulePermissions,
-  isModuleEnabled,
   uploadImage,
   deleteImage,
   searchStores,
   searchProducts,
+  
   getStoreCommissionSummary,
   getCommissionCalculations,
   updateStoreCommissionSummary,
   createCommissionCalculation,
   getAllCommissionSummaries,
+  
   getNotifications,
   createNotification,
   sendEmailNotification,
@@ -2765,22 +2906,23 @@ export default {
   createNewOrderNotification,
   createStoreRegistrationNotification,
   createStoreApprovalNotification,
+  
   getAdminStats,
   getDailyOrderStats,
   getCategoryStats,
   getTopStores,
   getRecentUserActivities,
-  // Favoriler
+  
   getUserFavorites,
   addToFavorites,
   removeFromFavorites,
   checkIsFavorite,
-  // Ödeme yöntemleri
+  
   getUserPaymentMethods,
   createPaymentMethod,
   updatePaymentMethod,
   deletePaymentMethod,
-  // Kullanıcı ayarları
+  
   getUserSettings,
   createUserSettings,
   updateUserSettings,
