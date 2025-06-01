@@ -249,7 +249,7 @@ export default function Home() {
                   {/* Background Image */}
                   {categories.find(cat => cat.name.toLowerCase() === 'market')?.image_url ? (
                     <div 
-                      className="absolute inset-0 bg-cover bg-center"
+                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
                       style={{
                         backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'market')?.image_url})`,
                       }}
@@ -304,7 +304,7 @@ export default function Home() {
                   {/* Background Image */}
                   {categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image_url ? (
                     <div 
-                      className="absolute inset-0 bg-cover bg-center"
+                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
                       style={{
                         backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'yemek')?.image_url})`,
                       }}
@@ -368,7 +368,7 @@ export default function Home() {
                   {/* Background Image */}
                   {categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url ? (
                     <div 
-                      className="absolute inset-0 bg-cover bg-center"
+                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
                       style={{
                         backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url})`,
                       }}
@@ -417,7 +417,7 @@ export default function Home() {
                   {/* Background Image */}
                   {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url ? (
                     <div 
-                      className="absolute inset-0 bg-cover bg-center"
+                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
                       style={{
                         backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url})`,
                       }}
