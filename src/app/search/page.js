@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiSearch, FiFilter, FiX, FiArrowLeft, FiChevronDown, FiStar } from 'react-icons/fi';
@@ -21,17 +21,16 @@ function SearchLoading() {
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchInputRef = useRef(null);
   
   const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [activeTab, setActiveTab] = useState('stores');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Hepsi');
-  
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'stores'); // stores, products
   const [sortOption, setSortOption] = useState('relevance');
   const [showFilters, setShowFilters] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Hepsi');
 
   // Arama işlemini gerçekleştir
   useEffect(() => {
@@ -89,7 +88,7 @@ function SearchContent() {
   // Arama kutusu temizleme
   const clearSearch = () => {
     setQuery('');
-    searchInputRef.current?.focus();
+    searchTimeoutRef.current?.focus();
   };
   
   // Filtre sayfasına yönlendirme
@@ -119,7 +118,7 @@ function SearchContent() {
               </div>
               
               <input
-                ref={searchInputRef}
+                ref={searchTimeoutRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

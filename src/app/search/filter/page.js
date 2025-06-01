@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiArrowLeft, FiCheck, FiX } from 'react-icons/fi';
 
-function FilterPageContent() {
+function SearchFilterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -14,7 +14,10 @@ function FilterPageContent() {
   const activeTab = searchParams.get('tab') || 'stores'; // stores veya products
   
   // Filtre durumları
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState(() => {
+    const categories = searchParams.get('categories');
+    return categories ? categories.split(',') : [];
+  });
   const [deliveryTime, setDeliveryTime] = useState('any'); // any, under30, under45, under60
   const [minRating, setMinRating] = useState(0); // 0, 3, 3.5, 4, 4.5
   const [priceRange, setPriceRange] = useState([0, 500]); // [min, max]
@@ -356,7 +359,7 @@ function FilterPageLoading() {
 export default function FilterPage() {
   return (
     <Suspense fallback={<FilterPageLoading />}>
-      <FilterPageContent />
+      <SearchFilterContent />
     </Suspense>
   );
 } 

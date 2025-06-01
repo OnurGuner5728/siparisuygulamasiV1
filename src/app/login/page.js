@@ -3,13 +3,14 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import supabase from '@/lib/supabase';
 
 // SearchParams için ayrı bir bileşen oluşturuyoruz
 function LoginContent() {
+  const { login, isAuthenticated } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated } = useAuth();
   
   // URL parametrelerini al
   const redirectTo = searchParams.get('redirect') || '/';
