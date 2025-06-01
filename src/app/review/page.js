@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FiArrowLeft, FiStar, FiUpload, FiThumbsUp, FiXCircle } from 'react-icons/fi';
 
@@ -45,7 +45,7 @@ function ReviewPageLoading() {
   );
 }
 
-function ReviewPageContent() {
+function ReviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
@@ -397,7 +397,7 @@ function ReviewPageContent() {
 export default function ReviewPage() {
   return (
     <Suspense fallback={<ReviewPageLoading />}>
-      <ReviewPageContent />
+      <ReviewContent />
     </Suspense>
   );
 } 
