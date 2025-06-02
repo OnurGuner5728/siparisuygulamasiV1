@@ -394,7 +394,7 @@ export default function StoreDetailPage({ params }) {
             <span className="text-orange-600 text-sm font-medium">
               {parseFloat(store.delivery_fee || 0) === 0 ? 'Ücretsiz' : `${parseFloat(store.delivery_fee || 12).toFixed(0)} TL`}
             </span>
-          </div>
+                </div>
           
           <div className="flex items-center space-x-1 text-gray-600">
             <FiClock size={14} />

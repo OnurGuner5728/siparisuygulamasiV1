@@ -347,103 +347,107 @@ export default function Home() {
           </div>
 
           {/* Alt kısım - Su ve Aktüel kartları - Her biri yatayda tam genişlik */}
-          <div className="space-y-3 md:space-y-4">
+          <div>
             {/* Su ve Damacana Kartı - Yatayda tam genişlik */}
             {isModuleEnabled('su') && (
-              <Link href="/su" className="group">
-                <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.01] h-32 md:h-40 w-full">
-                  {/* Background Image */}
-                  {categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url ? (
-                    <div 
-                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
-                      style={{
-                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url})`,
-                      }}
-                    >
-                      {/* Overlay for text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Default gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600"></div>
-                      {/* Pattern overlay */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-3 right-3 w-16 h-16 border-2 border-white/40 rounded-full"></div>
-                        <div className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/30 rounded-lg rotate-45"></div>
-                        <div className="absolute top-1/2 right-1/4 w-8 h-8 bg-white/20 rounded-full"></div>
-                        <div className="absolute top-4 left-1/3 w-6 h-6 bg-white/15 rounded-full animate-pulse"></div>
+              <div className="mb-4">
+                <Link href="/su" className="group">
+                  <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.01] h-32 md:h-40 w-full">
+                    {/* Background Image */}
+                    {categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url ? (
+                      <div 
+                        className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
+                        style={{
+                          backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url})`,
+                        }}
+                      >
+                        {/* Overlay for text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                       </div>
-                    </>
-                  )}
-                  
-                  {/* Content overlay */}
-                  <div className="relative z-10 h-full flex items-center justify-between p-4 md:p-6">
-                    <div className="flex items-center">
-                     
-                      <div className="text-white">
-                     
-                        <h3 className="text-white/90 text-sm md:text-base drop-shadow">Su siparişi ver!</h3>
-                        <div className="flex items-center text-xs md:text-sm text-white/80 mt-1">
-                          
+                    ) : (
+                      <>
+                        {/* Default gradient background */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600"></div>
+                        {/* Pattern overlay */}
+                        <div className="absolute inset-0 opacity-20">
+                          <div className="absolute top-3 right-3 w-16 h-16 border-2 border-white/40 rounded-full"></div>
+                          <div className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/30 rounded-lg rotate-45"></div>
+                          <div className="absolute top-1/2 right-1/4 w-8 h-8 bg-white/20 rounded-full"></div>
+                          <div className="absolute top-4 left-1/3 w-6 h-6 bg-white/15 rounded-full animate-pulse"></div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Content overlay */}
+                    <div className="relative z-10 h-full flex items-center justify-between p-4 md:p-6">
+                      <div className="flex items-center">
+                       
+                        <div className="text-white">
+                       
+                          <h3 className="text-white/90 text-sm md:text-base drop-shadow">Su siparişi ver!</h3>
+                          <div className="flex items-center text-xs md:text-sm text-white/80 mt-1">
+                            
+                          </div>
                         </div>
                       </div>
+                   
                     </div>
-                 
+                    
+                    {/* Hover effect */}
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
-                  
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             )}
 
             {/* Aktüel Kartı - Yatayda tam genişlik */}
             {isModuleEnabled('aktuel') && (
-              <Link href="/aktuel" className="group">
-                <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.01] h-32 md:h-40 w-full">
-                  {/* Background Image */}
-                  {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url ? (
-                    <div 
-                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
-                      style={{
-                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url})`,
-                      }}
-                    >
-                      {/* Overlay for text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Default gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600"></div>
-                      {/* Pattern overlay */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-3 left-3 w-16 h-16 border-2 border-white/40 rounded-full"></div>
-                        <div className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/30 rounded-lg rotate-12"></div>
-                        <div className="absolute top-2/3 left-1/4 w-8 h-8 bg-white/20 rounded-full"></div>
-                        <div className="absolute top-4 right-1/3 w-6 h-6 bg-white/15 rounded-full animate-pulse"></div>
+              <div className="mb-6">
+                <Link href="/aktuel" className="group">
+                  <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.01] h-32 md:h-40 w-full">
+                    {/* Background Image */}
+                    {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url ? (
+                      <div 
+                        className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
+                        style={{
+                          backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url})`,
+                        }}
+                      >
+                        {/* Overlay for text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                       </div>
-                    </>
-                  )}
-                  
-                  {/* Content overlay */}
-                  <div className="relative z-10 h-full flex items-center justify-between p-4 md:p-6">
-                    <div className="flex items-center">
+                    ) : (
+                      <>
+                        {/* Default gradient background */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600"></div>
+                        {/* Pattern overlay */}
+                        <div className="absolute inset-0 opacity-20">
+                          <div className="absolute top-3 left-3 w-16 h-16 border-2 border-white/40 rounded-full"></div>
+                          <div className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/30 rounded-lg rotate-12"></div>
+                          <div className="absolute top-2/3 left-1/4 w-8 h-8 bg-white/20 rounded-full"></div>
+                          <div className="absolute top-4 right-1/3 w-6 h-6 bg-white/15 rounded-full animate-pulse"></div>
+                        </div>
+                      </>
+                    )}
                     
-                      <div className="text-white">
-                        <h3 className="text-white/90 text-sm md:text-base drop-shadow">Ürünleri keşfet!</h3>
+                    {/* Content overlay */}
+                    <div className="relative z-10 h-full flex items-center justify-between p-4 md:p-6">
+                      <div className="flex items-center">
                       
-                      
+                        <div className="text-white">
+                          <h3 className="text-white/90 text-sm md:text-base drop-shadow">Ürünleri keşfet!</h3>
+                        
+                        
+                        </div>
                       </div>
-                    </div>
-                
-                  </div>
                   
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-              </Link>
+                    </div>
+                    
+                    {/* Hover effect */}
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
+                </Link>
+              </div>
             )}
           </div>
 

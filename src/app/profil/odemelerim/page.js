@@ -44,17 +44,17 @@ function PaymentMethodsContent() {
       ];
 
       setPaymentMethods(paymentOptions);
-      setLoading(false);
+        setLoading(false);
     };
-
+    
     loadPaymentMethods();
   }, [user]);
 
   const setDefaultPayment = (paymentId) => {
-    setPaymentMethods(paymentMethods.map(payment => ({
-      ...payment,
-      is_default: payment.id === paymentId
-    })));
+      setPaymentMethods(paymentMethods.map(payment => ({
+        ...payment,
+        is_default: payment.id === paymentId
+      })));
   };
 
   if (loading) {
@@ -89,7 +89,7 @@ function PaymentMethodsContent() {
                 <h2 className="text-xl font-bold text-gray-800">Ödeme Tercihleri</h2>
                 <p className="text-gray-600 text-sm mt-1">Varsayılan ödeme yönteminizi seçin</p>
               </div>
-
+              
               <div className="p-6">
                 <div className="space-y-4 mb-6">
                   {paymentMethods.map((payment) => (
@@ -133,11 +133,11 @@ function PaymentMethodsContent() {
                 {/* Bilgi Kutusu */}
                 <div className="mb-6">
                   <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                    <div className="flex items-start">
+                  <div className="flex items-start">
                       <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      <div>
+                    <div>
                         <h3 className="font-medium text-blue-800 mb-1">Kapıda Ödeme</h3>
                         <p className="text-sm text-blue-700">
                           Tüm siparişlerinizde kapıda ödeme yapabilirsiniz. Nakit veya kart ile ödeme seçenekleriniz mevcuttur. 
@@ -172,16 +172,16 @@ function PaymentMethodsContent() {
                       </div>
                     </div>
                   </div>
-                </div>
+                  </div>
 
                 {/* İnaktif Kart Ekleme Butonu */}
-                <button 
+                    <button
                   disabled
                   className="w-full bg-gray-200 text-gray-500 font-semibold py-3 px-4 rounded-lg shadow-sm cursor-not-allowed flex items-center justify-center"
-                >
+                    >
                   <FiPlus className="mr-2" />
                   Online Kart Ödeme (Yakında)
-                </button>
+                    </button>
               </div>
             </div>
           </div>
@@ -192,5 +192,5 @@ function PaymentMethodsContent() {
 }
 
 function PaymentMethodCard({ payment, onDelete, onSetDefault, onEdit }) {
-  return 'Ödeme Yöntemi';
+        return 'Ödeme Yöntemi';
 } 
