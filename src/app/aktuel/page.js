@@ -181,11 +181,11 @@ function AktuelPageContent() {
         </div>
       </div>
       
-      {/* Kampanya Banner */}
-      <CategoryCampaignBanner 
-        categoryId={4} 
-        categoryName="aktuel" 
-      />
+        {/* Kampanya Banner */}
+        <CategoryCampaignBanner 
+          categoryId={4} 
+          categoryName="Aktüel" 
+        />
       
       {/* Filter Tabs */}
       <div className="bg-white px-4 py-3 border-b">

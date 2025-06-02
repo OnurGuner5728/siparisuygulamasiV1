@@ -181,10 +181,11 @@ const NotificationDropdown = () => {
           onClick={() => setIsOpen(false)}
         >
           <div 
-            className="absolute w-80 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden"
+            className="absolute w-80 sm:w-80 md:right-4 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden"
             style={{
               top: `${dropdownPosition.top}px`,
-              right: `${dropdownPosition.right}px`,
+              right: window.innerWidth < 768 ? '50%' : `${dropdownPosition.right}px`,
+              transform: window.innerWidth < 768 ? 'translateX(50%)' : 'none',
             }}
             onClick={(e) => e.stopPropagation()}
           >

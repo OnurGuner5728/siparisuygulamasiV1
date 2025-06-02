@@ -45,6 +45,17 @@ function AdminCampaignsContent() {
           >
             Kampanyalar
           </button>
+
+          <button 
+            className={`py-3 px-4 font-medium mr-4 border-b-2 ${
+              activeTab === 'applications' 
+                ? 'border-blue-500 text-blue-600' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+            onClick={() => setActiveTab('applications')}
+          >
+            Başvurular
+          </button>
           <button 
             className={`py-3 px-4 font-medium mr-4 border-b-2 ${
               activeTab === 'permissions' 
@@ -60,6 +71,7 @@ function AdminCampaignsContent() {
       
       {/* Aktif Sekmeye Göre İçerik */}
       {activeTab === 'campaigns' && <CampaignsManagement />}
+      {activeTab === 'applications' && <ApplicationsManagement />}
       {activeTab === 'permissions' && <PermissionsManagement />}
     </div>
   );
@@ -110,11 +122,11 @@ function CampaignsManagement() {
   // Kampanya durumunu güncelle
   const toggleCampaignStatus = async (campaignId, currentStatus) => {
     try {
-      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      await api.updateCampaign(campaignId, { status: newStatus }); // updateCampaign API'de olmalı
+      const newIsActive = !currentStatus; // is_active boolean değeri
+      await api.updateCampaign(campaignId, { is_active: newIsActive });
       setCampaigns(prevCampaigns =>
         prevCampaigns.map(campaign => 
-          campaign.id === campaignId ? { ...campaign, status: newStatus } : campaign
+          campaign.id === campaignId ? { ...campaign, is_active: newIsActive } : campaign
         )
       );
     } catch (error) {
@@ -145,17 +157,20 @@ function CampaignsManagement() {
 
   // Filtrelenmiş kampanyalar
   const filteredCampaigns = campaigns.filter(campaign => {
-    if (statusFilter !== 'all' && campaign.status !== statusFilter) {
+    if (statusFilter !== 'all') {
+      const isActiveFilter = statusFilter === 'active';
+      if (campaign.is_active !== isActiveFilter) {
       return false;
+      }
     }
     if (searchTerm.trim() !== '') {
       const search = searchTerm.toLowerCase();
-      const storeName = getStoreName(campaign.store_id).toLowerCase(); // store_id olarak düzeltildi
+      const storeName = getStoreName(campaign.store_id).toLowerCase();
       return (
-        campaign.title.toLowerCase().includes(search) ||
+        campaign.name.toLowerCase().includes(search) ||
         campaign.description.toLowerCase().includes(search) ||
         storeName.includes(search) ||
-        campaign.code.toLowerCase().includes(search)
+        (campaign.code && campaign.code.toLowerCase().includes(search))
       );
     }
     return true;
@@ -214,99 +229,114 @@ function CampaignsManagement() {
         </div>
       </div>
       
-      {/* Kampanya Tablosu */}
+      {/* Kampanya Kartları */}
       {filteredCampaigns.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Başlık
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mağaza
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kod
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İndirim
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Geçerlilik
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Durum
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İşlemler
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCampaigns.map(campaign => (
-                  <tr key={campaign.id} className="hover:bg-gray-50 dark:bg-gray-900">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {campaign.id.substring(0, 8)}...
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => navigateToStore(campaign.store_id)}>
-                        {campaign.title}
+            <div key={campaign.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+              {/* Banner Görseli */}
+              <div className="relative h-48 bg-gray-100">
+                {campaign.banner_image_url ? (
+                  <img 
+                    src={campaign.banner_image_url} 
+                    alt={campaign.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/images/banners/default.jpg';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c1.5-2 4.5-2 6 0s2 4.5 0 6H13l-4 4-2-2.5L7 7z" />
+                    </svg>
+                  </div>
+                )}
+                
+                {/* Durum Badge'i */}
+                <div className="absolute top-2 right-2">
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    campaign.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {campaign.is_active ? 'Aktif' : 'Pasif'}
+                  </span>
+                </div>
+                
+                {/* Kategori Badge'i */}
+                {campaign.campaign_category && (
+                  <div className="absolute top-2 left-2">
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      {campaign.campaign_category}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Kampanya Bilgileri */}
+              <div className="p-4">
+                <h3 className="font-bold text-lg mb-2 line-clamp-1">{campaign.name}</h3>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{campaign.description}</p>
+                
+                {/* İndirim Bilgisi */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">İndirim:</span>
+                    <span className="font-medium text-orange-600">
+                      {campaign.type === 'percentage' ? `%${campaign.value}` : 
+                       campaign.type === 'amount' ? `${campaign.value} TL` : 
+                       'Ücretsiz Teslimat'}
+                    </span>
                       </div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{campaign.description}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer" onClick={() => navigateToStore(campaign.store_id)}>
-                      {getStoreName(campaign.store_id)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
+                  {campaign.code && (
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-sm text-gray-500">Kod:</span>
+                      <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
                         {campaign.code}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {campaign.discount_type === 'percent' ? `%${campaign.discount}` : 
-                       campaign.discount_type === 'amount' ? `${campaign.discount} TL` : 
-                       'Ücretsiz Teslimat'} {/* discount_type olarak düzeltildi */}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(campaign.start_date)} - {formatDate(campaign.end_date)} {/* start_date ve end_date olarak düzeltildi */}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        campaign.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {campaign.status === 'active' ? 'Aktif' : 'Pasif'}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Mağaza Bilgisi */}
+                {campaign.store_id && (
+                  <div className="mb-3">
+                    <span className="text-sm text-gray-500">Mağaza: </span>
+                    <span 
+                      className="text-blue-600 hover:text-blue-800 cursor-pointer text-sm"
+                      onClick={() => navigateToStore(campaign.store_id)}
+                    >
+                      {getStoreName(campaign.store_id)}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
+                  </div>
+                )}
+                
+                {/* Tarih Bilgisi */}
+                <div className="text-xs text-gray-500 mb-4">
+                  {formatDate(campaign.start_date)} - {formatDate(campaign.end_date)}
+                </div>
+                
+                {/* İşlem Butonları */}
+                <div className="flex space-x-2">
                         <button 
-                          onClick={() => toggleCampaignStatus(campaign.id, campaign.status)}
-                          className={`px-2 py-1 rounded-md text-white ${
-                            campaign.status === 'active' 
-                              ? 'bg-red-600 hover:bg-red-700' 
-                              : 'bg-green-600 hover:bg-green-700'
-                          }`}
-                        >
-                          {campaign.status === 'active' ? 'Pasifleştir' : 'Aktifleştir'}
+                    onClick={() => toggleCampaignStatus(campaign.id, campaign.is_active)}
+                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      campaign.is_active 
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                    }`}
+                  >
+                    {campaign.is_active ? 'Pasifleştir' : 'Aktifleştir'}
                         </button>
                         <button 
                           onClick={() => handleEditCampaign(campaign.id)} 
-                          className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
                         >
                           Düzenle
                         </button>
                       </div>
-                    </td>
-                  </tr>
+              </div>
+            </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
@@ -593,6 +623,212 @@ function PermissionsManagement() {
       ) : (
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <p className="text-gray-500">Aradığınız kriterlere uygun kullanıcı bulunamadı.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+// Kampanya Başvuruları Yönetimi Bileşeni
+function ApplicationsManagement() {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const { user } = useAuth();
+
+  // Başvuru verilerini yükle
+  useEffect(() => {
+    async function fetchApplications() {
+      try {
+        setLoading(true);
+        const applicationsData = await api.getCampaignApplications();
+        setApplications(applicationsData);
+      } catch (error) {
+        console.error("Başvuru verileri yüklenirken hata:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchApplications();
+  }, []);
+
+  // Başvuruyu onayla
+  const approveApplication = async (applicationId) => {
+    try {
+      const updatedApplication = await api.approveCampaignApplication(applicationId, user.id);
+      setApplications(prevApplications =>
+        prevApplications.map(app => 
+          app.id === applicationId ? { ...app, ...updatedApplication } : app
+        )
+      );
+    } catch (error) {
+      console.error("Başvuru onaylanırken hata:", error);
+      alert('Başvuru onaylanamadı.');
+    }
+  };
+
+  // Başvuruyu reddet
+  const rejectApplication = async (applicationId, notes = '') => {
+    try {
+      const updatedApplication = await api.rejectCampaignApplication(applicationId, user.id, notes);
+      setApplications(prevApplications =>
+        prevApplications.map(app => 
+          app.id === applicationId ? { ...app, ...updatedApplication } : app
+        )
+      );
+    } catch (error) {
+      console.error("Başvuru reddedilirken hata:", error);
+      alert('Başvuru reddedilemedi.');
+    }
+  };
+
+  // Filtrelenmiş başvurular
+  const filteredApplications = applications.filter(application => {
+    if (statusFilter !== 'all' && application.status !== statusFilter) {
+      return false;
+    }
+    if (searchTerm.trim() !== '') {
+      const search = searchTerm.toLowerCase();
+      return (
+        application.campaign?.name?.toLowerCase().includes(search) ||
+        application.store?.name?.toLowerCase().includes(search)
+      );
+    }
+    return true;
+  });
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto mb-4"></div>
+        <p className="text-gray-600">Başvurular yükleniyor...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-xl font-bold mb-2">Kampanya Başvuruları</h2>
+        <p className="text-gray-600">Mağazaların kampanyalara katılım başvurularını yönetin</p>
+      </div>
+      
+      {/* Filtreler */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="w-full md:w-1/2">
+            <label htmlFor="appSearch" className="block text-sm font-medium text-gray-700 mb-1">Ara</label>
+            <input
+              type="text"
+              id="appSearch"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Kampanya veya mağaza adı ile ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="w-full md:w-1/2">
+            <label htmlFor="appStatus" className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+            <select
+              id="appStatus"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Tüm Durumlar</option>
+              <option value="pending">Beklemede</option>
+              <option value="approved">Onaylandı</option>
+              <option value="rejected">Reddedildi</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Başvuru Tablosu */}
+      {filteredApplications.length > 0 ? (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Mağaza
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Kampanya
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Başvuru Tarihi
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Durum
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    İşlemler
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredApplications.map(application => (
+                  <tr key={application.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{application.store?.name}</div>
+                      <div className="text-sm text-gray-500">ID: {application.store_id}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{application.campaign?.name}</div>
+                      <div className="text-sm text-gray-500">{application.campaign?.type}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(application.applied_at)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        application.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {application.status === 'pending' ? 'Beklemede' :
+                         application.status === 'approved' ? 'Onaylandı' :
+                         'Reddedildi'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {application.status === 'pending' && (
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => approveApplication(application.id)}
+                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm"
+                          >
+                            Onayla
+                          </button>
+                          <button
+                            onClick={() => rejectApplication(application.id)}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+                          >
+                            Reddet
+                          </button>
+                        </div>
+                      )}
+                      {application.status !== 'pending' && (
+                        <span className="text-gray-400 text-sm">
+                          {formatDate(application.reviewed_at)}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <p className="text-gray-500">Aradığınız kriterlere uygun başvuru bulunamadı.</p>
         </div>
       )}
     </div>

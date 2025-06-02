@@ -144,7 +144,7 @@ function Header({ onCartClick }) {
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className={`bg-white  overflow-hidden shadow-lg py-2 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+  return (<header className={`bg-white  overflow-hidden shadow-lg py-0.2 md:py-1 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-2 left-10 w-6 h-6 bg-orange-100/50 rounded-full animate-bounce animation-delay-1000"></div>
@@ -158,15 +158,13 @@ function Header({ onCartClick }) {
       <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50/30 rounded-full -translate-y-16 translate-x-16"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-50/30 rounded-full translate-y-12 -translate-x-12"></div>
 
-      <div className="relative container mx-auto px-4 flex justify-between items-center">        <div className="flex items-center">          <a href="/" className="flex items-center space-x-2 text-2xl font-bold" onClick={(e) => handleLinkClick(e, '/')}
+      <div className="relative container mx-auto px-2 md:px-2 flex justify-between items-center">        <div className="flex items-center md:justify-start justify-start -ml-2 md:ml-0">          <a href="/" className="flex items-center space-x-2" onClick={(e) => handleLinkClick(e, '/')}
           >
-           {/* <div className="bg-orange-100 backdrop-blur-sm rounded-2xl p-3 shadow-lg transform hover:scale-105 transition-all duration-300 border border-orange-200">
-              <span className="text-orange-500 font-black text-lg tracking-tight">es</span>
-            </div>
-            */}
-            <span className="hidden sm:inline text-orange-500 font-black tracking-tight drop-shadow-lg">
-              easysiparis
-            </span>
+            <img 
+              src="/images/logo/logo.jpg" 
+              alt="Easysipariş Logo" 
+              className="h-8 sm:h-10 w-auto object-contain hover:scale-105 transition-all duration-200"
+            />
           </a>        </div>
 
     {/* Mobil Sağ Butonlar */}

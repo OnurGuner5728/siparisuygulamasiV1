@@ -72,8 +72,7 @@ function CreateCampaignContent() {
     start_date: getTodayDateString(),
     end_date: getNextMonthDateString(),
     max_usage: '',
-    conditions: '',
-    image_url: '',
+    banner_image_url: '',
     is_active: true,
     main_category_id: ''
   });
@@ -90,14 +89,15 @@ function CreateCampaignContent() {
         throw new Error('Lütfen tüm gerekli alanları doldurun.');
       }
       
-      // Mağaza veya ana kategori seçilmiş olmalı
-      if (!formData.store_id && !formData.main_category_id) {
-        throw new Error('Lütfen bir mağaza veya ana kategori seçin.');
+      // Ana kategori seçilmiş olmalı (mağaza seçimi sadece admin için isteğe bağlı)
+      if (!formData.main_category_id) {
+        throw new Error('Lütfen bir ana kategori seçin (Yemek, Market, Su).');
       }
       
-      if (formData.categories.length === 0) {
-        throw new Error('En az bir kategori seçmelisiniz.');
-      }
+      // Artık kategori seçimi zorunlu değil
+      // if (formData.categories.length === 0) {
+      //   throw new Error('En az bir kategori seçmelisiniz.');
+      // }
       
       // İndirim türü kontrolü
       const validDiscountTypes = ['percentage', 'amount', 'free_delivery'];
@@ -111,16 +111,22 @@ function CreateCampaignContent() {
       
       // API isteği için verileri hazırla
       const campaignData = {
-        ...formData,
-        discount: formData.discount ? parseFloat(formData.discount) : null,
+        name: formData.title,
+        description: formData.description,
+        code: formData.code,
+        type: formData.discount_type || 'percentage',
+        value: formData.discount ? parseFloat(formData.discount) : null,
         min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : null,
         max_discount_amount: formData.max_discount_amount ? parseFloat(formData.max_discount_amount) : null,
-        max_usage: formData.max_usage ? parseInt(formData.max_usage) : null,
-        created_by: user.id,
-        updated_by: user.id,
+        usage_limit: formData.max_usage ? parseInt(formData.max_usage) : null,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        is_active: formData.is_active,
         store_id: formData.store_id || null,
-        main_category_id: formData.main_category_id || null,
-        discount_type: formData.discount_type || 'percentage' // Varsayılan değer olarak 'percent' kullan
+        campaign_category: formData.main_category_id ? getCategoryName(formData.main_category_id) : null,
+        categories: formData.categories || [],
+        banner_image_url: formData.banner_image_url || null,
+        is_admin_created: user.role === 'admin'
       };
       
       // API üzerinden kampanya oluştur
@@ -191,6 +197,22 @@ function CreateCampaignContent() {
     });
   };
   
+
+  
+  // Seçilen mağazanın adını al
+  const getStoreName = (storeId) => {
+    if (!storeId) return '';
+    const store = stores.find(s => s.id === storeId);
+    return store ? store.name : '';
+  };
+  
+  // Seçilen kategorinin adını al
+  const getCategoryName = (categoryId) => {
+    if (!categoryId) return '';
+    const category = categories.find(c => c.id.toString() === categoryId.toString());
+    return category ? category.name : '';
+  };
+  
   // Dosya yükleme işlemi
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -204,7 +226,7 @@ function CreateCampaignContent() {
       
       setFormData(prev => ({
         ...prev,
-        image_url: imageUrl
+        banner_image_url: imageUrl
       }));
       
     } catch (error) {
@@ -213,13 +235,6 @@ function CreateCampaignContent() {
     } finally {
       setLoading(false);
     }
-  };
-  
-  // Seçilen mağazanın adını al
-  const getStoreName = (storeId) => {
-    if (!storeId) return '';
-    const store = stores.find(s => s.id === storeId);
-    return store ? store.name : '';
   };
   
   if (isLoadingData) {
@@ -380,21 +395,21 @@ function CreateCampaignContent() {
                   </div>
                 </div>
                 
-                <div>
-                  <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-                    Kampanya Görseli
+                <div className="md:col-span-2">
+                  <label htmlFor="banner_image" className="block text-sm font-medium text-gray-700 mb-1">
+                    Kampanya Afişi
                   </label>
                   <div className="flex items-center">
-                    {formData.image_url ? (
+                    {formData.banner_image_url ? (
                       <div className="relative w-32 h-32 mr-4 border rounded-md overflow-hidden">
                         <img
-                          src={formData.image_url}
-                          alt="Kampanya görseli"
+                          src={formData.banner_image_url}
+                          alt="Kampanya afişi"
                           className="w-full h-full object-cover"
                         />
                         <button
                           type="button"
-                          onClick={() => setFormData({ ...formData, image_url: '' })}
+                          onClick={() => setFormData({ ...formData, banner_image_url: '' })}
                           className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-md"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -412,16 +427,16 @@ function CreateCampaignContent() {
                     <div className="flex-1">
                       <input
                         type="file"
-                        id="image"
+                        id="banner_image"
                         accept="image/*"
                         onChange={handleFileChange}
                         className="hidden"
                       />
                       <label
-                        htmlFor="image"
-                        className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        htmlFor="banner_image"
+                        className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        Resim Yükle
+                        Afiş Yükle
                       </label>
                       <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF formatında 2MB'a kadar</p>
                     </div>
@@ -540,20 +555,7 @@ function CreateCampaignContent() {
                   />
                 </div>
                 
-                <div>
-                  <label htmlFor="conditions" className="block text-sm font-medium text-gray-700 mb-1">
-                    Kullanım Koşulları
-                  </label>
-                  <textarea
-                    id="conditions"
-                    name="conditions"
-                    rows="2"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.conditions}
-                    onChange={handleChange}
-                    placeholder="Opsiyonel"
-                  ></textarea>
-                </div>
+
               </div>
             </div>
             

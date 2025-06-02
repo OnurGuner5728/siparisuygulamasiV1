@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ProductDetailModal from '@/components/ProductDetailModal';
+import StoreCampaignBanner from '@/components/StoreCampaignBanner';
 
 // React Icons'ları dinamik olarak import et
 const FiArrowLeft = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiArrowLeft })), { ssr: false });
@@ -294,18 +295,19 @@ export default function StoreDetailPage({ params }) {
       {/* Hero Image Section */}
       <div className="relative">
         {/* Large Image Area */}
-        <div className="h-80 bg-gray-300 relative overflow-hidden">
+        <div className="h-40 sm:h-40 md:h-60 lg:h-60 bg-gray-300 relative overflow-hidden">
           {store.banner_url || store.logo_url ? (
-              <img
-              src={store.banner_url || store.logo_url}
-                alt={store.name}
-                className="w-full h-full object-cover"
-              />
+              <div 
+                className="absolute inset-0 bg-center bg-no-repeat bg-[length:100%_100%]"
+                style={{
+                  backgroundImage: `url(${store.banner_url || store.logo_url})`,
+                }}
+              ></div>
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
                 <div className="text-center">
-                <div className="text-6xl mb-4">🍽️</div>
-                <div className="text-gray-700 font-semibold text-xl">{store.name}</div>
+                <div className="text-4xl mb-2">🍽️</div>
+                <div className="text-gray-700 font-semibold text-lg">{store.name}</div>
               </div>
             </div>
           )}
@@ -338,13 +340,7 @@ export default function StoreDetailPage({ params }) {
                   <span>🍽️</span>
                   <span>Mağaza Hakkında</span>
                 </button>
-                <button 
-                  onClick={() => handleMenuClick('contact')}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <span>📞</span>
-                  <span>İletişim</span>
-                </button>
+             
                 <button 
                   onClick={() => handleMenuClick('reviews')}
                   className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -382,7 +378,7 @@ export default function StoreDetailPage({ params }) {
           </div>
       
       {/* Store Info */}
-      <div className="bg-white px-6 py-6">
+      <div className="bg-white px-2 md:px-4 py-2 md:py-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{store.name}</h1>
         
         <div className="flex items-center space-x-4 mb-4">
@@ -408,6 +404,9 @@ export default function StoreDetailPage({ params }) {
           {store.description || 'Maecenas sed diam eget risus varius blandit sit amet non magna. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.'}
         </p>
       </div>
+      
+      {/* Store Campaign Banner */}
+      <StoreCampaignBanner storeId={id} categoryName="yemek" />
       
       {/* Category Filter */}
       <div className="bg-white px-6 py-4 border-t border-gray-100">

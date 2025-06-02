@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ProductDetailModal from '@/components/ProductDetailModal';
+import StoreCampaignBanner from '@/components/StoreCampaignBanner';
 
 export default function MarketStoreDetailPage({ params }) {
   const router = useRouter();
@@ -284,13 +285,14 @@ export default function MarketStoreDetailPage({ params }) {
       {/* Hero Image Section */}
       <div className="relative">
         {/* Large Image Area */}
-        <div className="h-80 bg-gray-300 relative overflow-hidden">
+        <div className="h-40 bg-gray-300 relative overflow-hidden">
           {store.banner_url || store.logo_url ? (
-            <img
-              src={store.banner_url || store.logo_url}
-              alt={store.name}
-                className="w-full h-full object-cover"
-            />
+            <div 
+              className="absolute inset-0 bg-center bg-no-repeat bg-[length:100%_100%]"
+              style={{
+                backgroundImage: `url(${store.banner_url || store.logo_url})`,
+              }}
+            ></div>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
                 <div className="text-center">
@@ -328,13 +330,7 @@ export default function MarketStoreDetailPage({ params }) {
                   <span>🏪</span>
                   <span>Market Hakkında</span>
                 </button>
-                <button 
-                  onClick={() => handleMenuClick('contact')}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <span>📞</span>
-                  <span>İletişim</span>
-                </button>
+              
                 <button 
                   onClick={() => handleMenuClick('reviews')}
                   className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -398,6 +394,9 @@ export default function MarketStoreDetailPage({ params }) {
           {store.description || 'Maecenas sed diam eget risus varius blandit sit amet non magna. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.'}
         </p>
       </div>
+      
+      {/* Store Campaign Banner */}
+      <StoreCampaignBanner storeId={id} categoryName="market" />
       
       {/* Category Filter */}
       <div className="bg-white px-6 py-4 border-t border-gray-100">

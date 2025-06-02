@@ -501,7 +501,7 @@ function StorePanelContent() {
       )}
 
       {/* Hızlı Erişim Menüsü */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         <Link href="/store/orders" className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -526,6 +526,20 @@ function StorePanelContent() {
             <div>
               <h3 className="text-lg font-semibold">Ürünler</h3>
               <p className="text-gray-600">Ürünlerinizi yönetin</p>
+            </div>
+          </div>
+        </Link>
+        
+        <Link href="/store/kampanyalar" className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Kampanyalar</h3>
+              <p className="text-gray-600">Kampanyalara katılın ve yönetin</p>
             </div>
           </div>
         </Link>

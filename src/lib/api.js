@@ -722,6 +722,308 @@ export const deleteCampaign = async (campaignId) => {
   return { success: true };
 };
 
+// Kampanya afişleri API fonksiyonları
+export const getCampaignBanners = async (category = null, useAdmin = false) => {
+  const client = useAdmin ? supabaseAdmin : supabase;
+  
+  let query = client
+    .from('campaigns')
+    .select('*')
+    .eq('is_active', true)
+    .not('banner_image_url', 'is', null)
+    .not('banner_image_url', 'eq', '')
+    .gte('end_date', new Date().toISOString())
+    .order('priority_order', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (category) {
+    // Kategori adını normalize et - ilk harfi büyük yap
+    const normalizedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    query = query.eq('campaign_category', normalizedCategory);
+  }
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Kampanya afişlerini getirirken hata:', error);
+    return [];
+  }
+  
+  return data || [];
+};
+
+// Campaign banner fonksiyonları kaldırıldı - artık campaigns.banner_image_url kullanılıyor
+
+// Kampanya başvuruları API fonksiyonları
+export const getCampaignApplications = async (filters = {}) => {
+  let query = supabase
+    .from('campaign_applications')
+    .select(`
+      *,
+      campaign:campaigns (id, name, description, type, value, start_date, end_date, is_active),
+      store:stores (id, name, category_id),
+      applicant:users!campaign_applications_user_id_fkey (id, name, email)
+    `);
+
+  if (filters.campaign_id) {
+    query = query.eq('campaign_id', filters.campaign_id);
+  }
+  
+  if (filters.store_id) {
+    query = query.eq('store_id', filters.store_id);
+  }
+  
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  query = query.order('applied_at', { ascending: false });
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Kampanya başvurularını getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createCampaignApplication = async (applicationData) => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .insert(applicationData)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Kampanya başvurusu oluştururken hata:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateCampaignApplication = async (applicationId, updates) => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .update(updates)
+    .eq('id', applicationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya başvurusu güncellenirken hata (ID: ${applicationId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+export const approveCampaignApplication = async (applicationId, reviewedBy) => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .update({
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewedBy
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya başvurusu onaylanırken hata (ID: ${applicationId}):`, error);
+    throw error;
+  }
+  
+  // Onaylanan başvuru için store_campaign_participations tablosuna kayıt ekle
+  if (data) {
+    await createStoreCampaignParticipation({
+      store_id: data.store_id,
+      campaign_id: data.campaign_id,
+      status: 'active'
+    });
+  }
+  
+  return data;
+};
+
+export const rejectCampaignApplication = async (applicationId, reviewedBy, notes = '') => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewedBy,
+      notes: notes
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya başvurusu reddedilirken hata (ID: ${applicationId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+// Mağaza kampanya katılımları API fonksiyonları
+export const getStoreCampaignParticipations = async (filters = {}) => {
+  let query = supabase
+    .from('store_campaign_participations')
+    .select(`
+      *,
+      store:stores (id, name, category_id),
+      campaign:campaigns (id, name, description, type, value, start_date, end_date, is_active)
+    `);
+
+  if (filters.store_id) {
+    query = query.eq('store_id', filters.store_id);
+  }
+  
+  if (filters.campaign_id) {
+    query = query.eq('campaign_id', filters.campaign_id);
+  }
+  
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  query = query.order('joined_at', { ascending: false });
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Mağaza kampanya katılımlarını getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createStoreCampaignParticipation = async (participationData) => {
+  const { data, error } = await supabase
+    .from('store_campaign_participations')
+    .insert(participationData)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Mağaza kampanya katılımı oluştururken hata:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateStoreCampaignParticipation = async (participationId, updates) => {
+  const { data, error } = await supabase
+    .from('store_campaign_participations')
+    .update(updates)
+    .eq('id', participationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Mağaza kampanya katılımı güncellenirken hata (ID: ${participationId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+// Kampanya kuralları API fonksiyonları
+export const getCampaignRules = async () => {
+  const { data, error } = await supabase
+    .from('campaign_rules')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Kampanya kurallarını getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createCampaignRule = async (ruleData) => {
+  const { data, error } = await supabase
+    .from('campaign_rules')
+    .insert(ruleData)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Kampanya kuralı oluştururken hata:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateCampaignRule = async (ruleId, updates) => {
+  const { data, error } = await supabase
+    .from('campaign_rules')
+    .update(updates)
+    .eq('id', ruleId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya kuralı güncellenirken hata (ID: ${ruleId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+export const deleteCampaignRule = async (ruleId) => {
+  const { error } = await supabase
+    .from('campaign_rules')
+    .delete()
+    .eq('id', ruleId);
+  
+  if (error) {
+    console.error(`Kampanya kuralı silinirken hata (ID: ${ruleId}):`, error);
+    throw error;
+  }
+  return { success: true };
+};
+
+// Kampanya uygunluk kontrolü
+export const checkCampaignEligibility = async (storeId, campaignId) => {
+  try {
+    // Kampanya kurallarını al
+    const rules = await getCampaignRules();
+    const activeRule = rules.find(rule => rule.id) || rules[0]; // İlk kuralı varsayılan olarak al
+    
+    if (!activeRule) {
+      return { eligible: true, reason: null };
+    }
+    
+    // Mağazanın mevcut aktif kampanyalarını kontrol et
+    const activeParticipations = await getStoreCampaignParticipations({
+      store_id: storeId,
+      status: 'active'
+    });
+    
+    // Çoklu kampanya katılımına izin verilip verilmediğini kontrol et
+    if (!activeRule.allow_multiple_campaigns && activeParticipations.length > 0) {
+      return {
+        eligible: false,
+        reason: 'Bu mağaza zaten aktif bir kampanyaya katılıyor ve çoklu kampanya katılımına izin verilmiyor.'
+      };
+    }
+    
+    // Maksimum kampanya sayısını kontrol et
+    if (activeParticipations.length >= activeRule.max_campaigns_per_store) {
+      return {
+        eligible: false,
+        reason: `Mağaza maksimum ${activeRule.max_campaigns_per_store} kampanyaya katılabilir.`
+      };
+    }
+    
+    return { eligible: true, reason: null };
+  } catch (error) {
+    console.error('Kampanya uygunluk kontrolü sırasında hata:', error);
+    return { eligible: false, reason: 'Uygunluk kontrolü yapılamadı.' };
+  }
+};
+
 // User (Kullanıcı)
 export const getUserProfile = async (userId) => {
   const { data, error } = await supabaseApi.getUserProfile(userId);
@@ -2839,6 +3141,28 @@ export default {
   createCampaign,
   updateCampaign,
   deleteCampaign,
+  
+  // Kampanya afişleri
+  getCampaignBanners,
+  
+  // Kampanya başvuruları
+  getCampaignApplications,
+  createCampaignApplication,
+  updateCampaignApplication,
+  approveCampaignApplication,
+  rejectCampaignApplication,
+  
+  // Mağaza kampanya katılımları
+  getStoreCampaignParticipations,
+  createStoreCampaignParticipation,
+  updateStoreCampaignParticipation,
+  
+  // Kampanya kuralları
+  getCampaignRules,
+  createCampaignRule,
+  updateCampaignRule,
+  deleteCampaignRule,
+  checkCampaignEligibility,
   
   getUserProfile,
   getUserAddresses,

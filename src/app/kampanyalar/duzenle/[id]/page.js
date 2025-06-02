@@ -96,21 +96,20 @@ function EditCampaignContent() {
         
         // Form verilerini kampanyaya göre doldur
         setFormData({
-          title: campaignData.title || '',
+          title: campaignData.name || '',
           description: campaignData.description || '',
           store_id: campaignData.store_id || '',
-          main_category_id: campaignData.main_category_id || '',
+          main_category_id: campaignData.campaign_category || '',
           categories: campaignData.categories || [],
-          discount_type: campaignData.discount_type || 'percent',
-          discount: campaignData.discount ? campaignData.discount.toString() : '',
+          discount_type: campaignData.type || 'percentage',
+          discount: campaignData.value ? campaignData.value.toString() : '',
           min_order_amount: campaignData.min_order_amount ? campaignData.min_order_amount.toString() : '',
           max_discount_amount: campaignData.max_discount_amount ? campaignData.max_discount_amount.toString() : '',
           code: campaignData.code || '',
           start_date: campaignData.start_date ? campaignData.start_date.split('T')[0] : getTodayDateString(),
           end_date: campaignData.end_date ? campaignData.end_date.split('T')[0] : getNextMonthDateString(),
-          max_usage: campaignData.max_usage ? campaignData.max_usage.toString() : '',
-          conditions: campaignData.conditions || '',
-          image_url: campaignData.image_url || '',
+          max_usage: campaignData.usage_limit ? campaignData.usage_limit.toString() : '',
+          banner_image_url: campaignData.banner_image_url || '',
           is_active: campaignData.is_active !== false
         });
         
@@ -137,13 +136,9 @@ function EditCampaignContent() {
         throw new Error('Lütfen tüm gerekli alanları doldurun.');
       }
       
-      // Mağaza veya ana kategori seçilmiş olmalı
-      if (!formData.store_id && !formData.main_category_id) {
-        throw new Error('Lütfen bir mağaza veya ana kategori seçin.');
-      }
-      
-      if (formData.categories.length === 0) {
-        throw new Error('En az bir kategori seçmelisiniz.');
+      // Ana kategori seçilmiş olmalı (mağaza seçimi sadece admin için isteğe bağlı)
+      if (!formData.main_category_id) {
+        throw new Error('Lütfen bir ana kategori seçin (Yemek, Market, Su).');
       }
       
       if (formData.discount_type !== 'free_delivery' && (!formData.discount || isNaN(formData.discount) || Number(formData.discount) <= 0)) {
@@ -152,14 +147,21 @@ function EditCampaignContent() {
       
       // API isteği için verileri hazırla
       const campaignData = {
-        ...formData,
-        discount: formData.discount && formData.discount !== '' ? parseFloat(formData.discount) : null,
+        name: formData.title,
+        description: formData.description,
+        code: formData.code,
+        type: formData.discount_type || 'percentage',
+        value: formData.discount && formData.discount !== '' ? parseFloat(formData.discount) : null,
         min_order_amount: formData.min_order_amount && formData.min_order_amount !== '' ? parseFloat(formData.min_order_amount) : null,
         max_discount_amount: formData.max_discount_amount && formData.max_discount_amount !== '' ? parseFloat(formData.max_discount_amount) : null,
-        max_usage: formData.max_usage && formData.max_usage !== '' ? parseInt(formData.max_usage) : null,
+        usage_limit: formData.max_usage && formData.max_usage !== '' ? parseInt(formData.max_usage) : null,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        is_active: formData.is_active,
         store_id: formData.store_id && formData.store_id !== '' ? formData.store_id : null,
-        main_category_id: formData.main_category_id && formData.main_category_id !== '' ? formData.main_category_id : null,
-        updated_by: user.id
+        campaign_category: formData.main_category_id && formData.main_category_id !== '' ? getCategoryName(formData.main_category_id) : null,
+        categories: formData.categories || [],
+        banner_image_url: formData.banner_image_url || null
       };
       
       // API üzerinden kampanya güncelle
@@ -243,7 +245,7 @@ function EditCampaignContent() {
       
       setFormData(prev => ({
         ...prev,
-        image_url: imageUrl
+        banner_image_url: imageUrl
       }));
       
     } catch (error) {
@@ -252,6 +254,13 @@ function EditCampaignContent() {
     } finally {
       setSubmitting(false);
     }
+  };
+  
+  // Seçilen kategorinin adını al
+  const getCategoryName = (categoryId) => {
+    if (!categoryId) return '';
+    const category = categories.find(c => c.id.toString() === categoryId.toString());
+    return category ? category.name : '';
   };
   
   if (loading) {
@@ -432,21 +441,21 @@ function EditCampaignContent() {
                   </div>
                 </div>
                 
-                <div>
-                  <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-                    Kampanya Görseli
+                <div className="md:col-span-2">
+                  <label htmlFor="banner_image" className="block text-sm font-medium text-gray-700 mb-1">
+                    Kampanya Afişi
                   </label>
                   <div className="flex items-center">
-                    {formData.image_url ? (
+                    {formData.banner_image_url ? (
                       <div className="relative w-32 h-32 mr-4 border rounded-md overflow-hidden">
                         <img
-                          src={formData.image_url}
-                          alt="Kampanya görseli"
+                          src={formData.banner_image_url}
+                          alt="Kampanya afişi"
                           className="w-full h-full object-cover"
                         />
                         <button
                           type="button"
-                          onClick={() => setFormData({ ...formData, image_url: '' })}
+                          onClick={() => setFormData({ ...formData, banner_image_url: '' })}
                           className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-md"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -464,16 +473,16 @@ function EditCampaignContent() {
                     <div className="flex-1">
                       <input
                         type="file"
-                        id="image"
+                        id="banner_image"
                         accept="image/*"
                         onChange={handleFileChange}
                         className="hidden"
                       />
                       <label
-                        htmlFor="image"
+                        htmlFor="banner_image"
                         className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        Resim Yükle
+                        Afiş Yükle
                       </label>
                       <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF formatında 2MB'a kadar</p>
                     </div>

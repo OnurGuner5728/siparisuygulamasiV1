@@ -110,7 +110,7 @@ function YemekPageContent() {
       {yemekCategoryId && (
         <CategoryCampaignBanner 
           categoryId={yemekCategoryId} 
-          categoryName="yemek" 
+          categoryName ="yemek" 
         />
       )}
       

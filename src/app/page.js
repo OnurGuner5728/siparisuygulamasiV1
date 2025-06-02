@@ -437,7 +437,7 @@ export default function Home() {
                     </div>
                     <div className="text-white">
                       <h3 className="text-lg md:text-xl font-bold mb-1 drop-shadow-lg">Aktüel Ürünler</h3>
-                      <p className="text-white/90 text-sm drop-shadow">Güncel kampanyalar!</p>
+                      <p className="text-white/90 text-sm drop-shadow">Ürünleri keşfet!</p>
                     </div>
                   </div>
                   
