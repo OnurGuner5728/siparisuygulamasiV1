@@ -341,11 +341,16 @@ function SearchContent() {
                       </div>
                     </div>
                     <div className="flex items-center text-xs text-gray-500 mt-2">
-                      <span>{store.delivery_time || '30-45 dk'}</span>
+                      <span>
+                        {store.delivery_time_min && store.delivery_time_max 
+                          ? `${store.delivery_time_min}-${store.delivery_time_max} dk`
+                          : '30-60 dk'
+                        }
+                      </span>
                       <span className="mx-2">•</span>
                       <span>{store.distance ? `${store.distance} km` : '---'}</span>
                       <span className="mx-2">•</span>
-                      <span>{store.delivery_fee === 0 ? 'Ücretsiz Teslimat' : `${store.delivery_fee || '5'} TL Teslimat`}</span>
+                      <span>{store.delivery_fee === 0 ? 'Ücretsiz Teslimat' : `${parseFloat(store.delivery_fee || 12).toFixed(0)} TL Teslimat`}</span>
                     </div>
                   </div>
                 </Link>

@@ -25,19 +25,15 @@ function CheckoutContent() {
     calculateSubtotal, 
     calculateDeliveryFee, 
     calculateTotal,
-    clearCart 
+    calculateDeliveryTime,
+    clearCart,
+    currentStore
   } = useCart();
   const { error, warning, success } = useToast();
   
   const [activeStep, setActiveStep] = useState(1);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [cardInfo, setCardInfo] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: ''
-  });
+  const [paymentMethod, setPaymentMethod] = useState('cash'); // cash veya card_on_delivery
   const [loading, setLoading] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -89,91 +85,13 @@ function CheckoutContent() {
     loadAddresses();
   }, [cartItems.length, router, user, orderCompleted, isAuthenticated]);
 
-  const handleCardInfoChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Kart numarası formatlama
-    if (name === 'cardNumber') {
-      const formattedValue = value
-        .replace(/\s/g, '')
-        .replace(/(.{4})/g, '$1 ')
-        .trim()
-        .slice(0, 19);
-      
-      setCardInfo({
-        ...cardInfo,
-        [name]: formattedValue
-      });
-      return;
-    }
-    
-    // Son kullanma tarihi formatlama
-    if (name === 'expiryDate') {
-      const formattedValue = value
-        .replace(/\D/g, '')
-        .replace(/(\d{2})(\d{0,2})/, '$1/$2')
-        .slice(0, 5);
-      
-      setCardInfo({
-        ...cardInfo,
-        [name]: formattedValue
-      });
-      return;
-    }
-    
-    // CVV formatlama
-    if (name === 'cvv') {
-      const formattedValue = value.slice(0, 3);
-      
-      setCardInfo({
-        ...cardInfo,
-        [name]: formattedValue
-      });
-      return;
-    }
-    
-    setCardInfo({
-      ...cardInfo,
-      [name]: value
-    });
-  };
-
   const handleContinue = () => {
     if (activeStep === 1 && selectedAddress) {
       setActiveStep(2);
     } else if (activeStep === 2) {
-      // Sadece kapıda ödeme mevcut olduğu için doğrudan siparişi tamamla
+      // Ödeme yöntemi seçildikten sonra siparişi tamamla
       handleCompleteOrder();
     }
-  };
-
-  const validateCardInfo = () => {
-    // Basit kart bilgisi doğrulama
-    if (paymentMethod === 'online') {
-      const { cardNumber, cardName, expiryDate, cvv } = cardInfo;
-      
-      if (!cardNumber || cardNumber.replace(/\s/g, '').length !== 16) {
-        error('Lütfen geçerli bir kart numarası girin.');
-        return false;
-      }
-      
-      if (!cardName) {
-        error('Lütfen kart üzerindeki ismi girin.');
-        return false;
-      }
-      
-      if (!expiryDate || expiryDate.length !== 5) {
-        error('Lütfen geçerli bir son kullanma tarihi girin.');
-        return false;
-      }
-      
-      if (!cvv || cvv.length !== 3) {
-        error('Lütfen geçerli bir CVV girin.');
-        return false;
-      }
-    }
-    
-    return true;
   };
 
   const handleCompleteOrder = async () => {
@@ -224,6 +142,11 @@ function CheckoutContent() {
       const address = addresses.find(addr => addr.id === selectedAddress);
       console.log('🏠 Selected address:', address);
       
+      // Ödeme yöntemi detayları
+      const paymentMethodDetails = {
+        type: paymentMethod === 'cash' ? 'cash' : 'card'
+      };
+      
       // Sipariş verisi oluştur
       const orderData = {
         user_id: user.id,
@@ -232,9 +155,10 @@ function CheckoutContent() {
         delivery_fee: calculateDeliveryFee(),
         total_amount: calculateTotal(),
         discount_amount: 0,
-        payment_method: paymentMethod === 'online' ? 'credit_card' : 'cash',
+        payment_method: paymentMethod, // cash veya card_on_delivery
+        payment_method_details: JSON.stringify(paymentMethodDetails),
         delivery_address: JSON.stringify(address),
-        estimated_delivery_time: '30-45 dakika',
+        estimated_delivery_time: `${calculateDeliveryTime().min}-${calculateDeliveryTime().max} dakika`,
         delivery_notes: ''
       };
       
@@ -268,6 +192,12 @@ function CheckoutContent() {
       
       setOrderNumber(result.data.id);
       setOrderCompleted(true);
+      
+      // Success sayfasında kullanmak üzere bilgileri localStorage'a kaydet
+      localStorage.setItem('paymentMethod', paymentMethod);
+      localStorage.setItem('cartItems', JSON.stringify(cartItems));
+      localStorage.setItem('selectedAddress', JSON.stringify(address));
+      
       clearCart(); // Sepeti temizle
       console.log('🎉 Sipariş başarıyla tamamlandı!');
       
@@ -429,34 +359,7 @@ function CheckoutContent() {
               <h2 className="text-xl font-semibold mb-4">Ödeme Yöntemi</h2>
               
               <div className="space-y-4">
-                <div 
-                  className={`border rounded-lg p-4 transition-colors bg-gray-100 border-gray-300 cursor-not-allowed opacity-60`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <svg className="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-gray-500">Kredi/Banka Kartı</h3>
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">
-                            Yakında
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-400">Güvenli ödeme (Geliştiriliyor)</p>
-                      </div>
-                    </div>
-                    <input
-                      type="radio"
-                      className="w-5 h-5 text-gray-400 border-gray-300 cursor-not-allowed"
-                      checked={false}
-                      disabled={true}
-                      readOnly
-                    />
-                  </div>
-                </div>
-                
+                {/* Kapıda Nakit Ödeme */}
                 <div 
                   className={`border rounded-lg p-4 cursor-pointer transition-colors ${
                     paymentMethod === 'cash' 
@@ -471,8 +374,8 @@ function CheckoutContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                       <div>
-                        <h3 className="font-medium">Kapıda Ödeme</h3>
-                        <p className="text-sm text-gray-500">Nakit ödeme</p>
+                        <h3 className="font-medium">Kapıda Nakit Ödeme</h3>
+                        <p className="text-sm text-gray-500">Kurye geldiğinde nakit olarak ödeyin</p>
                       </div>
                     </div>
                     <input
@@ -480,6 +383,34 @@ function CheckoutContent() {
                       className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                       checked={paymentMethod === 'cash'}
                       onChange={() => setPaymentMethod('cash')}
+                    />
+                  </div>
+                </div>
+
+                {/* Kapıda Kart ile Ödeme */}
+                <div 
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                    paymentMethod === 'card_on_delivery' 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 hover:border-blue-300'
+                  }`}
+                  onClick={() => setPaymentMethod('card_on_delivery')}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <svg className="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <div>
+                        <h3 className="font-medium">Kapıda Kart ile Ödeme</h3>
+                        <p className="text-sm text-gray-500">Kurye geldiğinde POS cihazı ile kartınızla ödeyin</p>
+                      </div>
+                    </div>
+                    <input
+                      type="radio"
+                      className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      checked={paymentMethod === 'card_on_delivery'}
+                      onChange={() => setPaymentMethod('card_on_delivery')}
                     />
                   </div>
                 </div>
@@ -584,9 +515,31 @@ function CheckoutContent() {
               <span className="font-medium">
                 {calculateDeliveryFee() === 0 
                   ? 'Ücretsiz' 
-                  : `${calculateDeliveryFee().toFixed(2)} TL`}
+                  : `${calculateDeliveryFee().toFixed(0)} TL`}
               </span>
             </div>
+            
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Tahmini Teslimat</span>
+              <span className="font-medium text-blue-600">
+                {calculateDeliveryTime().min}-{calculateDeliveryTime().max} dakika
+              </span>
+            </div>
+            
+            {/* Ücretsiz teslimat bilgisi */}
+            {currentStore && currentStore.minimum_order_for_free_delivery && calculateDeliveryFee() > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                <div className="text-orange-700 text-sm">
+                  <div className="font-medium mb-1">🚚 Ücretsiz Teslimat</div>
+                  <div>
+                    {currentStore.minimum_order_for_free_delivery > calculateSubtotal() ? 
+                      `${(currentStore.minimum_order_for_free_delivery - calculateSubtotal()).toFixed(0)} TL daha harcayın, teslimat ücretsiz olsun!` :
+                      'Tebrikler! Teslimat ücretsiz!'
+                    }
+                  </div>
+                </div>
+              </div>
+            )}
             
             <hr className="my-4" />
             

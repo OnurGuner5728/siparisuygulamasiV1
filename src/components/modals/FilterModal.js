@@ -308,7 +308,7 @@ const FilterModal = ({
             <div className="mt-4 space-y-2">
               <Checkbox
                 id="has-delivery"
-                label="Ücretsiz Teslimat"
+                label="Düşük Teslimat Ücreti (15 TL ve altı)"
                 checked={localFilters.hasDelivery}
                 onChange={() => handleBooleanChange('hasDelivery')}
               />

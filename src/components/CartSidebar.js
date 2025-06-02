@@ -25,7 +25,9 @@ const CartSidebar = ({ isOpen, onClose }) => {
     calculateSubtotal,
     calculateDeliveryFee,
     calculateTotal,
-    forceRender
+    calculateDeliveryTime,
+    forceRender,
+    currentStore
   } = useCart();
   
   // Debug: forceRender değişikliklerini izle
@@ -127,6 +129,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
   const subtotal = calculateSubtotal();
   const deliveryFee = calculateDeliveryFee();
   const total = calculateTotal();
+  const deliveryTime = calculateDeliveryTime();
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   
   if (!isOpen) return null;
@@ -181,7 +184,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                 {/* Mağaza bilgisi */}
                 {cartItems.length > 0 && (
                   <div className="bg-gray-800 rounded-lg p-4 mb-4">
-                    <div className="flex items-center text-white">
+                    <div className="flex items-center text-white mb-3">
                       <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full mr-3">
                         {cartItems[0].store_type === 'yemek' ? '🍽️' : 
                          cartItems[0].store_type === 'market' ? '🏪' : '💧'}
@@ -192,6 +195,13 @@ const CartSidebar = ({ isOpen, onClose }) => {
                           {cartItems[0].store_type === 'yemek' ? 'Restaurant' : 
                            cartItems[0].store_type === 'market' ? 'Market' : 'Su Satıcısı'}
                         </div>
+                      </div>
+                    </div>
+                    {/* Teslimat süresi bilgisi */}
+                    <div className="bg-gray-700 rounded p-2">
+                      <div className="flex items-center text-sm text-gray-300">
+                        <span className="mr-2">🚚</span>
+                        <span>Tahmini teslimat: {deliveryTime.min}-{deliveryTime.max} dakika</span>
                       </div>
                     </div>
                   </div>
@@ -296,9 +306,25 @@ const CartSidebar = ({ isOpen, onClose }) => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Teslimat:</span>
                   <span className="text-white">
-                    {deliveryFee === 0 ? 'Ücretsiz' : `${deliveryFee.toFixed(2)} TL`}
+                    {deliveryFee === 0 ? 'Ücretsiz' : `${deliveryFee.toFixed(0)} TL`}
                   </span>
                 </div>
+                
+                {/* Ücretsiz teslimat bilgisi */}
+                {currentStore && currentStore.minimum_order_for_free_delivery && deliveryFee > 0 && (
+                  <div className="bg-orange-100 rounded-lg p-3 mt-3">
+                    <div className="text-orange-700 text-xs">
+                      <div className="font-medium mb-1">Ücretsiz Teslimat</div>
+                      <div>
+                        {currentStore.minimum_order_for_free_delivery > subtotal ? 
+                          `${(currentStore.minimum_order_for_free_delivery - subtotal).toFixed(0)} TL daha harcayın, teslimat ücretsiz olsun!` :
+                          'Tebrikler! Teslimat ücretsiz!'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="border-t border-gray-600 pt-2 mt-2">
                   <div className="flex justify-between font-bold">
                     <span className="text-white">Toplam:</span>

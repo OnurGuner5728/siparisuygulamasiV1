@@ -210,7 +210,11 @@ function OrdersList() {
                         <div>
                           <div className="text-lg font-medium text-gray-900">{formatPrice(order.total_amount)}</div>
                           <div className="text-sm text-gray-500">
-                            {order.order_items?.length || 0} ürün
+                            {order.order_items?.length || 0} ürün • {
+                              order.payment_method === 'cash' ? 'Kapıda Nakit' :
+                              order.payment_method === 'card_on_delivery' ? 'Kapıda Kart' :
+                              'Kapıda Nakit'
+                            }
                           </div>
                         </div>
                         

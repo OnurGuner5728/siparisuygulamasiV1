@@ -108,11 +108,19 @@ function LoginContent() {
       <div className="absolute top-1/2 left-1/4 w-4 h-4 bg-white/20 rounded-full animate-pulse"></div>
       <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-white/30 rounded-full animate-bounce"></div>
       
-      <div className="bg-white rounded-3xl overflow-hidden max-w-md w-full mx-auto shadow-2xl backdrop-blur-sm">
+      <div className="bg-white rounded-2xl overflow-hidden max-w-md w-full mx-auto shadow-2xl backdrop-blur-sm">
         <div className="px-8 pt-12 pb-8">
           {/* Logo/Brand Section */}
+          
           <div className="text-center mb-10">
-              <img src="/images/logo/logo.jpg" alt="logo" className="w-50 h-50" />
+            <div className="flex items-center justify-center space-x-2 text-2xl font-bold mb-6 text-white py-8">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-2">
+                es
+              </div>
+              <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                easysiparis
+              </span>
+            </div>
            
             <h2 className="text-3xl font-bold text-gray-800 mb-3">Hoş Geldiniz!</h2>
             <p className="text-gray-500 text-base">

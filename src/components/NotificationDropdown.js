@@ -157,7 +157,7 @@ const NotificationDropdown = () => {
         {/* Bildirim İkonu */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="relative p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
+          className="relative p-2 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
           aria-label="Bildirimler"
           ref={buttonRef}
         >

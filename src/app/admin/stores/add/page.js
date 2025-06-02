@@ -24,6 +24,11 @@ function AddStoreContent() {
     phone: '',
     category: 'Yemek',
     description: '',
+    delivery_fee: '12.00',
+    minimum_order_amount: '30.00',
+    minimum_order_for_free_delivery: '500.00',
+    delivery_time_min: '30',
+    delivery_time_max: '60',
     workingHours: {
       monday: '',
       tuesday: '',
@@ -98,6 +103,24 @@ function AddStoreContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const storeData = {
+    name: formData.name,
+    email: formData.email,
+    phone: formData.phone,
+    description: formData.description,
+    category: formData.category,
+    delivery_fee: parseFloat(formData.delivery_fee),
+    minimum_order_amount: parseFloat(formData.minimum_order_amount),
+    minimum_order_for_free_delivery: parseFloat(formData.minimum_order_for_free_delivery),
+    delivery_time_min: parseInt(formData.delivery_time_min),
+    delivery_time_max: parseInt(formData.delivery_time_max),
+    workingHours: JSON.stringify(formData.workingHours),
+    user_id: userId,
+    is_approved: false,
+    rating: 0.0,
+    status: 'inactive'
   };
 
   return (
@@ -422,6 +445,116 @@ function AddStoreContent() {
                   • "Geçici Kapat" ile o günü geçici olarak kapatabilirsiniz<br/>
                   • Zaman formatı: 09:00 - 18:00 şeklinde olmalıdır
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Teslimat Ayarları */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">Teslimat Ayarları</h3>
+            <p className="text-gray-500 mb-3 text-sm">Mağazanın teslimat ücreti ve minimum sipariş tutarlarını belirleyin.</p>
+            
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="delivery_fee" className="block text-sm font-medium text-gray-700 mb-1">
+                    Teslimat Ücreti (TL)
+                  </label>
+                  <input
+                    type="number"
+                    id="delivery_fee"
+                    name="delivery_fee"
+                    value={formData.delivery_fee}
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="12.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Müşterilerinizden alınacak teslimat ücreti
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="minimum_order_amount" className="block text-sm font-medium text-gray-700 mb-1">
+                    Minimum Sipariş Tutarı (TL)
+                  </label>
+                  <input
+                    type="number"
+                    id="minimum_order_amount"
+                    name="minimum_order_amount"
+                    value={formData.minimum_order_amount}
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="30.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Sipariş verebilmek için gereken minimum tutar
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="minimum_order_for_free_delivery" className="block text-sm font-medium text-gray-700 mb-1">
+                    Ücretsiz Teslimat Min. Tutarı (TL)
+                  </label>
+                  <input
+                    type="number"
+                    id="minimum_order_for_free_delivery"
+                    name="minimum_order_for_free_delivery"
+                    value={formData.minimum_order_for_free_delivery}
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="500.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Bu tutarın üzerinde teslimat ücretsiz
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="delivery_time_min" className="block text-sm font-medium text-gray-700 mb-1">
+                    Min. Teslimat Süresi (Dakika)
+                  </label>
+                  <input
+                    type="number"
+                    id="delivery_time_min"
+                    name="delivery_time_min"
+                    value={formData.delivery_time_min}
+                    onChange={handleChange}
+                    min="5"
+                    max="120"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="30"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    En hızlı teslimat süresi
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="delivery_time_max" className="block text-sm font-medium text-gray-700 mb-1">
+                    Maks. Teslimat Süresi (Dakika)
+                  </label>
+                  <input
+                    type="number"
+                    id="delivery_time_max"
+                    name="delivery_time_max"
+                    value={formData.delivery_time_max}
+                    onChange={handleChange}
+                    min="10"
+                    max="180"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="60"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    En uzun teslimat süresi
+                  </p>
+                </div>
               </div>
             </div>
           </div>

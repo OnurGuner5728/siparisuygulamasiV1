@@ -381,12 +381,19 @@ export default function MarketStoreDetailPage({ params }) {
             <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span className="text-green-600 text-sm font-medium">Free</span>
-                </div>
+            <span className="text-green-600 text-sm font-medium">
+              {parseFloat(store.delivery_fee || 0) === 0 ? 'Ücretsiz' : `${parseFloat(store.delivery_fee || 12).toFixed(0)} TL`}
+            </span>
+          </div>
           
           <div className="flex items-center space-x-1 text-gray-600">
             <FiClock size={14} />
-            <span className="text-sm">{store.delivery_time_estimation || '30 min'}</span>
+            <span className="text-sm">
+              {store.delivery_time_min && store.delivery_time_max 
+                ? `${store.delivery_time_min}-${store.delivery_time_max} dk`
+                : '45-90 dk'
+              }
+            </span>
           </div>
         </div>
         
@@ -583,19 +590,7 @@ export default function MarketStoreDetailPage({ params }) {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                {store.phone && (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      📞
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Telefon</p>
-                      <p className="font-medium">{store.phone}</p>
-                    </div>
-                  </div>
-                )}
-                
+              <div className="space-y-6">
                 {store.email && (
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -620,7 +615,7 @@ export default function MarketStoreDetailPage({ params }) {
                   </div>
                 )}
                 
-                {(!store.phone && !store.email && !store.address) && (
+                {(!store.email && !store.address) && (
                   <div className="text-center py-8">
                     <p className="text-gray-500">İletişim bilgileri henüz eklenmemiş.</p>
                   </div>

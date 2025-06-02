@@ -318,7 +318,10 @@ function SearchFilterContent() {
               onChange={() => setFreeDelivery(!freeDelivery)}
               className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
             />
-            <span className="ml-3 text-gray-700">Ücretsiz Teslimat</span>
+            <div className="ml-3">
+              <span className="text-gray-700">Düşük Teslimat Ücreti</span>
+              <p className="text-xs text-gray-500">15 TL ve altındaki teslimat ücretleri</p>
+            </div>
           </label>
           
           <label className="flex items-center py-2">

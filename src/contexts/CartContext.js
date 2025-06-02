@@ -10,16 +10,18 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { success, error, warning } = useToast();
   const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [cartBackup, setCartBackup] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [forceRender, setForceRender] = useState(0);
+  const [forceNewProduct, setForceNewProduct] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null });
-  const [forceNewProduct, setForceNewProduct] = useState(false); // Sepet temizlendikten sonra yeni ürün için
-  const [forceRender, setForceRender] = useState(0); // UI force refresh için
+  const [currentStore, setCurrentStore] = useState(null); // Mağaza bilgisi cache
   
   // localStorage backup for offline capability
-  const [cartBackup, setCartBackup] = useLocalStorage('cart_backup', [], {
+  const [cartBackupLocal, setCartBackupLocal] = useLocalStorage('cart_backup', [], {
     validateData: (data) => Array.isArray(data),
     syncAcrossTabs: true
   });
@@ -31,6 +33,7 @@ export function CartProvider({ children }) {
     if (!userId) {
       console.log('❌ loadCart: userId yok, sepet temizleniyor');
       setCartItems([]);
+      setCurrentStore(null);
       setForceRender(prev => prev + 1); // UI force refresh
       return;
     }
@@ -42,6 +45,24 @@ export function CartProvider({ children }) {
       console.log('📦 API den gelen items:', items?.length || 0, 'öğe');
       
       setCartItems(items || []);
+      
+      // Sepette ürün varsa store bilgisini yükle
+      if (items && items.length > 0) {
+        const storeId = items[0].store_id;
+        if (storeId) {
+          try {
+            const store = await api.getStoreById(storeId);
+            setCurrentStore(store);
+            console.log('🏪 Store bilgisi yüklendi:', store?.name);
+          } catch (storeError) {
+            console.error('❌ Store bilgisi yüklenirken hata:', storeError);
+            setCurrentStore(null);
+          }
+        }
+      } else {
+        setCurrentStore(null);
+      }
+      
       setForceRender(prev => prev + 1); // UI force refresh
       if (!skipBackup) {
         // Backup güncelleme - daha güvenli yöntem
@@ -59,15 +80,18 @@ export function CartProvider({ children }) {
         if (currentBackup && currentBackup.length > 0 && currentBackup[0]?.user_id === userId) {
           console.log('🔄 Backup tan yükleniyor:', currentBackup.length, 'öğe');
           setCartItems(currentBackup);
+          setCurrentStore(null); // Backup'tan store bilgisi yüklenemez
           setForceRender(prev => prev + 1); // UI force refresh
         } else {
           console.log('🗑️ Sepet temizlendi (hata + backup yok)');
           setCartItems([]);
+          setCurrentStore(null);
           setForceRender(prev => prev + 1); // UI force refresh
         }
       } else {
         console.log('🗑️ Sepet temizlendi (skipBackup=true)');
         setCartItems([]);
+        setCurrentStore(null);
         setForceRender(prev => prev + 1); // UI force refresh
       }
     } finally {
@@ -347,6 +371,18 @@ export function CartProvider({ children }) {
           
           setCartItems(updatedItems);
           setCartBackup(updatedItems); // Backup'ı da güncelle
+          
+          // Store bilgisini güncelle (yeni mağaza veya sepet boştu)
+          if (!currentStore || freshCartItems.length === 0) {
+            try {
+              const store = await api.getStoreById(product.store_id);
+              setCurrentStore(store);
+              console.log('🏪 Store bilgisi güncellendi:', store?.name);
+            } catch (storeError) {
+              console.error('❌ Store bilgisi yüklenirken hata:', storeError);
+            }
+          }
+          
           setForceRender(prev => prev + 1); // UI force refresh
           
           // Force flag'ı sıfırla
@@ -406,6 +442,12 @@ export function CartProvider({ children }) {
           const updatedItems = cartItems.filter(cartItem => cartItem.id !== item.id);
           setCartItems(updatedItems);
           setCartBackup(updatedItems); // Backup güncelle
+          
+          // Sepet boşaldıysa store bilgisini temizle
+          if (updatedItems.length === 0) {
+            setCurrentStore(null);
+          }
+          
           setForceRender(prev => prev + 1); // UI force refresh
         }
       }
@@ -426,6 +468,12 @@ export function CartProvider({ children }) {
         const updatedItems = cartItems.filter(cartItem => cartItem.id !== item.id);
         setCartItems(updatedItems);
         setCartBackup(updatedItems); // Backup güncelle
+        
+        // Sepet boşaldıysa store bilgisini temizle
+        if (updatedItems.length === 0) {
+          setCurrentStore(null);
+        }
+        
         setForceRender(prev => prev + 1); // UI force refresh
       }
     } catch (error) {
@@ -449,6 +497,7 @@ export function CartProvider({ children }) {
         flushSync(() => {
           setCartItems([]);
           setCartBackup([]);
+          setCurrentStore(null);
           setForceRender(prev => prev + 1);
         });
         
@@ -467,11 +516,33 @@ export function CartProvider({ children }) {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   }, [cartItems]);
 
+  // Teslimat ücreti hesaplama fonksiyonu
   const calculateDeliveryFee = useCallback(() => {
-    const subtotal = calculateSubtotal();
-    // 150 TL üzeri ücretsiz teslimat
-    return subtotal >= 150 ? 0 : 15;
-  }, [calculateSubtotal]);
+    const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Store bilgisi yoksa varsayılan değerleri kullan
+    if (!currentStore) {
+      return total >= 150 ? 0 : 12;
+    }
+    
+    const deliveryFee = currentStore.delivery_fee || 12;
+    const freeDeliveryThreshold = currentStore.minimum_order_for_free_delivery || 150;
+    
+    return total >= freeDeliveryThreshold ? 0 : deliveryFee;
+  }, [cartItems, currentStore]);
+
+  // Teslimat süresi hesaplama fonksiyonu
+  const calculateDeliveryTime = useCallback(() => {
+    // Store bilgisi yoksa varsayılan değerleri kullan
+    if (!currentStore) {
+      return { min: 30, max: 60 };
+    }
+    
+    const minTime = currentStore.delivery_time_min || 30;
+    const maxTime = currentStore.delivery_time_max || 60;
+    
+    return { min: minTime, max: maxTime };
+  }, [currentStore]);
 
   const calculateTotal = useCallback(() => {
     return calculateSubtotal() + calculateDeliveryFee();
@@ -497,8 +568,10 @@ export function CartProvider({ children }) {
     calculateSubtotal,
     calculateDeliveryFee,
     calculateTotal,
-    forceRender // UI refresh için
-  }), [cartItems, loading, addToCart, removeFromCart, removeItemCompletely, clearCart, loadCart, cartSummary, calculateSubtotal, calculateDeliveryFee, calculateTotal, forceRender]);
+    calculateDeliveryTime,
+    forceRender, // UI refresh için
+    currentStore // Mağaza bilgisi
+  }), [cartItems, loading, addToCart, removeFromCart, removeItemCompletely, clearCart, loadCart, cartSummary, calculateSubtotal, calculateDeliveryFee, calculateTotal, calculateDeliveryTime, forceRender, currentStore]);
 
   return (
     <CartContext.Provider value={value}>

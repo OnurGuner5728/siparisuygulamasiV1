@@ -144,7 +144,7 @@ function Header({ onCartClick }) {
   // Auth button'ların görünürlük class'ı
   const authButtonClass = `auth-buttons ${isHydrated ? 'auth-buttons-visible' : 'auth-buttons-hidden'}`;
   
-  return (<header className={`bg-white  overflow-hidden shadow-lg py-0.2 md:py-1 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+  return (<header className={`bg-white  overflow-hidden shadow-lg py-1 md:py-2 sticky top-0 z-40 backdrop-blur-sm transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-2 left-10 w-6 h-6 bg-orange-100/50 rounded-full animate-bounce animation-delay-1000"></div>
@@ -180,7 +180,7 @@ function Header({ onCartClick }) {
           {currentIsAuthenticated && (
             <button 
               onClick={openAddressPopup}
-              className="p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 relative group border border-orange-200"
+              className="p-2 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 relative group border border-orange-200"
               aria-label="Hızlı Adres Değiştir"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,31 +194,10 @@ function Header({ onCartClick }) {
             </button>
           )}
           
-          {/* Sepet ikonu - mobilde yorum satırı olarak güncellenmiş */}
-          {/* 
-          <button 
-            onClick={onCartClick}
-            className="relative p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 group border border-orange-200"
-            aria-label="Sepetim"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                {totalItems}
-              </span>
-            )}
-            <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Sepetim
-            </div>
-          </button>
-          */}
-          
           {/* Mobil Menü Butonu */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-3 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
+            className="p-2 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
