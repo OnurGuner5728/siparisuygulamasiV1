@@ -112,11 +112,8 @@ function LoginContent() {
         <div className="px-8 pt-12 pb-8">
           {/* Logo/Brand Section */}
           <div className="text-center mb-10">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 w-16 h-16 mx-auto mb-6 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-            </div>
+              <img src="/images/logo/logo.jpg" alt="logo" className="w-50 h-50" />
+           
             <h2 className="text-3xl font-bold text-gray-800 mb-3">Hoş Geldiniz!</h2>
             <p className="text-gray-500 text-base">
               {action === 'checkout' 
