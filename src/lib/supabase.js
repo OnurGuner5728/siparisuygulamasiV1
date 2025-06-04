@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Çevre değişkenleri yerine doğrudan değerleri kullanıyoruz
-const supabaseUrl = 'https://ozqsbbngkkssstmaktou.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96cXNiYm5na2tzc3N0bWFrdG91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4OTkzMDIsImV4cCI6MjA2MzQ3NTMwMn0.q3uI3MPupzQVt5QAgxqEjJB0ro-IPNQJR2XC2i5-nAY'
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96cXNiYm5na2tzc3N0bWFrdG91Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzg5OTMwMiwiZXhwIjoyMDYzNDc1MzAyfQ.H0pMW6qyeO4aXVVhwDfahzIkKoIJ-DyEMWdoui08v50'
-
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY;
 // Singleton pattern - Tek bir global instance oluştur
 let supabaseInstance = null;
 let supabaseAdminInstance = null;
