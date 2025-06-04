@@ -1,4 +1,6 @@
 # 🛒 Sipariş Uygulaması
+Demo linki:
+https://siparisuygulamasi.netlify.app/
 
 Modern, çok rollü e-ticaret platformu - Next.js 14 ve Supabase ile geliştirilmiş kapsamlı sipariş yönetim sistemi.
 
@@ -226,8 +228,7 @@ Bu proje [MIT License](LICENSE) ile lisanslanmıştır.
 ## 📞 İletişim
 
 Proje hakkında sorularınız için:
-- 📧 Email: [your-email@example.com]
-- 🐛 Issues: [GitHub Issues](issues-link)
+- 📧 Email: [onurguner.bjk@gmail.com]
 - 📖 Docs: [Proje Dokümantasyonu](proje.md)
 
 ## 🙏 Teşekkürler
