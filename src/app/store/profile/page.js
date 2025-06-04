@@ -27,6 +27,11 @@ function StoreProfileContent() {
     description: '',
     logo_url: '',
     banner_url: '',
+    delivery_fee: '',
+    minimum_order_amount: '',
+    minimum_order_for_free_delivery: '',
+    delivery_time_min: '',
+    delivery_time_max: '',
     address: {
       city: '',
       district: '',
@@ -49,29 +54,6 @@ function StoreProfileContent() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-
-  // Mağaza onaylanmamışsa özel ekran göster - hooks'ların altında
-  if (!user?.storeInfo?.is_approved) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-lg mx-auto text-center">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="text-orange-500 text-5xl mb-4">⏳</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Mağaza Onayı Gerekli</h2>
-            <p className="text-gray-600 mb-4">
-              Mağaza profilinizi düzenlemek için önce mağazanızın onaylanması gerekiyor.
-            </p>
-            <Link
-              href="/store"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
-            >
-              Ana Panele Dön
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   useEffect(() => {
     // API'den mağaza verilerini yükle
@@ -132,6 +114,11 @@ function StoreProfileContent() {
             description: storeData.description || '',
             logo_url: storeData.logo_url || '',
             banner_url: storeData.banner_url || '',
+            delivery_fee: storeData.delivery_fee || '',
+            minimum_order_amount: storeData.minimum_order_amount || '',
+            minimum_order_for_free_delivery: storeData.minimum_order_for_free_delivery || '',
+            delivery_time_min: storeData.delivery_time_min || '',
+            delivery_time_max: storeData.delivery_time_max || '',
             address: addressData,
             workingHours: workingHoursData
           });
@@ -148,25 +135,6 @@ function StoreProfileContent() {
 
     fetchStoreData();
   }, [user]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
 
   // Logo yükleme fonksiyonu
   const handleLogoUpload = async (e) => {
@@ -258,6 +226,25 @@ function StoreProfileContent() {
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -276,6 +263,11 @@ function StoreProfileContent() {
         description: formData.description,
         logo_url: formData.logo_url,
         banner_url: formData.banner_url,
+        delivery_fee: formData.delivery_fee,
+        minimum_order_amount: formData.minimum_order_amount,
+        minimum_order_for_free_delivery: formData.minimum_order_for_free_delivery,
+        delivery_time_min: formData.delivery_time_min,
+        delivery_time_max: formData.delivery_time_max,
         city: formData.address.city,
         district: formData.address.district,
         neighborhood: formData.address.neighborhood,
@@ -316,6 +308,29 @@ function StoreProfileContent() {
       setSubmitting(false);
     }
   };
+
+  // Mağaza onaylanmamışsa özel ekran göster - tüm hooks'lardan sonra
+  if (!user?.storeInfo?.is_approved) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-orange-500 text-5xl mb-4">⏳</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Mağaza Onayı Gerekli</h2>
+            <p className="text-gray-600 mb-4">
+              Mağaza profilinizi düzenlemek için önce mağazanızın onaylanması gerekiyor.
+            </p>
+            <Link
+              href="/store"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+            >
+              Ana Panele Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -426,6 +441,16 @@ function StoreProfileContent() {
               }`}
             >
               Çalışma Saatleri
+            </button>
+            <button
+              onClick={() => setActiveTab('delivery')}
+              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                activeTab === 'delivery'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Teslimat Ayarları
             </button>
           </nav>
         </div>
@@ -864,6 +889,153 @@ function StoreProfileContent() {
                   • "Geçici Kapat" ile o günü geçici olarak kapatabilirsiniz<br/>
                   • Değişiklikler otomatik olarak kaydedilir
                 </p>
+              </div>
+            )}
+
+            {/* Teslimat Ayarları Formu */}
+            {activeTab === 'delivery' && (
+              <div className="space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-800">Teslimat Ayarları</h3>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Mağazanızın teslimat ücreti ve minimum sipariş tutarını belirleyin.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="delivery_fee" className="block text-sm font-medium text-gray-700 mb-1">
+                      Teslimat Ücreti (TL)
+                    </label>
+                    <input
+                      type="number"
+                      id="delivery_fee"
+                      name="delivery_fee"
+                      value={formData.delivery_fee}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="12.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Müşterilerinizden alınacak teslimat ücreti
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="minimum_order_amount" className="block text-sm font-medium text-gray-700 mb-1">
+                      Minimum Sipariş Tutarı (TL)
+                    </label>
+                    <input
+                      type="number"
+                      id="minimum_order_amount"
+                      name="minimum_order_amount"
+                      value={formData.minimum_order_amount}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="30.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Sipariş verebilmek için gereken minimum tutar
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label htmlFor="minimum_order_for_free_delivery" className="block text-sm font-medium text-gray-700 mb-1">
+                      Ücretsiz Teslimat İçin Minimum Sipariş Tutarı (TL)
+                    </label>
+                    <input
+                      type="number"
+                      id="minimum_order_for_free_delivery"
+                      name="minimum_order_for_free_delivery"
+                      value={formData.minimum_order_for_free_delivery}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="500.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Bu tutarın üzerindeki siparişlerde teslimat ücretsiz olacaktır. 
+                      Düşük tutarlar (örn: 150 TL) teslimat ücretini sık sık ücretsiz yapar.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="delivery_time_min" className="block text-sm font-medium text-gray-700 mb-1">
+                      Minimum Teslimat Süresi (Dakika)
+                    </label>
+                    <input
+                      type="number"
+                      id="delivery_time_min"
+                      name="delivery_time_min"
+                      value={formData.delivery_time_min}
+                      onChange={handleChange}
+                      min="5"
+                      max="120"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="30"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      En hızlı teslimat süresi (dakika)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="delivery_time_max" className="block text-sm font-medium text-gray-700 mb-1">
+                      Maksimum Teslimat Süresi (Dakika)
+                    </label>
+                    <input
+                      type="number"
+                      id="delivery_time_max"
+                      name="delivery_time_max"
+                      value={formData.delivery_time_max}
+                      onChange={handleChange}
+                      min="10"
+                      max="180"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="60"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      En uzun teslimat süresi (dakika)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Örnek Hesaplama */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-gray-800 mb-3">💡 Örnek Hesaplama</h4>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Sipariş tutarı 100 TL ise:</span>
+                      <span className="font-medium">
+                        Teslimat: {formData.delivery_fee || '12'} TL
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Sipariş tutarı {formData.minimum_order_for_free_delivery || '500'} TL ise:</span>
+                      <span className="font-medium text-green-600">
+                        Teslimat: Ücretsiz!
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tahmini teslimat süresi:</span>
+                      <span className="font-medium text-blue-600">
+                        {formData.delivery_time_min || '30'} - {formData.delivery_time_max || '60'} dakika
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

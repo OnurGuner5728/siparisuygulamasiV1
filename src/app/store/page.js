@@ -96,12 +96,18 @@ function StorePanelContent() {
             ).length;
             
             // Bugünkü siparişler
+            // UTC saat diliminde bugünün başlangıç ve bitiş zamanlarını ayarla
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // Tarih kısmını alıp saat 00:00:00'a ayarla (UTC)
+            const todayStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+            // Bir sonraki günün başlangıcını ayarla (UTC)
+            const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
+            
             const todaysOrders = orders.filter(order => {
-              const orderDate = new Date(order.order_date);
-              orderDate.setHours(0, 0, 0, 0);
-              return orderDate.getTime() === today.getTime();
+              // Veritabanından gelen timestamptz değerini düzgün işle
+              const orderDate = new Date(order.order_date || order.created_at);
+              // UTC değerlerini karşılaştır
+              return orderDate >= todayStart && orderDate < todayEnd;
             });
             
             const todaysRevenue = todaysOrders.reduce((sum, order) => sum + (order.total_amount || order.total || 0), 0);
@@ -163,8 +169,12 @@ function StorePanelContent() {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
       
-      // Sipariş detayına git
-      if (notification.data?.order_id) {
+      // Bildirim tipine göre yönlendirme
+      if (notification.type === 'new_order' && notification.data?.order_id) {
+        window.location.href = `/store/orders/${notification.data.order_id}`;
+      } else if (notification.type === 'review_response' && notification.data?.review_id) {
+        window.location.href = `/store/yorumlar`;
+      } else if (notification.data?.order_id) {
         window.location.href = `/store/orders/${notification.data.order_id}`;
       }
     } catch (error) {
@@ -375,8 +385,10 @@ function StorePanelContent() {
         </div>
         
         {showNotifications && (
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {notifications.length > 0 ? (
+          <div className="relative">
+            <div className="absolute top-2 right-0 w-96 max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+              <div className="space-y-3 p-4">
+                {notifications.length > 0 ? (
               notifications.map((notification) => (
                 <div
                   key={notification.id}
@@ -420,9 +432,11 @@ function StorePanelContent() {
                 <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 010-15c0 2.5 1 5 3 7.5h-3z" />
                 </svg>
-                <p>Henüz bildirim yok</p>
+                    <p>Henüz bildirim yok</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -501,7 +515,7 @@ function StorePanelContent() {
       )}
 
       {/* Hızlı Erişim Menüsü */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
         <Link href="/store/orders" className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -526,6 +540,34 @@ function StorePanelContent() {
             <div>
               <h3 className="text-lg font-semibold">Ürünler</h3>
               <p className="text-gray-600">Ürünlerinizi yönetin</p>
+            </div>
+          </div>
+        </Link>
+        
+        <Link href="/store/kampanyalar" className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Kampanyalar</h3>
+              <p className="text-gray-600">Kampanyalara katılın ve yönetin</p>
+            </div>
+          </div>
+        </Link>
+        
+                        <Link href="/store/yorumlar" className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Müşteri Yorumları</h3>
+              <p className="text-gray-600">Yorumları görüntüle ve cevapla</p>
             </div>
           </div>
         </Link>

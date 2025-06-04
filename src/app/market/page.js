@@ -4,6 +4,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import ModuleGuard from '@/components/ModuleGuard';
 import CategoryCampaignBanner from '@/components/CategoryCampaignBanner';
+import FavoriteButton from '@/components/FavoriteButton';
+import { FiClock } from 'react-icons/fi';
 
 const MARKET_CATEGORY_NAME = 'Market';
 
@@ -231,19 +233,31 @@ function MarketPageContent() {
                     </div>
 
                     <div className="absolute top-4 right-4">
+                      <FavoriteButton
+                        itemType="store"
+                        itemId={market.id}
+                        size="sm"
+                        className="shadow-lg"
+                      />
+                    </div>
+                    
+                    <div className="absolute top-4 right-16">
                       <div className="flex items-center space-x-2">
                         <span className="bg-green-500 text-white px-2 py-1 rounded-full text-sm">
                           <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
-                          {market.delivery_fee || '0 ₺' + " teslimat ücreti"}
+                          {parseFloat(market.delivery_fee || 0) === 0 ? 'Ücretsiz' : `${parseFloat(market.delivery_fee || 12).toFixed(0)} TL`}
                         </span>
-                        <span className="bg-black/70 text-white px-2 py-1 rounded-full text-sm">
-                          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {market.delivery_time_min + " min" || '20 min'}
-                        </span>
+                        <div className="flex items-center space-x-1 text-gray-600">
+                          <FiClock size={14} />
+                          <span className="text-sm">
+                            {market.delivery_time_min && market.delivery_time_max 
+                              ? `${market.delivery_time_min}-${market.delivery_time_max} dk`
+                              : '45-90 dk'
+                            }
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

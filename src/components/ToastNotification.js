@@ -44,6 +44,37 @@ const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
         if (user?.role === 'store') {
           window.location.href = '/store';
         }
+      } else if (notification.type === 'new_review') {
+        // Yeni değerlendirme bildirimi - mağaza yorumlar sayfasına yönlendir
+        if (user?.role === 'store') {
+          window.location.href = '/store/yorumlar';
+        } else {
+          // Müşteri için uygun sayfa yok, ana sayfaya yönlendir
+          window.location.href = '/';
+        }
+      } else if (notification.type === 'review_response') {
+        // Yorum yanıt bildirimi
+        if (notification.data?.review_id && notification.data?.store_id) {
+          const reviewId = notification.data.review_id;
+          const storeId = notification.data.store_id;
+          
+          // Kullanıcı rolüne göre yönlendirme
+          if (user?.role === 'store') {
+            // Mağaza sahibi - kendi yorumlar sayfasına git
+            window.location.href = '/store/yorumlar';
+          } else {
+            // Müşteri - restoran sayfasındaki yorumlara git (kendi yorumunu ve cevabını görmek için)
+            window.location.href = `/yemek/store/${storeId}#review-${reviewId}`;
+          }
+        } else {
+          // Fallback - genel yorumlar sayfası
+          if (user?.role === 'store') {
+            window.location.href = '/store/yorumlar';
+          } else {
+            // Ana sayfaya yönlendir - genel değerlendirme sayfası yok
+            window.location.href = '/';
+          }
+        }
       } else if (notification.data?.order_id) {
         // Sipariş bildirimi - sipariş detayına yönlendir
         const orderId = notification.data.order_id;
@@ -126,6 +157,20 @@ const ToastNotification = ({ notification, onClose, duration = 6000 }) => {
         iconBg: 'bg-red-100',
         iconColor: 'text-red-600',
         emoji: '❌'
+      },
+      new_review: {
+        bg: 'bg-purple-500',
+        icon: FiBell,
+        iconBg: 'bg-purple-100',
+        iconColor: 'text-purple-600',
+        emoji: '⭐'
+      },
+      review_response: {
+        bg: 'bg-blue-500',
+        icon: FiBell,
+        iconBg: 'bg-blue-100',
+        iconColor: 'text-blue-600',
+        emoji: '💬'
       },
       system: {
         bg: 'bg-gray-500',

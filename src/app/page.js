@@ -277,7 +277,7 @@ export default function Home() {
                     </div>
                     <div className="text-white">
                       
-                      <p className="text-white/90 text-sm md:text-base mb-2 drop-shadow">Market siparişi ver!</p>
+                      
                       <div className="flex items-center text-xs md:text-sm text-white/80">
                       <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
@@ -328,7 +328,7 @@ export default function Home() {
                     </div>
                     <div className="text-white">
                  
-                      <p className="text-white/90 text-sm md:text-base mb-2 drop-shadow">Yemek siparişi ver!</p>
+                      
                       <div className="flex items-center text-xs md:text-sm text-white/80">
                       <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
@@ -346,105 +346,108 @@ export default function Home() {
             )}
           </div>
 
-          {/* Alt kısım - Su ve Aktüel kartları */}
-          {/* Eğer hem Su hem Aktüel modülü aktifse yanyana, sadece Su aktifse yatay */}
-          <div className={`grid gap-3 md:gap-4 ${isModuleEnabled('su') && isModuleEnabled('aktuel')
-              ? 'grid-cols-2 md:grid-cols-2'
-              : 'grid-cols-1'
-            }`}>
-            {/* Su ve Damacana Kartı */}
+          {/* Alt kısım - Su ve Aktüel kartları - Her biri yatayda tam genişlik */}
+          <div>
+            {/* Su ve Damacana Kartı - Yatayda tam genişlik */}
             {isModuleEnabled('su') && (
-              <Link href="/su" className="group">
-                <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02] h-32 md:h-40">
-                  {/* Background Image */}
-                  {categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url ? (
-                    <div 
-                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
-                      style={{
-                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url})`,
-                      }}
-                    >
-                      {/* Overlay for text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                  </div>
-                  ) : (
-                    <>
-                      {/* Default gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600"></div>
-                      {/* Pattern overlay */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-3 right-3 w-12 h-12 border-2 border-white/40 rounded-full"></div>
-                        <div className="absolute bottom-4 left-4 w-8 h-8 border-2 border-white/30 rounded-lg rotate-45"></div>
-                        <div className="absolute top-1/2 right-6 w-5 h-5 bg-white/20 rounded-full"></div>
+              <div className="mb-4">
+                <Link href="/su" className="group">
+                  <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.01] h-32 md:h-40 w-full">
+                    {/* Background Image */}
+                    {categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url ? (
+                      <div 
+                        className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
+                        style={{
+                          backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase() === 'su')?.image_url})`,
+                        }}
+                      >
+                        {/* Overlay for text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                       </div>
-                    </>
-                  )}
-                  
-                  {/* Content overlay */}
-                  <div className="relative z-10 h-full flex flex-col justify-between p-4 md:p-5">
-                    <div className="flex-1 flex items-center">
-                  
+                    ) : (
+                      <>
+                        {/* Default gradient background */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600"></div>
+                        {/* Pattern overlay */}
+                        <div className="absolute inset-0 opacity-20">
+                          <div className="absolute top-3 right-3 w-16 h-16 border-2 border-white/40 rounded-full"></div>
+                          <div className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/30 rounded-lg rotate-45"></div>
+                          <div className="absolute top-1/2 right-1/4 w-8 h-8 bg-white/20 rounded-full"></div>
+                          <div className="absolute top-4 left-1/3 w-6 h-6 bg-white/15 rounded-full animate-pulse"></div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Content overlay */}
+                    <div className="relative z-10 h-full flex items-center justify-between p-4 md:p-6">
+                      <div className="flex items-center">
+                       
+                        <div className="text-white">
+                       
+                          <h3 className="text-white/90 text-sm md:text-base drop-shadow">Su siparişi ver!</h3>
+                          <div className="flex items-center text-xs md:text-sm text-white/80 mt-1">
+                            
+                          </div>
+                        </div>
+                      </div>
+                   
                     </div>
-                    <div className="text-white">
-                     
-                      <p className="text-white/90 text-sm drop-shadow">Su siparişi ver!</p>
-                  
-                    </div>
+                    
+                    {/* Hover effect */}
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
-                  
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             )}
 
-            {/* Aktüel Kartı */}
+            {/* Aktüel Kartı - Yatayda tam genişlik */}
             {isModuleEnabled('aktuel') && (
-              <Link href="/aktuel" className="group">
-                <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02] h-32 md:h-40">
-                  {/* Background Image */}
-                  {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url ? (
-                    <div 
-                      className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
-                      style={{
-                        backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url})`,
-                      }}
-                    >
-                      {/* Overlay for text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                  </div>
-                  ) : (
-                    <>
-                      {/* Default gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600"></div>
-                      {/* Pattern overlay */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-3 left-3 w-12 h-12 border-2 border-white/40 rounded-full"></div>
-                        <div className="absolute bottom-4 right-4 w-8 h-8 border-2 border-white/30 rounded-lg rotate-12"></div>
-                        <div className="absolute top-2/3 left-6 w-5 h-5 bg-white/20 rounded-full"></div>
+              <div className="mb-6">
+                <Link href="/aktuel" className="group">
+                  <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.01] h-32 md:h-40 w-full">
+                    {/* Background Image */}
+                    {categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url ? (
+                      <div 
+                        className="absolute inset-0 bg-center bg-no-repeat bg-cover md:bg-[length:100%_100%]"
+                        style={{
+                          backgroundImage: `url(${categories.find(cat => cat.name.toLowerCase().includes('aktüel') || cat.name.toLowerCase().includes('aktuel'))?.image_url})`,
+                        }}
+                      >
+                        {/* Overlay for text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                       </div>
-                    </>
-                  )}
-                  
-                  {/* Content overlay */}
-                  <div className="relative z-10 h-full flex flex-col justify-between p-4 md:p-5">
-                    <div className="flex-1 flex items-center">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-2">
-                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" />
-                      </svg>
+                    ) : (
+                      <>
+                        {/* Default gradient background */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600"></div>
+                        {/* Pattern overlay */}
+                        <div className="absolute inset-0 opacity-20">
+                          <div className="absolute top-3 left-3 w-16 h-16 border-2 border-white/40 rounded-full"></div>
+                          <div className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/30 rounded-lg rotate-12"></div>
+                          <div className="absolute top-2/3 left-1/4 w-8 h-8 bg-white/20 rounded-full"></div>
+                          <div className="absolute top-4 right-1/3 w-6 h-6 bg-white/15 rounded-full animate-pulse"></div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Content overlay */}
+                    <div className="relative z-10 h-full flex items-center justify-between p-4 md:p-6">
+                      <div className="flex items-center">
+                      
+                        <div className="text-white">
+                          <h3 className="text-white/90 text-sm md:text-base drop-shadow">Ürünleri keşfet!</h3>
+                        
+                        
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-white">
-                      <h3 className="text-lg md:text-xl font-bold mb-1 drop-shadow-lg">Aktüel Ürünler</h3>
-                      <p className="text-white/90 text-sm drop-shadow">Güncel kampanyalar!</p>
-                    </div>
-                  </div>
                   
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-              </Link>
+                    </div>
+                    
+                    {/* Hover effect */}
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
+                </Link>
+              </div>
             )}
           </div>
 

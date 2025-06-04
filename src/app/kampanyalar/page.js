@@ -242,9 +242,9 @@ function CampaignsContent() {
                 className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl flex flex-col"
               >
                 <div className="relative">
-                  {campaign.image_url ? (
+                  {campaign.banner_image_url ? (
                     <img 
-                      src={campaign.image_url} 
+                      src={campaign.banner_image_url} 
                       alt={campaign.title} 
                       className="w-full h-48 object-cover" 
                     />

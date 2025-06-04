@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { FiSend, FiArrowLeft, FiPhone, FiMapPin } from 'react-icons/fi';
+import { FiSend, FiArrowLeft, FiMapPin } from 'react-icons/fi';
 import api from '@/lib/api';
 
 export default function OrderMessagePage() {
@@ -192,25 +192,14 @@ function OrderMessageContent() {
             </div>
             
             {orderId && order && (
-              <>
-                <button 
-                  onClick={() => router.push(`/delivery/${orderId}/call`)}
-                  className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-1 sm:ml-2 transition-colors"
-                  aria-label={`${recipient.name} kişisini ara`}
-                  title={`${recipient.name} kişisini ara`}
-                >
-                  <FiPhone size={20} />
-                </button>
-                
-                <button 
-                  onClick={() => router.push(`/profil/siparisler/${orderId}/tracking`)}
-                  className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-1 sm:ml-2 transition-colors"
-                  aria-label="Siparişi Takip Et"
-                  title="Siparişi Takip Et"
-                >
-                  <FiMapPin size={20} />
-                </button>
-              </>
+              <button 
+                onClick={() => router.push(`/profil/siparisler/${orderId}/tracking`)}
+                className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 ml-1 sm:ml-2 transition-colors"
+                aria-label="Siparişi Takip Et"
+                title="Siparişi Takip Et"
+              >
+                <FiMapPin size={20} />
+              </button>
             )}
           </div>
         </div>

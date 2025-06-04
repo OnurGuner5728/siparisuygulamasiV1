@@ -238,6 +238,9 @@ function AdminOrdersContent() {
                       Ödeme
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ödeme Yöntemi
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       İşlemler
                     </th>
                   </tr>
@@ -268,6 +271,13 @@ function AdminOrdersContent() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {formatPaymentStatus(order.payment_status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {order.payment_method === 'cash' ? 'Kapıda Nakit' :
+                           order.payment_method === 'card_on_delivery' ? 'Kapıda Kart' :
+                           order.payment_method || 'Belirtilmemiş'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Link 

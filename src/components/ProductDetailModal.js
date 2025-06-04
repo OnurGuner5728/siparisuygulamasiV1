@@ -5,6 +5,7 @@ import { FiX, FiMinus, FiPlus, FiShoppingCart } from 'react-icons/fi';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import api from '@/lib/api';
+import FavoriteButton from '@/components/FavoriteButton';
 
 const ProductDetailModal = ({ 
   isOpen, 
@@ -227,6 +228,16 @@ const ProductDetailModal = ({
           >
             <FiX className="w-5 h-5" />
           </button>
+          
+          {/* Favori Butonu */}
+          <div className="absolute top-4 right-16 z-10">
+            <FavoriteButton
+              itemType="product"
+              itemId={product?.id}
+              size="sm"
+              className="shadow-lg"
+            />
+          </div>
           
           {/* Product Image */}
           <div className="h-64 bg-gray-100 relative">

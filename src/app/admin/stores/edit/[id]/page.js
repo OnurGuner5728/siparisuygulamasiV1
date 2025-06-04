@@ -44,6 +44,7 @@ function EditStoreContent({ promiseParams }) {
     delivery_time_min: 30,
     delivery_time_max: 60,
     minimum_order_amount: 0,
+    minimum_order_for_free_delivery: 150,
     logo_url: '', // Logo URL'i için state eklendi
     banner_url: '', // Banner URL'i için state eklendi
     commission_rate: 0, // Komisyon oranı
@@ -133,6 +134,7 @@ function EditStoreContent({ promiseParams }) {
               delivery_time_min: storeData.delivery_time_min || 30,
               delivery_time_max: storeData.delivery_time_max || 60,
               minimum_order_amount: storeData.minimum_order_amount || 0,
+              minimum_order_for_free_delivery: storeData.minimum_order_for_free_delivery || 150,
               logo_url: storeData.logo_url || '',
               banner_url: storeData.banner_url || '',
               commission_rate: storeData.commission_rate || 0,
@@ -522,7 +524,7 @@ function EditStoreContent({ promiseParams }) {
                 value={formData.payment_link}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="https://odeme.com/magaza-link"
+                placeholder="https://example.com/odeme-linki"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Mağaza sahibinin komisyon ödemelerini yapabileceği ödeme sayfası linki
@@ -705,6 +707,23 @@ function EditStoreContent({ promiseParams }) {
                 step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               />
+            </div>
+            <div>
+              <label htmlFor="minimum_order_for_free_delivery" className="block text-sm font-medium text-gray-700 mb-1">
+                Ücretsiz Teslimat için Min. Tutar (TL)
+              </label>
+              <input
+                type="number"
+                id="minimum_order_for_free_delivery"
+                name="minimum_order_for_free_delivery"
+                value={formData.minimum_order_for_free_delivery}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                placeholder="150"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Bu tutarın üstündeki siparişlerde teslimat ücretsiz olur</p>
             </div>
             <div>
               <label htmlFor="delivery_time_min" className="block text-sm font-medium text-gray-700 mb-1">

@@ -40,65 +40,47 @@ export default function CampaignBanner() {
         setIsLoading(true);
         setError(null);
         
-        // Aktif kampanyaları getir
-        const campaignsData = await api.getCampaigns();
+        // Aktif kampanya afişlerini getir (her kategori için)
+        const [yemekBanners, marketBanners, suBanners] = await Promise.all([
+          api.getCampaignBanners('Yemek'),
+          api.getCampaignBanners('Market'),
+          api.getCampaignBanners('Su')
+        ]);
         
-        if (!campaignsData || campaignsData.length === 0) {
+        // Tüm bannerleri birleştir
+        const allBanners = [...yemekBanners, ...marketBanners, ...suBanners];
+        
+        if (!allBanners || allBanners.length === 0) {
           setCampaigns([]);
           setIsLoading(false);
           return;
         }
         
-        // Her kampanya için ilgili mağaza bilgilerini al
-        const campaignsWithDetails = await Promise.all(
-          campaignsData.map(async (campaign) => {
-            try {
-              // Mağaza spesifik kampanya ise mağaza bilgilerini getir
-              if (campaign.store_id) {
-                const storeData = await api.getStoreById(campaign.store_id);
-                
-                return {
-                  ...campaign,
-                  image: campaign.image_url || getDefaultImage(storeData?.category_id),
-                  storeName: storeData?.name || 'Bilinmeyen Mağaza',
-                  categoryName: getCategoryTypeFromId(storeData?.category_id),
-                  categoryId: storeData?.category_id
-                };
-              }
-              
-              // Kategori genelinde bir kampanya ise
-              return {
-                ...campaign,
-                image: campaign.image_url || getDefaultImage(campaign.main_category_id),
-                storeName: 'Tüm Mağazalar',
-                categoryName: getCategoryTypeFromId(campaign.main_category_id),
-                categoryId: campaign.main_category_id
-              };
-            } catch (error) {
-              console.error(`Kampanya ${campaign.id} için detay bilgileri alınamadı:`, error);
-              
-              return {
-                ...campaign,
-                image: campaign.image_url || getDefaultImage(null),
-                storeName: 'Bilinmeyen Mağaza',
-                categoryName: 'genel',
-                categoryId: null
-              };
-            }
-          })
-        );
-        
-        // Aktif kampanyaları filtrele
-        const activeAndValidCampaigns = campaignsWithDetails.filter(c => {
-          // Kampanyanın geçerli olup olmadığını kontrol et
-          const now = new Date();
-          const startDate = c.start_date ? new Date(c.start_date) : null;
-          const endDate = c.end_date ? new Date(c.end_date) : null;
-          
-          return (!startDate || startDate <= now) && (!endDate || endDate >= now);
+        // Banner verilerini kampanya formatına dönüştür
+        const campaignsWithDetails = allBanners.map((banner) => {
+          return {
+            id: banner.id,
+            title: banner.title,
+            description: banner.description,
+            image: banner.banner_image_url || getDefaultImage(getCategoryIdFromName(banner.category)),
+            storeName: banner.campaign ? 'Kampanya' : 'Tüm Mağazalar',
+            categoryName: getCategoryTypeFromName(banner.category),
+            categoryId: getCategoryIdFromName(banner.category),
+            campaign_id: banner.campaign_id,
+            category: banner.category,
+            priority_order: banner.priority_order,
+            start_date: banner.start_date,
+            end_date: banner.end_date,
+            click_count: banner.click_count
+          };
         });
         
-        setCampaigns(activeAndValidCampaigns);
+        // Öncelik sırasına göre sırala
+        const sortedCampaigns = campaignsWithDetails.sort((a, b) => {
+          return (b.priority_order || 0) - (a.priority_order || 0);
+        });
+        
+        setCampaigns(sortedCampaigns);
       } catch (error) {
         console.error('Kampanya yükleme hatası:', error);
         setError('Kampanyalar yüklenirken bir sorun oluştu.');
@@ -123,6 +105,36 @@ export default function CampaignBanner() {
     };
     
     return categoryMap[categoryId] || 'genel';
+  };
+
+  // Kategori adından ID belirle
+  const getCategoryIdFromName = (categoryName) => {
+    if (!categoryName) return null;
+    
+    const categoryMap = {
+      'Yemek': 1,
+      'Market': 2,
+      'Su': 3,
+      'Çiçek': 4,
+      'Tatlı': 5
+    };
+    
+    return categoryMap[categoryName] || null;
+  };
+
+  // Kategori adından tip belirle
+  const getCategoryTypeFromName = (categoryName) => {
+    if (!categoryName) return 'genel';
+    
+    const categoryMap = {
+      'Yemek': 'yemek',
+      'Market': 'market',
+      'Su': 'su',
+      'Çiçek': 'cicek',
+      'Tatlı': 'tatli'
+    };
+    
+    return categoryMap[categoryName] || 'genel';
   };
 
   // Otomatik geçiş için zamanlayıcı

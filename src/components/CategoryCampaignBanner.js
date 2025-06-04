@@ -39,8 +39,8 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
         setIsLoading(true);
         setError(null);
         
-        // Tüm aktif kampanyaları getir
-        const campaignsData = await api.getCampaigns();
+        // Kategoriye göre aktif kampanyaları getir - yeni getCampaignBanners fonksiyonunu kullan
+        const campaignsData = await api.getCampaignBanners(categoryName);
         
         if (!campaignsData || campaignsData.length === 0) {
           setCampaigns([]);
@@ -48,52 +48,26 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
           return;
         }
         
-        // Her kampanya için ilgili mağaza bilgilerini al ve kategoriye göre filtrele
-        const categoryFilteredCampaigns = [];
-        
-        for (const campaign of campaignsData) {
-          try {
-            // Mağaza spesifik kampanya ise mağaza bilgilerini getir
-            if (campaign.store_id) {
-              const storeData = await api.getStoreById(campaign.store_id);
-              
-              // Eğer mağaza belirtilen kategorideyse ekle
-              if (storeData && storeData.category_id === categoryId) {
-                categoryFilteredCampaigns.push({
-                  ...campaign,
-                  image: campaign.image_url || getDefaultImage(storeData?.category_id),
-                  storeName: storeData?.name || 'Bilinmeyen Mağaza',
-                  categoryName: categoryName,
-                  categoryId: storeData?.category_id
-                });
-              }
-            } 
-            // Kategori genelinde bir kampanya ise ve kategori eşleşiyorsa
-            else if (campaign.main_category_id === categoryId) {
-              categoryFilteredCampaigns.push({
-                ...campaign,
-                image: campaign.image_url || getDefaultImage(campaign.main_category_id),
-                storeName: 'Tüm Mağazalar',
-                categoryName: categoryName,
-                categoryId: campaign.main_category_id
-              });
-            }
-          } catch (error) {
-            console.error(`Kampanya ${campaign.id} için detay bilgileri alınamadı:`, error);
-          }
-        }
-        
-        // Aktif kampanyaları filtrele
-        const activeAndValidCampaigns = categoryFilteredCampaigns.filter(c => {
-          // Kampanyanın geçerli olup olmadığını kontrol et
-          const now = new Date();
-          const startDate = c.start_date ? new Date(c.start_date) : null;
-          const endDate = c.end_date ? new Date(c.end_date) : null;
+        // Kampanyaları uygun formata dönüştür
+        const formattedCampaigns = campaignsData.map(campaign => {
+          let storeName = '';
           
-          return (!startDate || startDate <= now) && (!endDate || endDate >= now);
+          // Eğer mağaza spesifik kampanya ise
+          if (campaign.store_id) {
+            storeName = campaign.store?.name || 'Bilinmeyen Mağaza';
+          }
+          
+          return {
+            ...campaign,
+            title: campaign.name,
+            image: campaign.banner_image_url || getDefaultImage(categoryId),
+            storeName: storeName,
+            categoryName: categoryName,
+            categoryId: categoryId
+          };
         });
         
-        setCampaigns(activeAndValidCampaigns);
+        setCampaigns(formattedCampaigns);
       } catch (error) {
         console.error('Kampanya yükleme hatası:', error);
         setError('Kampanyalar yüklenirken bir sorun oluştu.');
@@ -102,7 +76,7 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
       }
     };
 
-    if (categoryId) {
+    if (categoryId && categoryName) {
       loadCampaigns();
     }
   }, [categoryId, categoryName, getDefaultImage]);
@@ -122,15 +96,11 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
     };
   }, [campaigns.length, isHovered]);
 
-  // Mağaza sayfasına yönlendirme
-  const navigateToStore = (campaign) => {
-    if (campaign.store_id) {
-      // Mağaza kampanyası ise ilgili mağazaya yönlendir
-      router.push(`/${categoryName}/store/${campaign.store_id}`);
-    } else if (campaign.main_category_id) {
-      // Kategori kampanyası ise kategoriye yönlendir
-      router.push(`/${categoryName}`);
-    }
+  // Kampanya sayfasına yönlendirme
+  const navigateToCampaign = (campaign) => {
+    // Kampanya kategorisine göre kampanya sayfasına yönlendir - kampanya ID'si ile
+    const categorySlug = categoryName.toLowerCase();
+    router.push(`/kampanya/${categorySlug}?cid=${campaign.id}`);
   };
 
   // Tarih formatı
@@ -142,7 +112,9 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-[180px] sm:h-[200px] md:h-[250px] bg-gray-100 animate-pulse rounded-2xl shadow-sm"></div>
+      <div className="w-full mb-6">
+        <div className="w-full h-[120px] sm:h-[140px] md:h-[180px] lg:h-[180px] bg-gray-100 animate-pulse rounded-2xl shadow-sm"></div>
+      </div>
     );
   }
 
@@ -152,19 +124,10 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
 
   return (
     <div className="w-full mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800">Kampanyalar</h2>
-        {campaigns.length > 1 && (
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">
-              {activeIndex + 1} / {campaigns.length}
-            </span>
-          </div>
-        )}
-      </div>
+   
       
       <div 
-        className="relative w-full h-[180px] sm:h-[200px] md:h-[250px] overflow-hidden rounded-2xl shadow-lg"
+        className="relative w-full h-[120px] sm:h-[140px] md:h-[180px] lg:h-[180px] overflow-hidden rounded-2xl shadow-lg"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -178,20 +141,12 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
               key={campaign.id}
               className="flex-none w-full h-full relative"
             >
-              <img 
-                src={campaign.image} 
-                alt={campaign.title}
-                className="w-full h-full object-cover object-center"
-                style={{ 
-                  objectFit: 'cover',
-                  objectPosition: 'center center',
-                  minHeight: '100%',
-                  minWidth: '100%'
+              <div 
+                className="absolute inset-0 bg-center bg-no-repeat bg-[length:100%_100%]"
+                style={{
+                  backgroundImage: `url(${campaign.image})`,
                 }}
-                onError={(e) => {
-                  e.target.src = getDefaultImage(categoryId);
-                }}
-              />
+              ></div>
               
               {/* Kampanya Bilgileri - Sol alt köşe overlay */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4 md:p-6 text-white">
@@ -201,9 +156,7 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
                   
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center flex-wrap gap-2">
-                      <span className="text-xs bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full">
-                        {campaign.storeName}
-                      </span>
+                      
                       {(campaign.start_date || campaign.end_date) && (
                         <span className="text-xs opacity-75">
                           {campaign.start_date && formatDate(campaign.start_date)} 
@@ -214,11 +167,11 @@ export default function CategoryCampaignBanner({ categoryId, categoryName }) {
                     </div>
                     
                     <button 
-                      onClick={() => navigateToStore(campaign)}
+                      onClick={() => navigateToCampaign(campaign)}
                       className="px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 bg-white text-gray-800 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-100 transition-colors"
                     >
-                      <span className="hidden sm:inline">{campaign.store_id ? 'Mağazaya Git' : 'Detaylar'}</span>
-                      <span className="sm:hidden">Git</span>
+                      <span className="hidden sm:inline">Kampanya Mağazaları</span>
+                      <span className="sm:hidden">Detaylar</span>
                     </button>
                   </div>
                 </div>

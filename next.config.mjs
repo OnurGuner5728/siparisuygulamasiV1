@@ -19,6 +19,11 @@ const nextConfig = {
       'ozqsbbngkkssstmaktou.supabase.co'
     ],
   },
+  // Netlify için özel ayarlar
+  trailingSlash: false,
+  // output: 'export' static site için, 'standalone' server için
+  // Netlify Next.js plugin kullanırken output belirtmeye gerek yok
+  
   // Hydration mismatch hatalarını azaltmak için
   experimental: {
     // suppressHydrationWarning artık experimental'da değil

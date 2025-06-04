@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ProductDetailModal from '@/components/ProductDetailModal';
+import StoreCampaignBanner from '@/components/StoreCampaignBanner';
 
 export default function SuStoreDetailPage({ params }) {
   const router = useRouter();
@@ -283,11 +284,12 @@ export default function SuStoreDetailPage({ params }) {
         {/* Large Image Area */}
         <div className="h-80 bg-gray-300 relative overflow-hidden">
           {store.banner_url || store.logo_url ? (
-            <img
-              src={store.banner_url || store.logo_url}
-              alt={store.name}
-                className="w-full h-full object-cover"
-            />
+            <div 
+              className="absolute inset-0 bg-center bg-no-repeat bg-[length:100%_100%]"
+              style={{
+                backgroundImage: `url(${store.banner_url || store.logo_url})`,
+              }}
+            ></div>
           ) : (
               <div className="w-full h-full bg-gradient-to-br from-sky-100 to-blue-100 flex items-center justify-center">
                 <div className="text-center">
@@ -325,13 +327,7 @@ export default function SuStoreDetailPage({ params }) {
                   <span>💧</span>
                   <span>Su Marketi Hakkında</span>
                 </button>
-                <button 
-                  onClick={() => handleMenuClick('contact')}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <span>📞</span>
-                  <span>İletişim</span>
-                </button>
+             
                 <button 
                   onClick={() => handleMenuClick('reviews')}
                   className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -382,12 +378,19 @@ export default function SuStoreDetailPage({ params }) {
             <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span className="text-sky-600 text-sm font-medium">Free</span>
-                </div>
+            <span className="text-sky-600 text-sm font-medium">
+              {parseFloat(store.delivery_fee || 0) === 0 ? 'Ücretsiz' : `${parseFloat(store.delivery_fee || 12).toFixed(0)} TL`}
+            </span>
+          </div>
           
           <div className="flex items-center space-x-1 text-gray-600">
             <FiClock size={14} />
-            <span className="text-sm">{store.delivery_time_estimation || '25 min'}</span>
+            <span className="text-sm">
+              {store.delivery_time_min && store.delivery_time_max 
+                ? `${store.delivery_time_min}-${store.delivery_time_max} dk`
+                : '60-120 dk'
+              }
+            </span>
           </div>
         </div>
         
@@ -395,6 +398,9 @@ export default function SuStoreDetailPage({ params }) {
           {store.description || 'Maecenas sed diam eget risus varius blandit sit amet non magna. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.'}
         </p>
       </div>
+      
+      {/* Store Campaign Banner */}
+      <StoreCampaignBanner storeId={id} categoryName="su" />
       
       {/* Category Filter */}
       <div className="bg-white px-6 py-4 border-t border-gray-100">
@@ -581,19 +587,7 @@ export default function SuStoreDetailPage({ params }) {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                {store.phone && (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      📞
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Telefon</p>
-                      <p className="font-medium">{store.phone}</p>
-                    </div>
-                  </div>
-                )}
-                
+              <div className="space-y-6">
                 {store.email && (
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -618,7 +612,7 @@ export default function SuStoreDetailPage({ params }) {
                   </div>
                 )}
                 
-                {(!store.phone && !store.email && !store.address) && (
+                {(!store.email && !store.address) && (
                   <div className="text-center py-8">
                     <p className="text-gray-500">İletişim bilgileri henüz eklenmemiş.</p>
                   </div>
@@ -666,8 +660,9 @@ export default function SuStoreDetailPage({ params }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-sky-500"></div>
                 </div>
               ) : storeReviews.length > 0 ? (
+                <>
                 <div className="space-y-4">
-                  {storeReviews.map((review) => (
+                    {storeReviews.slice(0, 3).map((review) => (
                     <div key={review.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -688,10 +683,28 @@ export default function SuStoreDetailPage({ params }) {
                     </div>
                   ))}
                 </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <Link 
+                      href={`/su/store/${id}/yorumlar`}
+                      className="block w-full bg-sky-500 text-white text-center py-3 rounded-lg font-medium hover:bg-sky-600 transition-colors"
+                      onClick={closeAllPopups}
+                    >
+                      Tüm Yorumları Görüntüle ({storeReviews.length})
+                    </Link>
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">⭐</div>
-                  <p className="text-gray-500">Henüz değerlendirme yok.</p>
+                  <p className="text-gray-500 mb-4">Henüz değerlendirme yok.</p>
+                  <Link 
+                    href={`/su/store/${id}/yorumlar`}
+                    className="inline-block bg-sky-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-sky-600 transition-colors"
+                    onClick={closeAllPopups}
+                  >
+                    İlk Yorumu Siz Yazın
+                  </Link>
                 </div>
               )}
             </div>

@@ -368,23 +368,6 @@ function OrderTrackingContent({ params }) {
                   </div>
                   <p className="text-sm text-gray-600">Kurye</p>
                 </div>
-                
-                <div className="flex">
-                  <a 
-                    href={`tel:${order.courier.phone}`} 
-                    className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-full"
-                    aria-label="Ara"
-                  >
-                    <FiPhone className="w-5 h-5" />
-                  </a>
-                  <a 
-                    href={`sms:${order.courier.phone}`} 
-                    className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full"
-                    aria-label="Mesaj Gönder"
-                  >
-                    <FiMessageSquare className="w-5 h-5" />
-                  </a>
-                </div>
               </div>
               
               {/* Harita yerine sadece bilgi gösteriyoruz */}
@@ -419,12 +402,6 @@ function OrderTrackingContent({ params }) {
                 <div>
                   <h3 className="font-semibold text-gray-800">{order.store.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">{order.store.address}</p>
-                  <a 
-                    href={`tel:${order.store.phone}`} 
-                    className="text-sm text-orange-600 hover:text-orange-800 mt-1 inline-flex items-center"
-                  >
-                    <FiPhone className="mr-1" /> Ara
-                  </a>
                 </div>
               </div>
               
@@ -472,7 +449,12 @@ function OrderTrackingContent({ params }) {
               
               <div className="mt-4 text-sm text-gray-600">
                 <div><strong>Sipariş Tarihi:</strong> {formatDate(order.orderDate)}</div>
-                <div><strong>Ödeme Yöntemi:</strong> {order.paymentMethod === 'card' ? 'Kredi Kartı' : 'Kapıda Ödeme'}</div>
+                <div><strong>Ödeme Yöntemi:</strong> {
+                  order.paymentMethod === 'cash' ? 'Kapıda Nakit Ödeme' :
+                  order.paymentMethod === 'card_on_delivery' ? 'Kapıda Kart ile Ödeme' :
+                  order.paymentMethod === 'card' ? 'Kapıda Kart ile Ödeme' :
+                  'Kapıda Nakit Ödeme'
+                }</div>
                 <div className="mt-2"><strong>Teslimat Adresi:</strong></div>
                 <div className="mt-1">{order.customer.address.text}</div>
               </div>

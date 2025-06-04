@@ -9,6 +9,8 @@ import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ProductDetailModal from '@/components/ProductDetailModal';
+import StoreCampaignBanner from '@/components/StoreCampaignBanner';
+import FavoriteButton from '@/components/FavoriteButton';
 
 // React Icons'ları dinamik olarak import et
 const FiArrowLeft = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiArrowLeft })), { ssr: false });
@@ -71,6 +73,12 @@ export default function StoreDetailPage({ params }) {
           
           const productsData = await api.getProducts({ store_id: id });
           setProducts(productsData || []);
+          
+          // URL'de hash varsa (örn: #review-123) reviews popup'ını aç
+          if (window.location.hash.startsWith('#review-')) {
+            setShowReviewsPopup(true);
+            loadStoreReviews();
+          }
         }
       } catch (error) {
         console.error('Restoran ve ürün verilerini yüklerken hata:', error);
@@ -199,8 +207,27 @@ export default function StoreDetailPage({ params }) {
   const loadStoreReviews = async () => {
     try {
       setReviewsLoading(true);
-      const reviews = await api.getReviews({ store_id: id });
-      setStoreReviews(reviews);
+      const reviews = await api.getReviews({ store_id: id, review_type: 'store' });
+      
+      // Her yorum için cevapları da yükle
+      const reviewsWithResponses = await Promise.all(
+        reviews.map(async (review) => {
+          const responses = await api.getReviewResponses(review.id);
+          return { ...review, responses };
+        })
+      );
+      
+      setStoreReviews(reviewsWithResponses);
+      
+      // Eğer URL'de belirli bir review hash'i varsa, o review'a scroll yap
+      if (window.location.hash.startsWith('#review-')) {
+        setTimeout(() => {
+          const element = document.querySelector(window.location.hash);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
     } catch (error) {
       console.error('Reviews yüklenemedi:', error);
     } finally {
@@ -294,18 +321,19 @@ export default function StoreDetailPage({ params }) {
       {/* Hero Image Section */}
       <div className="relative">
         {/* Large Image Area */}
-        <div className="h-80 bg-gray-300 relative overflow-hidden">
+        <div className="h-40 sm:h-40 md:h-60 lg:h-60 bg-gray-300 relative overflow-hidden">
           {store.banner_url || store.logo_url ? (
-              <img
-              src={store.banner_url || store.logo_url}
-                alt={store.name}
-                className="w-full h-full object-cover"
-              />
+              <div 
+                className="absolute inset-0 bg-center bg-no-repeat bg-[length:100%_100%]"
+                style={{
+                  backgroundImage: `url(${store.banner_url || store.logo_url})`,
+                }}
+              ></div>
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
                 <div className="text-center">
-                <div className="text-6xl mb-4">🍽️</div>
-                <div className="text-gray-700 font-semibold text-xl">{store.name}</div>
+                <div className="text-4xl mb-2">🍽️</div>
+                <div className="text-gray-700 font-semibold text-lg">{store.name}</div>
               </div>
             </div>
           )}
@@ -318,6 +346,16 @@ export default function StoreDetailPage({ params }) {
         >
           <FiArrowLeft size={20} className="text-gray-800" />
         </button>
+        
+        {/* Favori Butonu */}
+        <div className="absolute top-6 right-20">
+          <FavoriteButton
+            itemType="store"
+            itemId={id}
+            size="md"
+            className="shadow-lg"
+          />
+        </div>
         
         <div className="absolute top-6 right-6">
           <div className="relative">
@@ -338,13 +376,7 @@ export default function StoreDetailPage({ params }) {
                   <span>🍽️</span>
                   <span>Mağaza Hakkında</span>
                 </button>
-                <button 
-                  onClick={() => handleMenuClick('contact')}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <span>📞</span>
-                  <span>İletişim</span>
-                </button>
+             
                 <button 
                   onClick={() => handleMenuClick('reviews')}
                   className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -382,7 +414,7 @@ export default function StoreDetailPage({ params }) {
           </div>
       
       {/* Store Info */}
-      <div className="bg-white px-6 py-6">
+      <div className="bg-white px-2 md:px-4 py-2 md:py-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{store.name}</h1>
         
         <div className="flex items-center space-x-4 mb-4">
@@ -395,12 +427,19 @@ export default function StoreDetailPage({ params }) {
             <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span className="text-orange-600 text-sm font-medium">Free</span>
+            <span className="text-orange-600 text-sm font-medium">
+              {parseFloat(store.delivery_fee || 0) === 0 ? 'Ücretsiz' : `${parseFloat(store.delivery_fee || 12).toFixed(0)} TL`}
+            </span>
                 </div>
           
           <div className="flex items-center space-x-1 text-gray-600">
             <FiClock size={14} />
-            <span className="text-sm">{store.delivery_time_estimation || '20 dk'}</span>
+            <span className="text-sm">
+              {store.delivery_time_min && store.delivery_time_max 
+                ? `${store.delivery_time_min}-${store.delivery_time_max} dk`
+                : '30-60 dk'
+              }
+            </span>
           </div>
         </div>
         
@@ -408,6 +447,9 @@ export default function StoreDetailPage({ params }) {
           {store.description || 'Maecenas sed diam eget risus varius blandit sit amet non magna. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.'}
         </p>
       </div>
+      
+      {/* Store Campaign Banner */}
+      <StoreCampaignBanner storeId={id} categoryName="yemek" />
       
       {/* Category Filter */}
       <div className="bg-white px-6 py-4 border-t border-gray-100">
@@ -557,7 +599,12 @@ export default function StoreDetailPage({ params }) {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Teslimat</p>
-                    <p className="font-medium">{store.delivery_time_estimation || '20 dk'}</p>
+                    <p className="font-medium">
+                      {store.delivery_time_min && store.delivery_time_max 
+                        ? `${store.delivery_time_min}-${store.delivery_time_max} dk`
+                        : '30-60 dk'
+                      }
+                    </p>
                   </div>
                 </div>
                 
@@ -594,19 +641,7 @@ export default function StoreDetailPage({ params }) {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                {store.phone && (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      📞
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Telefon</p>
-                      <p className="font-medium">{store.phone}</p>
-                    </div>
-                  </div>
-                )}
-                
+              <div className="space-y-6">
                 {store.email && (
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -631,7 +666,7 @@ export default function StoreDetailPage({ params }) {
                   </div>
                 )}
                 
-                {(!store.phone && !store.email && !store.address) && (
+                {(!store.email && !store.address) && (
                   <div className="text-center py-8">
                     <p className="text-gray-500">İletişim bilgileri henüz eklenmemiş.</p>
                   </div>
@@ -679,9 +714,18 @@ export default function StoreDetailPage({ params }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
                 </div>
               ) : storeReviews.length > 0 ? (
+                <>
                 <div className="space-y-4">
-                  {storeReviews.map((review) => (
-                    <div key={review.id} className="border border-gray-200 rounded-lg p-4">
+                    {storeReviews.slice(0, 5).map((review) => (
+                    <div 
+                      key={review.id} 
+                      id={`review-${review.id}`}
+                      className={`border rounded-lg p-4 transition-colors ${
+                        window.location.hash === `#review-${review.id}`
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <p className="font-medium text-gray-900">{review.user?.name || 'Anonim Kullanıcı'}</p>
@@ -697,14 +741,45 @@ export default function StoreDetailPage({ params }) {
                           {new Date(review.created_at).toLocaleDateString('tr-TR')}
                         </span>
                       </div>
-                      <p className="text-gray-600 text-sm">{review.comment}</p>
+                      <p className="text-gray-600 text-sm mb-3">{review.comment}</p>
+                      
+                      {/* Store Response */}
+                      {review.review_responses && review.review_responses.length > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-3 mt-3">
+                          <div className="flex items-center mb-2">
+                            <span className="text-xs font-medium text-gray-600">🏪 {store.name} yanıtladı:</span>
+                          </div>
+                          <p className="text-sm text-gray-700">{review.review_responses[0].response_text}</p>
+                          <span className="text-xs text-gray-500 mt-1 block">
+                            {new Date(review.review_responses[0].created_at).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <Link 
+                      href={`/yemek/store/${id}/yorumlar`}
+                      className="block w-full bg-orange-500 text-white text-center py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                      onClick={closeAllPopups}
+                    >
+                      Tüm Yorumları Görüntüle ({storeReviews.length})
+                    </Link>
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">⭐</div>
-                  <p className="text-gray-500">Henüz değerlendirme yok.</p>
+                  <p className="text-gray-500 mb-4">Henüz değerlendirme yok.</p>
+                  <Link 
+                    href={`/yemek/store/${id}/yorumlar`}
+                    className="inline-block bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                    onClick={closeAllPopups}
+                  >
+                    İlk Yorumu Siz Yazın
+                  </Link>
                 </div>
               )}
             </div>

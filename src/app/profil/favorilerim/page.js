@@ -237,12 +237,25 @@ function FavoritesContent() {
 }
 
 function FavoriteCard({ favorite, detail, onRemove }) {
+  // Kategori adından slug oluştur
+  const getCategorySlug = (categoryName) => {
+    if (!categoryName) return 'yemek'; // varsayılan
+    
+    const categoryMap = {
+      'Yemek': 'yemek',
+      'Market': 'market', 
+      'Su': 'su',
+      'Aktüel': 'aktuel'
+    };
+    
+    return categoryMap[categoryName] || 'yemek';
+  };
   if (detail.type === 'product') {
     return (
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
         <div className="relative">
           <img
-            src={detail.image || '/placeholder-product.jpg'}
+            src={detail.logo_url || '/placeholder-product.jpg'}
             alt={detail.name}
             className="w-full h-48 object-cover"
           />
@@ -326,7 +339,7 @@ function FavoriteCard({ favorite, detail, onRemove }) {
 
           <div className="flex gap-2">
             <Link
-              href={`/magaza/${detail.id}`}
+              href={`/${getCategorySlug(detail.category?.name)}/store/${detail.id}`}
               className="flex-1 bg-blue-500 text-white text-center py-2 px-3 rounded-lg text-sm hover:bg-blue-600 transition-colors"
             >
               Mağazayı Ziyaret Et

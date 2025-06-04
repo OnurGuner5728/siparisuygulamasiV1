@@ -293,11 +293,12 @@ function AdminOrderDetailContent() {
                 <p className="text-sm text-gray-600">Müşteri</p>
                 <p className="font-medium">{order.user?.name || order.user?.email || 'Bilinmiyor'}</p>
               </div>
-              <div>
+              <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">Ödeme Yöntemi</p>
                 <p className="font-medium">
-                  {order.payment_method === 'cash' ? 'Kapıda Ödeme' : 
-                   order.payment_method === 'card' ? 'Kredi Kartı' : 
+                  {order.payment_method === 'cash' ? 'Kapıda Nakit Ödeme' :
+                   order.payment_method === 'card_on_delivery' ? 'Kapıda Kart ile Ödeme' :
+                   order.payment_method === 'card' ? 'Kapıda Kart ile Ödeme' :
                    order.payment_method || 'Belirtilmemiş'}
                 </p>
               </div>

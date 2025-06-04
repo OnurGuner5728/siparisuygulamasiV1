@@ -722,6 +722,308 @@ export const deleteCampaign = async (campaignId) => {
   return { success: true };
 };
 
+// Kampanya afişleri API fonksiyonları
+export const getCampaignBanners = async (category = null, useAdmin = false) => {
+  const client = useAdmin ? supabaseAdmin : supabase;
+  
+  let query = client
+    .from('campaigns')
+    .select('*')
+    .eq('is_active', true)
+    .not('banner_image_url', 'is', null)
+    .not('banner_image_url', 'eq', '')
+    .gte('end_date', new Date().toISOString())
+    .order('priority_order', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (category) {
+    // Kategori adını normalize et - ilk harfi büyük yap
+    const normalizedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    query = query.eq('campaign_category', normalizedCategory);
+  }
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Kampanya afişlerini getirirken hata:', error);
+    return [];
+  }
+  
+  return data || [];
+};
+
+// Campaign banner fonksiyonları kaldırıldı - artık campaigns.banner_image_url kullanılıyor
+
+// Kampanya başvuruları API fonksiyonları
+export const getCampaignApplications = async (filters = {}) => {
+  let query = supabase
+    .from('campaign_applications')
+    .select(`
+      *,
+      campaign:campaigns (id, name, description, type, value, start_date, end_date, is_active),
+      store:stores (id, name, category_id),
+      applicant:users!campaign_applications_user_id_fkey (id, name, email)
+    `);
+
+  if (filters.campaign_id) {
+    query = query.eq('campaign_id', filters.campaign_id);
+  }
+  
+  if (filters.store_id) {
+    query = query.eq('store_id', filters.store_id);
+  }
+  
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  query = query.order('applied_at', { ascending: false });
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Kampanya başvurularını getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createCampaignApplication = async (applicationData) => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .insert(applicationData)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Kampanya başvurusu oluştururken hata:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateCampaignApplication = async (applicationId, updates) => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .update(updates)
+    .eq('id', applicationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya başvurusu güncellenirken hata (ID: ${applicationId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+export const approveCampaignApplication = async (applicationId, reviewedBy) => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .update({
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewedBy
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya başvurusu onaylanırken hata (ID: ${applicationId}):`, error);
+    throw error;
+  }
+  
+  // Onaylanan başvuru için store_campaign_participations tablosuna kayıt ekle
+  if (data) {
+    await createStoreCampaignParticipation({
+      store_id: data.store_id,
+      campaign_id: data.campaign_id,
+      status: 'active'
+    });
+  }
+  
+  return data;
+};
+
+export const rejectCampaignApplication = async (applicationId, reviewedBy, notes = '') => {
+  const { data, error } = await supabase
+    .from('campaign_applications')
+    .update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewedBy,
+      notes: notes
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya başvurusu reddedilirken hata (ID: ${applicationId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+// Mağaza kampanya katılımları API fonksiyonları
+export const getStoreCampaignParticipations = async (filters = {}) => {
+  let query = supabase
+    .from('store_campaign_participations')
+    .select(`
+      *,
+      store:stores (id, name, category_id),
+      campaign:campaigns (id, name, description, type, value, start_date, end_date, is_active)
+    `);
+
+  if (filters.store_id) {
+    query = query.eq('store_id', filters.store_id);
+  }
+  
+  if (filters.campaign_id) {
+    query = query.eq('campaign_id', filters.campaign_id);
+  }
+  
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  query = query.order('joined_at', { ascending: false });
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Mağaza kampanya katılımlarını getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createStoreCampaignParticipation = async (participationData) => {
+  const { data, error } = await supabase
+    .from('store_campaign_participations')
+    .insert(participationData)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Mağaza kampanya katılımı oluştururken hata:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateStoreCampaignParticipation = async (participationId, updates) => {
+  const { data, error } = await supabase
+    .from('store_campaign_participations')
+    .update(updates)
+    .eq('id', participationId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Mağaza kampanya katılımı güncellenirken hata (ID: ${participationId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+// Kampanya kuralları API fonksiyonları
+export const getCampaignRules = async () => {
+  const { data, error } = await supabase
+    .from('campaign_rules')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Kampanya kurallarını getirirken hata:', error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createCampaignRule = async (ruleData) => {
+  const { data, error } = await supabase
+    .from('campaign_rules')
+    .insert(ruleData)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Kampanya kuralı oluştururken hata:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateCampaignRule = async (ruleId, updates) => {
+  const { data, error } = await supabase
+    .from('campaign_rules')
+    .update(updates)
+    .eq('id', ruleId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Kampanya kuralı güncellenirken hata (ID: ${ruleId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+export const deleteCampaignRule = async (ruleId) => {
+  const { error } = await supabase
+    .from('campaign_rules')
+    .delete()
+    .eq('id', ruleId);
+  
+  if (error) {
+    console.error(`Kampanya kuralı silinirken hata (ID: ${ruleId}):`, error);
+    throw error;
+  }
+  return { success: true };
+};
+
+// Kampanya uygunluk kontrolü
+export const checkCampaignEligibility = async (storeId, campaignId) => {
+  try {
+    // Kampanya kurallarını al
+    const rules = await getCampaignRules();
+    const activeRule = rules.find(rule => rule.id) || rules[0]; // İlk kuralı varsayılan olarak al
+    
+    if (!activeRule) {
+      return { eligible: true, reason: null };
+    }
+    
+    // Mağazanın mevcut aktif kampanyalarını kontrol et
+    const activeParticipations = await getStoreCampaignParticipations({
+      store_id: storeId,
+      status: 'active'
+    });
+    
+    // Çoklu kampanya katılımına izin verilip verilmediğini kontrol et
+    if (!activeRule.allow_multiple_campaigns && activeParticipations.length > 0) {
+      return {
+        eligible: false,
+        reason: 'Bu mağaza zaten aktif bir kampanyaya katılıyor ve çoklu kampanya katılımına izin verilmiyor.'
+      };
+    }
+    
+    // Maksimum kampanya sayısını kontrol et
+    if (activeParticipations.length >= activeRule.max_campaigns_per_store) {
+      return {
+        eligible: false,
+        reason: `Mağaza maksimum ${activeRule.max_campaigns_per_store} kampanyaya katılabilir.`
+      };
+    }
+    
+    return { eligible: true, reason: null };
+  } catch (error) {
+    console.error('Kampanya uygunluk kontrolü sırasında hata:', error);
+    return { eligible: false, reason: 'Uygunluk kontrolü yapılamadı.' };
+  }
+};
+
 // User (Kullanıcı)
 export const getUserProfile = async (userId) => {
   const { data, error } = await supabaseApi.getUserProfile(userId);
@@ -833,15 +1135,18 @@ export const getStoreReviews = async (storeId) => {
   return data || [];
 };
 
-// Tüm yorumları getir (filtrelenebilir)
+// Tüm yorumları getir (filtrelenebilir) - artık sadece sipariş-based yorumlar
 export const getReviews = async (filters = {}) => {
   let query = supabase
     .from('reviews')
     .select(`
       *,
-      user:users(id, name),
-      store:stores(id, name)
-    `);
+      users(id, name),
+      stores!inner(id, name, logo_url),
+      orders!inner(id, order_number, created_at, total_amount),
+      review_responses(*)
+    `)
+    .eq('review_type', 'store'); // Sadece store review'lar
     
   // Filtreleri uygula
   if (filters.store_id) {
@@ -858,6 +1163,10 @@ export const getReviews = async (filters = {}) => {
   
   if (filters.order_id) {
     query = query.eq('order_id', filters.order_id);
+  }
+  
+  if (filters.review_type) {
+    query = query.eq('review_type', filters.review_type);
   }
   
   // Sıralama
@@ -884,29 +1193,64 @@ export const getReviews = async (filters = {}) => {
     console.error('Yorumları getirirken hata:', error);
     return [];
   }
-  return data || [];
+
+  // Anonim yorumlar için kullanıcı bilgilerini temizle
+  const processedData = (data || []).map(review => {
+    if (review.is_anonymous) {
+      return {
+        ...review,
+        users: null // Anonim yorumlar için kullanıcı bilgisini tamamen kaldır
+      };
+    }
+    return review;
+  });
+
+  return processedData;
 };
 
-// Yeni yorum oluştur
+// Yeni yorum oluştur (sipariş-based)
 export const createReview = async (reviewData) => {
-  const { data, error } = await supabase
-    .from('reviews')
-    .insert({
-      ...reviewData,
-      created_at: new Date().toISOString()
-    })
-    .select(`
-      *,
-      user:users(id, name),
-      store:stores(id, name)
-    `)
-    .single();
+  try {
+    // Zorunlu alanları kontrol et
+    if (!reviewData.order_id) {
+      throw new Error('Yorum için sipariş ID\'si gereklidir');
+    }
     
-  if (error) {
-    console.error('Yorum oluştururken hata:', error);
+    if (!reviewData.user_id || !reviewData.store_id) {
+      throw new Error('Kullanıcı ve mağaza ID\'si gereklidir');
+    }
+    
+    // Sipariş için daha önce yorum yapılıp yapılmadığını kontrol et
+    const existingReview = await getUserReviewForOrder(reviewData.user_id, reviewData.order_id);
+    if (existingReview) {
+      throw new Error('Bu sipariş için zaten yorum yapılmış');
+    }
+    
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert({
+        ...reviewData,
+        review_type: 'store', // Artık sadece store review var
+        created_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        users(id, name),
+        stores!inner(id, name),
+        orders!inner(id, order_number, created_at)
+      `)
+      .single();
+      
+    if (error) {
+      console.error('Yorum oluştururken hata:', error.message || error);
+      throw new Error(error.message || 'Yorum oluşturulamadı');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Yorum oluştururken beklenmeyen hata:', error.message || error);
     throw error;
   }
-  return data;
 };
 
 // Yorumu güncelle
@@ -917,8 +1261,8 @@ export const updateReview = async (reviewId, updates) => {
     .eq('id', reviewId)
     .select(`
       *,
-      user:users(id, name),
-      store:stores(id, name)
+      users(id, name),
+      stores!inner(id, name)
     `)
     .single();
     
@@ -959,13 +1303,30 @@ export const getUserReviewForStore = async (userId, storeId) => {
   return data;
 };
 
+// Kullanıcının belirli sipariş için yorum yapıp yapmadığını kontrol et
+export const getUserReviewForOrder = async (userId, orderId) => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('order_id', orderId)
+    .single();
+    
+  if (error && error.code !== 'PGRST116') { // 'PGRST116' is "not found" error
+    console.error(`Kullanıcı sipariş yorumu kontrol edilirken hata:`, error);
+    return null;
+  }
+  return data;
+};
+
 // Kullanıcının tüm değerlendirmelerini getir
 export const getUserReviews = async (userId) => {
   const { data, error } = await supabase
     .from('reviews')
     .select(`
       *,
-      store:stores(id, name, category_id)
+      stores!inner(id, name, category_id),
+      orders!inner(id, order_number, created_at, total_amount)
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
@@ -975,6 +1336,44 @@ export const getUserReviews = async (userId) => {
     return [];
   }
   return data || [];
+};
+
+// Kullanıcının değerlendirme yapabileceği siparişleri getir
+export const getUserReviewableOrders = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        stores!inner(id, name, logo_url)
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'delivered')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error(`Değerlendirilebilir siparişler getirirken hata (User ID: ${userId}):`, error);
+      return [];
+    }
+    
+    // Her sipariş için ayrı ayrı review kontrolü yap
+    const ordersWithReviewStatus = await Promise.all(
+      (data || []).map(async (order) => {
+        const existingReview = await getUserReviewForOrder(userId, order.id);
+        return {
+          ...order,
+          has_review: !!existingReview,
+          review: existingReview
+        };
+      })
+    );
+    
+    // Henüz değerlendirilmemiş siparişleri döndür
+    return ordersWithReviewStatus.filter(order => !order.has_review);
+  } catch (error) {
+    console.error(`Değerlendirilebilir siparişler getirirken beklenmeyen hata (User ID: ${userId}):`, error);
+    return [];
+  }
 };
 
 // Mağaza rating istatistiklerini güncelle
@@ -1006,6 +1405,209 @@ export const updateStoreRating = async (storeId) => {
   } catch (error) {
     console.error(`Mağaza rating'i güncellenirken hata (ID: ${storeId}):`, error);
     throw error;
+  }
+};
+
+// Review Responses (Mağaza Cevapları) API Fonksiyonları
+
+// Yoruma cevap ekle
+export const createReviewResponse = async (responseData) => {
+  const { data, error } = await supabase
+    .from('review_responses')
+    .insert({
+      ...responseData,
+      created_at: new Date().toISOString()
+    })
+    .select(`
+      *,
+      responder:users(id, name, role),
+      store:stores(id, name)
+    `)
+    .single();
+    
+  if (error) {
+    console.error('Review response oluştururken hata:', error);
+    throw error;
+  }
+  
+  // Response sayısını güncelle
+  await updateReview(responseData.review_id, { 
+    response_count: await getReviewResponseCount(responseData.review_id)
+  });
+  
+  return data;
+};
+
+// Yorumun cevaplarını getir
+export const getReviewResponses = async (reviewId) => {
+  try {
+    const { data, error } = await supabase
+      .from('review_responses')
+      .select(`
+        *,
+        responder:users(id, name, role),
+        store:stores(id, name)
+      `)
+      .eq('review_id', reviewId)
+      .order('created_at', { ascending: true });
+      
+    if (error) {
+      console.error(`Review responses getirirken hata (Review ID: ${reviewId}):`, error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error(`Review responses getirirken beklenmeyen hata (Review ID: ${reviewId}):`, error);
+    return [];
+  }
+};
+
+// Review response güncelle
+export const updateReviewResponse = async (responseId, updates) => {
+  const { data, error } = await supabase
+    .from('review_responses')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', responseId)
+    .select(`
+      *,
+      responder:users(id, name, role),
+      store:stores(id, name)
+    `)
+    .single();
+    
+  if (error) {
+    console.error(`Review response güncellenirken hata (ID: ${responseId}):`, error);
+    throw error;
+  }
+  return data;
+};
+
+// Review response sil
+export const deleteReviewResponse = async (responseId, reviewId) => {
+  const { error } = await supabase
+    .from('review_responses')
+    .delete()
+    .eq('id', responseId);
+    
+  if (error) {
+    console.error(`Review response silinirken hata (ID: ${responseId}):`, error);
+    throw error;
+  }
+  
+  // Response sayısını güncelle
+  await updateReview(reviewId, { 
+    response_count: await getReviewResponseCount(reviewId)
+  });
+  
+  return { success: true };
+};
+
+// Review response sayısını getir
+export const getReviewResponseCount = async (reviewId) => {
+  const { count, error } = await supabase
+    .from('review_responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('review_id', reviewId);
+    
+  if (error) {
+    console.error(`Review response sayısı getirirken hata (Review ID: ${reviewId}):`, error);
+    return 0;
+  }
+  return count || 0;
+};
+
+// Sipariş yorumlarını getir (artık sadece sipariş-based yorumlar var)
+export const getOrderReviews = async (orderId) => {
+  return await getReviews({ 
+    order_id: orderId
+  });
+};
+
+// Mağaza yorumlarını getir (artık sadece store review'lar var)
+export const getStoreReviewsByType = async (storeId) => {
+  return await getReviews({ 
+    store_id: storeId
+  });
+};
+
+// Review Like/Unlike fonksiyonları
+export const likeReview = async (reviewId, userId) => {
+  try {
+    // Önce var olan like var mı kontrol et
+    const { data: existingLike } = await supabase
+      .from('review_likes')
+      .select('*')
+      .eq('review_id', reviewId)
+      .eq('user_id', userId)
+      .single();
+    
+    if (existingLike) {
+      // Zaten beğenmişse unlike yap
+      await supabase
+        .from('review_likes')
+        .delete()
+        .eq('review_id', reviewId)
+        .eq('user_id', userId);
+      
+      return { action: 'unliked' };
+    } else {
+      // Beğeni ekle
+      await supabase
+        .from('review_likes')
+        .insert({
+          review_id: reviewId,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        });
+      
+      return { action: 'liked' };
+    }
+  } catch (error) {
+    console.error(`Review beğeni işlemi hatası (Review ID: ${reviewId}):`, error);
+    throw error;
+  }
+};
+
+// Review beğeni durumunu kontrol et
+export const checkReviewLike = async (reviewId, userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('review_likes')
+      .select('*')
+      .eq('review_id', reviewId)
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error(`Review beğeni kontrolü hatası (Review ID: ${reviewId}):`, error);
+    return false;
+  }
+};
+
+// Review beğeni sayısını getir
+export const getReviewLikeCount = async (reviewId) => {
+  try {
+    const { count, error } = await supabase
+      .from('review_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('review_id', reviewId);
+    
+    if (error) {
+      throw error;
+    }
+    
+    return count || 0;
+  } catch (error) {
+    console.error(`Review beğeni sayısı getirme hatası (Review ID: ${reviewId}):`, error);
+    return 0;
   }
 };
 
@@ -1923,41 +2525,52 @@ export const createNotification = async (notificationData) => {
   try {
     // Kullanıcının bildirim ayarlarını kontrol et
     if (notificationData.user_id) {
-      const userSettings = await getUserSettings(notificationData.user_id);
-      
-      if (userSettings) {
-        // Genel bildirim ayarı kapalıysa hiç bildirim gönderme
-        if (!userSettings.notifications_enabled) {
-          console.log('🔕 Kullanıcının bildirimleri kapalı, bildirim gönderilmiyor:', notificationData.user_id);
-          return null;
-        }
+      try {
+        const userSettings = await getUserSettings(notificationData.user_id);
         
-        // Bildirim tipine göre özel kontroller
-        switch (notificationData.type) {
-          case 'order_pending':
-          case 'order_processing':
-          case 'order_shipped':
-          case 'order_delivered':
-          case 'order_cancelled':
-            if (!userSettings.order_updates) {
-              console.log('🔕 Kullanıcının sipariş güncellemeleri kapalı, bildirim gönderilmiyor');
-              return null;
-            }
-            break;
-          case 'promo_notification':
-          case 'campaign':
-            if (!userSettings.promo_notifications) {
-              console.log('🔕 Kullanıcının promosyon bildirimleri kapalı, bildirim gönderilmiyor');
-              return null;
-            }
-            break;
-          case 'marketing':
-            if (!userSettings.marketing_emails) {
-              console.log('🔕 Kullanıcının pazarlama bildirimleri kapalı, bildirim gönderilmiyor');
-              return null;
-            }
-            break;
+        if (userSettings) {
+          // Genel bildirim ayarı kapalıysa hiç bildirim gönderme
+          if (!userSettings.notifications_enabled) {
+            console.log('🔕 Kullanıcının bildirimleri kapalı, bildirim gönderilmiyor:', notificationData.user_id);
+            return null;
+          }
+          
+          // Bildirim tipine göre özel kontroller
+          switch (notificationData.type) {
+            case 'order_pending':
+            case 'order_processing':
+            case 'order_shipped':
+            case 'order_delivered':
+            case 'order_cancelled':
+              if (!userSettings.order_updates) {
+                console.log('🔕 Kullanıcının sipariş güncellemeleri kapalı, bildirim gönderilmiyor');
+                return null;
+              }
+              break;
+            case 'promo_notification':
+            case 'campaign':
+              if (!userSettings.promo_notifications) {
+                console.log('🔕 Kullanıcının promosyon bildirimleri kapalı, bildirim gönderilmiyor');
+                return null;
+              }
+              break;
+            case 'marketing':
+              if (!userSettings.marketing_emails) {
+                console.log('🔕 Kullanıcının pazarlama bildirimleri kapalı, bildirim gönderilmiyor');
+                return null;
+              }
+              break;
+            case 'new_review':
+            case 'review_response':
+              // Değerlendirme bildirimleri varsayılan olarak gönderilir
+              // Mağaza sahipleri için önemli bildirimlerdir
+              console.log('📝 Değerlendirme bildirimi gönderiliyor:', notificationData.type);
+              break;
+          }
         }
+      } catch (settingsError) {
+        console.warn('Kullanıcı ayarları kontrol edilirken hata, bildirim yine de gönderiliyor:', settingsError.message || settingsError);
+        // Ayarlar kontrol edilemezse bildirim göndermeye devam et
       }
     }
     
@@ -1971,12 +2584,12 @@ export const createNotification = async (notificationData) => {
       .single();
       
     if (error) {
-      console.error('Bildirim oluştururken hata:', error);
-      throw error;
+      console.error('Bildirim oluştururken hata:', error.message || error);
+      throw new Error(error.message || 'Bildirim oluşturulamadı');
     }
     return data;
   } catch (error) {
-    console.error('Bildirim oluştururken beklenmeyen hata:', error);
+    console.error('Bildirim oluştururken beklenmeyen hata:', error.message || error);
     throw error;
   }
 };
@@ -2840,6 +3453,28 @@ export default {
   updateCampaign,
   deleteCampaign,
   
+  // Kampanya afişleri
+  getCampaignBanners,
+  
+  // Kampanya başvuruları
+  getCampaignApplications,
+  createCampaignApplication,
+  updateCampaignApplication,
+  approveCampaignApplication,
+  rejectCampaignApplication,
+  
+  // Mağaza kampanya katılımları
+  getStoreCampaignParticipations,
+  createStoreCampaignParticipation,
+  updateStoreCampaignParticipation,
+  
+  // Kampanya kuralları
+  getCampaignRules,
+  createCampaignRule,
+  updateCampaignRule,
+  deleteCampaignRule,
+  checkCampaignEligibility,
+  
   getUserProfile,
   getUserAddresses,
   createAddress,
@@ -2849,12 +3484,29 @@ export default {
   getStoreReviews,
   getReviews,
   getUserReviews,
+  getUserReviewableOrders, // Yeni fonksiyon
+  getUserReviewForOrder, // Yeni fonksiyon
   createReview,
   updateReview,
   deleteReview,
   getUserReviewForStore,
-  getUserReviews,
   updateStoreRating,
+  
+  // Review Responses
+  createReviewResponse,
+  getReviewResponses,
+  updateReviewResponse,
+  deleteReviewResponse,
+  getReviewResponseCount,
+  
+  // Order Reviews (artık sadece sipariş-based)
+  getOrderReviews,
+  getStoreReviewsByType,
+  
+  // Review Likes
+  likeReview,
+  checkReviewLike,
+  getReviewLikeCount,
   
   getUserCartItems,
   clearCartCache,

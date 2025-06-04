@@ -27,7 +27,9 @@ export default function CheckoutSuccess() {
         estimatedDelivery: '30-45 dakika',
         items: JSON.parse(localStorage.getItem('cartItems') || '[]'),
         deliveryAddress: JSON.parse(localStorage.getItem('selectedAddress') || '{"text": "Varsayılan Teslimat Adresi"}'),
-        paymentMethod: localStorage.getItem('paymentMethod') || 'Kredi Kartı'
+        paymentMethod: localStorage.getItem('paymentMethod') === 'cash' ? 'Kapıda Nakit Ödeme' :
+                        localStorage.getItem('paymentMethod') === 'card_on_delivery' ? 'Kapıda Kart ile Ödeme' :
+                        'Kapıda Nakit Ödeme'
       };
       
       setTimeout(() => {

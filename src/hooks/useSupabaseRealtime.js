@@ -6,6 +6,20 @@ import supabase from '@/lib/supabase';
  * Belirtilen tablo ve filtrelere göre real-time güncellemeleri dinler
  */
 export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
+  // Güvenlik kontrolleri
+  if (!table || typeof table !== 'string') {
+    console.error('useSupabaseRealtime: table parameter is required and must be a string');
+    return {
+      data: [],
+      loading: false,
+      error: new Error('Invalid table parameter'),
+      refresh: () => {},
+      insert: async () => ({ data: null, error: new Error('Invalid table parameter') }),
+      update: async () => ({ data: null, error: new Error('Invalid table parameter') }),
+      remove: async () => ({ error: new Error('Invalid table parameter') })
+    };
+  }
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,28 +70,19 @@ export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
   // Real-time subscription kur
   const setupSubscription = () => {
     if (!enabled) return;
-
+    
     // Önceki subscription'ı temizle
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
     }
 
-    // Filter string'ini doğru formatta oluştur
-    let filterString = undefined;
-    if (Object.entries(filters).length > 0) {
-      const filterParts = Object.entries(filters)
-        .filter(([key, value]) => value !== undefined && value !== null)
-        .map(([key, value]) => `${key}=eq.${value}`);
-      
-      if (filterParts.length > 0) {
-        filterString = filterParts.join(' and ');
-      }
-    }
+    // Filter string oluştur
+    const filterString = Object.entries(filters)
+      .map(([key, value]) => `${key}=eq.${value}`)
+      .join('&');
 
-    console.log(`Setting up subscription for ${table} with filter:`, filterString);
-
-    let channel = supabase
-      .channel(`${table}_changes_${Date.now()}`) // Unique channel name
+    const channel = supabase
+      .channel(`${table}_${Date.now()}`) // Unique channel name
       .on(
         'postgres_changes',
         {
@@ -87,52 +92,64 @@ export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
           filter: filterString
         },
         (payload) => {
-          console.log(`Real-time change in ${table}:`, payload);
-          
-          const { eventType, new: newRecord, old: oldRecord } = payload;
+          try {
+            console.log(`Real-time change in ${table}:`, payload);
+            
+            const { eventType, new: newRecord, old: oldRecord } = payload;
 
-          switch (eventType) {
-            case 'INSERT':
-              setData(prev => {
-                // Yeni kaydı ekle ve sırala
-                const updated = [newRecord, ...prev];
-                if (orderBy) {
-                  updated.sort((a, b) => {
-                    const aVal = a[orderBy.column];
-                    const bVal = b[orderBy.column];
-                    
-                    if (orderBy.ascending) {
-                      return aVal > bVal ? 1 : -1;
-                    } else {
-                      return aVal < bVal ? 1 : -1;
-                    }
-                  });
-                }
-                return updated;
-              });
-              onInsert?.(newRecord);
-              break;
+            switch (eventType) {
+              case 'INSERT':
+                setData(prev => {
+                  // Yeni kaydı ekle ve sırala
+                  const updated = [newRecord, ...prev];
+                  if (orderBy) {
+                    updated.sort((a, b) => {
+                      const aVal = a[orderBy.column];
+                      const bVal = b[orderBy.column];
+                      
+                      if (orderBy.ascending) {
+                        return aVal > bVal ? 1 : -1;
+                      } else {
+                        return aVal < bVal ? 1 : -1;
+                      }
+                    });
+                  }
+                  return updated;
+                });
+                onInsert?.(newRecord);
+                break;
 
-            case 'UPDATE':
-              setData(prev => prev.map(item => 
-                item.id === newRecord.id ? newRecord : item
-              ));
-              onUpdate?.(newRecord, oldRecord);
-              break;
+              case 'UPDATE':
+                setData(prev => prev.map(item => 
+                  item.id === newRecord.id ? newRecord : item
+                ));
+                onUpdate?.(newRecord, oldRecord);
+                break;
 
-            case 'DELETE':
-              setData(prev => prev.filter(item => item.id !== oldRecord.id));
-              onDelete?.(oldRecord);
-              break;
+              case 'DELETE':
+                setData(prev => prev.filter(item => item.id !== oldRecord.id));
+                onDelete?.(oldRecord);
+                break;
+            }
+          } catch (err) {
+            console.error(`Error processing real-time change for ${table}:`, err);
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log(`Subscription status for ${table}:`, status);
         if (status === 'SUBSCRIBED') {
           console.log(`✅ Successfully subscribed to ${table} changes`);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error(`❌ Error subscribing to ${table} changes`);
+          console.error(`❌ Error subscribing to ${table} changes`, err);
+          // Hata durumunda subscription'ı yeniden kurmaya çalışma
+          // Çift subscription sorununa neden olur
+        } else if (status === 'CLOSED') {
+          console.log(`🔌 Subscription closed for ${table}`);
+        } else if (status === 'TIMED_OUT') {
+          console.log(`⏰ Subscription timed out for ${table}`);
+          // Timeout durumunda yeniden bağlanmaya çalışma
+          // Çift subscription sorununa neden olur
         }
       });
 
@@ -141,14 +158,33 @@ export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
 
   // Başlangıçta veri yükle ve subscription kur
   useEffect(() => {
-    if (enabled) {
-      loadData();
-      setupSubscription();
-    }
+    let isMounted = true;
+    
+    const initializeData = async () => {
+      if (enabled && isMounted) {
+        try {
+          await loadData();
+          if (isMounted) {
+            setupSubscription();
+          }
+        } catch (err) {
+          console.error(`Error initializing data for ${table}:`, err);
+        }
+      }
+    };
+
+    initializeData();
 
     return () => {
+      isMounted = false;
       if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
+        try {
+          subscriptionRef.current.unsubscribe();
+          console.log(`🧹 Cleaned up subscription for ${table}`);
+        } catch (err) {
+          console.error(`Error cleaning up subscription for ${table}:`, err);
+        }
+        subscriptionRef.current = null;
       }
     };
   }, [table, JSON.stringify(filters), enabled]);

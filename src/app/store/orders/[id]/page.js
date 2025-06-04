@@ -134,7 +134,7 @@ function StoreOrderDetailContent() {
       if (newStatus === 'delivered') {
         updates.actual_delivery_time = now;
         // Kapıda ödeme ise teslim edildiğinde ödeme durumunu güncelle
-        if (order.payment_method === 'cash') {
+        if (order.payment_method === 'cash' || order.payment_method === 'card_on_delivery') {
           updates.payment_status = 'paid';
         }
       }

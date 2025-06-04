@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import FavoriteButton from '@/components/FavoriteButton';
 
 /**
  * Restoran Kartı Bileşeni
@@ -34,18 +35,10 @@ const RestaurantCard = ({
   className = '',
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [isFav, setIsFav] = useState(isFavorite);
   
   // Hover işlevleri
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => setIsHovered(false);
-  
-  // Favori işlevleri
-  const handleFavoriteClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFav(!isFav);
-  };
   
   // Yıldız değerlendirmesini oluştur
   const renderStars = (rating) => {
@@ -107,28 +100,12 @@ const RestaurantCard = ({
           />
           
           {/* Favori butonu */}
-          <button 
-            className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
-              isFav 
-                ? 'bg-red-500 text-white' 
-                : 'bg-gray-100/80 text-gray-600 hover:bg-gray-200/90'
-            }`}
-            onClick={handleFavoriteClick}
-            aria-label={isFav ? 'Favorilerden çıkar' : 'Favorilere ekle'}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5" 
-              viewBox="0 0 20 20" 
-              fill="currentColor"
-            >
-              <path 
-                fillRule="evenodd" 
-                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" 
-                clipRule="evenodd" 
-              />
-            </svg>
-          </button>
+          <FavoriteButton
+            itemType="store"
+            itemId={id}
+            className="absolute top-3 right-3"
+            size="md"
+          />
           
           {/* Açık/Kapalı durumu */}
           {!isOpen && (
