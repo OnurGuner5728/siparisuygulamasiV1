@@ -1,2 +1,0 @@
-mağaza adres bilgileri /store/profile sayfasında düzgün yüklenmemiş. şehir, ilçe, mahalle ve adres bilgileri var, sadece adres
-doğru çekilmiş, şehir,ilçe,mahalle kısımları boş. database'e göre alınmalı.
