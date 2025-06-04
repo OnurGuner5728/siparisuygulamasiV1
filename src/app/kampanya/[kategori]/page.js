@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -8,8 +8,7 @@ import api from '@/lib/api';
 export default function CampaignCategoryPage({ params }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const resolvedParams = use(params);
-  const { kategori } = resolvedParams;
+  const { kategori } = params;
   const campaignId = searchParams.get('cid'); // URL'den kampanya ID'sini al
   
   const [campaigns, setCampaigns] = useState([]);
