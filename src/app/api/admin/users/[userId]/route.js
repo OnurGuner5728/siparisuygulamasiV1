@@ -2,8 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 // Admin client oluştur (server-side)
-const supabaseUrl = 'https://ozqsbbngkkssstmaktou.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96cXNiYm5na2tzc3N0bWFrdG91Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzg5OTMwMiwiZXhwIjoyMDYzNDc1MzAyfQ.H0pMW6qyeO4aXVVhwDfahzIkKoIJ-DyEMWdoui08v50';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY;
 
 const supabaseAdmin = createClient(
   supabaseUrl,
