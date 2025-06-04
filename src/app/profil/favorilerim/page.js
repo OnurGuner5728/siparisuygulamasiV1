@@ -255,7 +255,7 @@ function FavoriteCard({ favorite, detail, onRemove }) {
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
         <div className="relative">
           <img
-            src={detail.image || '/placeholder-product.jpg'}
+            src={detail.logo_url || '/placeholder-product.jpg'}
             alt={detail.name}
             className="w-full h-48 object-cover"
           />
