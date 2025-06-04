@@ -305,7 +305,7 @@ function FavoriteCard({ favorite, detail, onRemove }) {
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
         <div className="relative">
           <img
-            src={detail.cover_image || detail.logo || '/placeholder-store.jpg'}
+            src={detail.cover_image || detail.logo_url || '/placeholder-store.jpg'}
             alt={detail.name}
             className="w-full h-48 object-cover"
           />
@@ -325,9 +325,12 @@ function FavoriteCard({ favorite, detail, onRemove }) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center">
               <FiStar className="text-yellow-400 mr-1" size={14} />
-              <span className="text-sm text-gray-600">
+              <Link 
+                href={`/${getCategorySlug(detail.category?.name)}/store/${detail.id}/yorumlar`}
+                className="text-sm text-gray-600 hover:text-blue-600 hover:underline transition-colors"
+              >
                 {detail.rating || 0} ({detail.review_count || 0} değerlendirme)
-              </span>
+              </Link>
             </div>
             {detail.delivery_time_estimation && (
               <div className="flex items-center text-gray-500">
