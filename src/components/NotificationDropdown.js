@@ -13,8 +13,6 @@ const NotificationDropdown = () => {
   const { user, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentToast, setCurrentToast] = useState(null);
-  const buttonRef = useRef(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Real-time notifications hook
   const {
@@ -23,7 +21,7 @@ const NotificationDropdown = () => {
     error: hookError
   } = useNotifications(user?.id, {
     enabled: isAuthenticated && !!user?.id,
-    limit: 5, // Sadece son 5 bildirimi göster
+    limit: 10, // Daha fazla bildirim gösterelim
     onInsert: (newNotification) => {
       console.log('Yeni bildirim geldi:', newNotification);
       
@@ -39,26 +37,9 @@ const NotificationDropdown = () => {
             badge: '/icon-192x192.png'
           });
         }
-        
-        // İsteğe bağlı: Ses çalma
-        // const audio = new Audio('/notification-sound.mp3');
-        // audio.play().catch(console.error);
       }
     }
   });
-
-  // Dropdown açıldığında butonun pozisyonunu hesapla
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      
-      setDropdownPosition({
-        top: rect.bottom + scrollY + 8, // 8px gap
-        right: window.innerWidth - rect.right
-      });
-    }
-  }, [isOpen]);
 
   // Browser notification izni iste
   useEffect(() => {
@@ -110,6 +91,8 @@ const NotificationDropdown = () => {
       order_delivered: '📦',
       order_cancelled: '❌',
       new_order: '🔔',
+      new_review: '⭐',
+      review_response: '💬',
       store_registered: '🏪',
       store_approved: '✅',
       store_approval_revoked: '❌',
@@ -123,8 +106,47 @@ const NotificationDropdown = () => {
       // Bildirimi okundu olarak işaretle
       await api.markNotificationAsRead(notification.id);
       
+      // Popup'ı kapat
+      setIsOpen(false);
+      
       // Bildirim tipine göre yönlendirme
-      if (notification.type === 'store_registered') {
+      if (notification.type === 'new_review') {
+        // Yeni değerlendirme bildirimi - mağaza yorumlar sayfasına yönlendir
+        if (user?.role === 'store') {
+          window.location.href = '/store/yorumlar';
+        } else {
+          // Müşteri için uygun sayfa yok, ana sayfaya yönlendir
+          window.location.href = '/';
+        }
+      } else if (notification.type === 'review_response') {
+        // Yorum yanıt bildirimi
+        if (notification.data?.review_id && notification.data?.store_id) {
+          const reviewId = notification.data.review_id;
+          const storeId = notification.data.store_id;
+          
+          // Kullanıcı rolüne göre yönlendirme
+          if (user?.role === 'store') {
+            // Mağaza sahibi - kendi yorumlar sayfasına git
+            window.location.href = '/store/yorumlar';
+          } else {
+            // Müşteri - restoran sayfasındaki yorumlara git (kendi yorumunu ve cevabını görmek için)
+            window.location.href = `/yemek/store/${storeId}#review-${reviewId}`;
+          }
+        } else {
+          // Fallback - genel yorumlar sayfası
+          if (user?.role === 'store') {
+            window.location.href = '/store/yorumlar';
+          } else {
+            // Ana sayfaya yönlendir - genel değerlendirme sayfası yok
+            window.location.href = '/';
+          }
+        }
+      } else if (notification.type === 'new_review') {
+        // Yeni yorum bildirimi - sadece mağaza sahipleri için
+        if (user?.role === 'store' && notification.data?.review_id) {
+          window.location.href = '/store/yorumlar';
+        }
+      } else if (notification.type === 'store_registered') {
         // Mağaza kayıt bildirimi - admin/stores sayfasına yönlendir
         window.location.href = '/admin/stores';
       } else if (notification.type === 'store_approved' || notification.type === 'store_approval_revoked') {
@@ -135,7 +157,9 @@ const NotificationDropdown = () => {
       } else if (notification.data?.order_id) {
         // Sipariş bildirimi - sipariş detayına yönlendir
         const orderId = notification.data.order_id;
-        if (user?.role === 'store') {
+        if (user?.role === 'store' && notification.type === 'new_order') {
+          window.location.href = `/store/orders/${orderId}`;
+        } else if (user?.role === 'store') {
           window.location.href = `/store/orders/${orderId}`;
         } else {
           window.location.href = `/profil/siparisler/${orderId}`;
@@ -147,59 +171,33 @@ const NotificationDropdown = () => {
     }
   };
 
+  // Popup dışına tıklandığında kapat
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setIsOpen(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return null;
   }
 
-  return (
-    <>
-      <div className="relative">
-        {/* Bildirim İkonu */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="relative p-2 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
-          aria-label="Bildirimler"
-          ref={buttonRef}
-        >
-          <FiBell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-          {/* Pulse animasyonu okunmamış bildirim varsa */}
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 rounded-full h-5 w-5 animate-ping"></span>
-          )}
-        </button>
-      </div>
-
-      {/* Notification Dropdown Portal - Portal ile body'ye taşınıyor */}
-      {isOpen && typeof window !== 'undefined' && createPortal(
-        <div 
-          className="fixed inset-0 z-[10002]" 
-          onClick={() => setIsOpen(false)}
+  const notificationModal = isOpen && (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[999999]"
+      onClick={handleBackdropClick}
         >
           <div 
-            className="absolute w-80 sm:w-80 md:right-4 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden"
-            style={{
-              top: `${dropdownPosition.top}px`,
-              right: window.innerWidth < 768 ? '50%' : `${dropdownPosition.right}px`,
-              transform: window.innerWidth < 768 ? 'translateX(50%)' : 'none',
-            }}
-            onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-hidden mx-auto my-auto"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-gray-200 bg-orange-50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Bildirimler
-                  {unreadCount > 0 && (
-                    <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                      {unreadCount} yeni
-                    </span>
-                  )}
-                </h3>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Bildirimler</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {unreadCount > 0 ? `${unreadCount} yeni bildirim` : 'Tüm bildirimler okundu'}
+            </p>
+          </div>
                 <div className="flex items-center space-x-2">
                   {/* Tümünü Okundu İşaretle */}
                   {unreadCount > 0 && (
@@ -209,88 +207,93 @@ const NotificationDropdown = () => {
                         e.stopPropagation();
                         markAllAsRead();
                       }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        markAllAsRead();
-                      }}
-                      className="text-xs text-orange-600 hover:text-orange-700 active:text-orange-800 font-medium transition-colors touch-manipulation"
+                className="p-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-full transition-colors"
                       title="Tümünü Okundu İşaretle"
-                      style={{ WebkitTapHighlightColor: 'transparent' }}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                <FiCheck className="w-4 h-4" />
                     </button>
                   )}
-                  {/* Tümünü Gör */}
-                  <Link
-                    href="/profil/bildirimler"
-                    className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+            {/* Kapat */}
+            <button
                     onClick={() => setIsOpen(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                   >
-                    Tümünü Gör
-                  </Link>
-                </div>
+              <FiX className="w-5 h-5 text-gray-500" />
+            </button>
               </div>
             </div>
 
-            {/* Bildirim Listesi */}
-            <div className="max-h-80 overflow-y-auto">
+        {/* Content */}
+        <div className="p-6 max-h-96 overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto"></div>
-                  <p className="text-sm text-gray-500 mt-2">Bildirimler yükleniyor...</p>
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="p-6 text-center">
-                  <FiBell className="mx-auto text-gray-300 text-3xl mb-2" />
-                  <p className="text-sm text-gray-500">Henüz bildiriminiz yok</p>
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiBell className="w-8 h-8 text-orange-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">Henüz bildiriminiz yok</h3>
+              <p className="text-gray-500">Siparişleriniz ve diğer güncellemeler burada görünecek</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
-                  {notifications.slice(0, 5).map((notification) => (
+            <div className="space-y-3">
+              {notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-orange-50 active:bg-orange-100 cursor-pointer transition-colors touch-manipulation select-none ${
-                        !notification.is_read ? 'bg-orange-50/50' : ''
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    !notification.is_read 
+                      ? 'border-orange-500 bg-orange-50' 
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleNotificationClick(notification);
-                      }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleNotificationClick(notification);
-                      }}
-                      style={{ WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <span className="text-lg flex-shrink-0">
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <div className="flex items-start">
+                    <div className="h-10 w-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                      <span className="text-lg">
                           {getNotificationIcon(notification.type)}
                         </span>
+                    </div>
+                    
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className={`text-sm font-medium truncate ${
-                              !notification.is_read ? 'text-gray-900' : 'text-gray-700'
-                            }`}>
+                        <h3 className="font-medium text-gray-900 truncate">
                               {notification.title}
-                            </p>
-                            <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500 flex-shrink-0">
                               {formatTime(notification.created_at)}
                             </span>
-                          </div>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {notification.message}
-                          </p>
                           {!notification.is_read && (
-                            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                           )}
                         </div>
                       </div>
+                      
+                      <p className="text-gray-600 text-sm mt-2 leading-relaxed line-clamp-3">
+                        {notification.message}
+                      </p>
+                      
+                      {notification.type && (
+                        <p className="text-gray-500 text-xs mt-2">
+                          {notification.type === 'new_order' && 'Yeni Sipariş'}
+                          {notification.type === 'order_confirmed' && 'Sipariş Onaylandı'}
+                          {notification.type === 'order_preparing' && 'Sipariş Hazırlanıyor'}
+                          {notification.type === 'order_shipped' && 'Sipariş Yola Çıktı'}
+                          {notification.type === 'order_delivered' && 'Sipariş Teslim Edildi'}
+                          {notification.type === 'order_cancelled' && 'Sipariş İptal Edildi'}
+                          {notification.type === 'new_review' && 'Yeni Değerlendirme'}
+                          {notification.type === 'review_response' && 'Yoruma Yanıt'}
+                          {notification.type === 'store_registered' && 'Mağaza Kaydı'}
+                          {notification.type === 'store_approved' && 'Mağaza Onaylandı'}
+                          {notification.type === 'store_approval_revoked' && 'Mağaza Onayı İptal'}
+                          {notification.type === 'system' && 'Sistem Bildirimi'}
+                        </p>
+                      )}
                     </div>
+                  </div>
+                </div>
                   ))}
                 </div>
               )}
@@ -298,10 +301,10 @@ const NotificationDropdown = () => {
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-4 py-3 border-t border-gray-200 bg-orange-50">
+          <div className="px-6 py-4 border-t border-gray-200 bg-orange-50">
                 <Link
                   href="/profil/bildirimler"
-                  className="block text-center text-sm text-orange-600 hover:text-orange-700 font-medium"
+              className="block text-center text-orange-600 hover:text-orange-700 text-sm font-medium"
                   onClick={() => setIsOpen(false)}
                 >
                   Tüm Bildirimleri Gör ({notifications.length})
@@ -309,9 +312,31 @@ const NotificationDropdown = () => {
               </div>
             )}
           </div>
-        </div>,
-        document.body
-      )}
+    </div>
+  );
+
+  return (
+    <>
+      {/* Bildirim İkonu */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="relative p-2 rounded-2xl bg-orange-100 backdrop-blur-sm hover:bg-orange-200 text-orange-500 hover:scale-105 transition-all duration-200 border border-orange-200"
+        aria-label="Bildirimler"
+      >
+        <FiBell className="h-5 w-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+        {/* Pulse animasyonu okunmamış bildirim varsa */}
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 rounded-full h-5 w-5 animate-ping opacity-75"></span>
+        )}
+      </button>
+
+      {/* Notification Modal - Portal ile body'ye taşınıyor */}
+      {typeof window !== 'undefined' && createPortal(notificationModal, document.body)}
 
       {/* Toast Notification - Portal ile body'ye taşınıyor */}
       {currentToast && typeof window !== 'undefined' && createPortal(

@@ -72,6 +72,12 @@ export default function StoreDetailPage({ params }) {
           
           const productsData = await api.getProducts({ store_id: id });
           setProducts(productsData || []);
+          
+          // URL'de hash varsa (örn: #review-123) reviews popup'ını aç
+          if (window.location.hash.startsWith('#review-')) {
+            setShowReviewsPopup(true);
+            loadStoreReviews();
+          }
         }
       } catch (error) {
         console.error('Restoran ve ürün verilerini yüklerken hata:', error);
@@ -200,8 +206,27 @@ export default function StoreDetailPage({ params }) {
   const loadStoreReviews = async () => {
     try {
       setReviewsLoading(true);
-      const reviews = await api.getReviews({ store_id: id });
-      setStoreReviews(reviews);
+      const reviews = await api.getReviews({ store_id: id, review_type: 'store' });
+      
+      // Her yorum için cevapları da yükle
+      const reviewsWithResponses = await Promise.all(
+        reviews.map(async (review) => {
+          const responses = await api.getReviewResponses(review.id);
+          return { ...review, responses };
+        })
+      );
+      
+      setStoreReviews(reviewsWithResponses);
+      
+      // Eğer URL'de belirli bir review hash'i varsa, o review'a scroll yap
+      if (window.location.hash.startsWith('#review-')) {
+        setTimeout(() => {
+          const element = document.querySelector(window.location.hash);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
     } catch (error) {
       console.error('Reviews yüklenemedi:', error);
     } finally {
@@ -678,9 +703,18 @@ export default function StoreDetailPage({ params }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
                 </div>
               ) : storeReviews.length > 0 ? (
+                <>
                 <div className="space-y-4">
-                  {storeReviews.map((review) => (
-                    <div key={review.id} className="border border-gray-200 rounded-lg p-4">
+                    {storeReviews.slice(0, 5).map((review) => (
+                    <div 
+                      key={review.id} 
+                      id={`review-${review.id}`}
+                      className={`border rounded-lg p-4 transition-colors ${
+                        window.location.hash === `#review-${review.id}`
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <p className="font-medium text-gray-900">{review.user?.name || 'Anonim Kullanıcı'}</p>
@@ -696,14 +730,45 @@ export default function StoreDetailPage({ params }) {
                           {new Date(review.created_at).toLocaleDateString('tr-TR')}
                         </span>
                       </div>
-                      <p className="text-gray-600 text-sm">{review.comment}</p>
+                      <p className="text-gray-600 text-sm mb-3">{review.comment}</p>
+                      
+                      {/* Store Response */}
+                      {review.review_responses && review.review_responses.length > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-3 mt-3">
+                          <div className="flex items-center mb-2">
+                            <span className="text-xs font-medium text-gray-600">🏪 {store.name} yanıtladı:</span>
+                          </div>
+                          <p className="text-sm text-gray-700">{review.review_responses[0].response_text}</p>
+                          <span className="text-xs text-gray-500 mt-1 block">
+                            {new Date(review.review_responses[0].created_at).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <Link 
+                      href={`/store/${id}/yorumlar?cid=1`}
+                      className="block w-full bg-orange-500 text-white text-center py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                      onClick={closeAllPopups}
+                    >
+                      Tüm Yorumları Görüntüle ({storeReviews.length})
+                    </Link>
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">⭐</div>
-                  <p className="text-gray-500">Henüz değerlendirme yok.</p>
+                  <p className="text-gray-500 mb-4">Henüz değerlendirme yok.</p>
+                  <Link 
+                    href={`/store/${id}/yorumlar?cid=1`}
+                    className="inline-block bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                    onClick={closeAllPopups}
+                  >
+                    İlk Yorumu Siz Yazın
+                  </Link>
                 </div>
               )}
             </div>

@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import api from '@/lib/api';
 import { FiStar, FiArrowLeft, FiUser, FiCheck } from 'react-icons/fi';
-import { use } from 'react';
 
 export default function OrderReviewPage({ params: promiseParams }) {
   return (
@@ -44,7 +43,7 @@ function OrderReviewContent({ promiseParams }) {
         // Sipariş bilgilerini al
         const orderData = await api.getOrderById(params.id);
         
-        if (!orderData || orderData.customer_id !== user.id) {
+        if (!orderData || orderData.user_id !== user.id) {
           setError('Bu sipariş için değerlendirme yapma yetkiniz yok.');
           return;
         }
@@ -57,8 +56,8 @@ function OrderReviewContent({ promiseParams }) {
         
         setOrder(orderData);
         
-        // Mevcut değerlendirme var mı kontrol et
-        const existingReviewData = await api.getUserReviewForStore(user.id, orderData.store_id);
+        // Mevcut değerlendirme var mı kontrol et (sipariş bazlı)
+        const existingReviewData = await api.getUserReviewForOrder(user.id, orderData.id);
         if (existingReviewData) {
           setExistingReview(existingReviewData);
           setRating(existingReviewData.rating);
@@ -66,7 +65,7 @@ function OrderReviewContent({ promiseParams }) {
         }
         
       } catch (err) {
-        console.error('Sipariş ve değerlendirme yüklenirken hata:', err);
+        console.error('Sipariş ve değerlendirme yüklenirken hata:', err.message || err);
         setError('Bilgiler yüklenemedi.');
       } finally {
         setLoading(false);
@@ -100,19 +99,48 @@ function OrderReviewContent({ promiseParams }) {
         comment: comment.trim()
       };
       
+      let newReview = null;
+      
       if (existingReview) {
         // Mevcut değerlendirmeyi güncelle
-        await api.updateReview(existingReview.id, {
+        newReview = await api.updateReview(existingReview.id, {
           rating: rating,
           comment: comment.trim()
         });
       } else {
         // Yeni değerlendirme oluştur
-        await api.createReview(reviewData);
+        newReview = await api.createReview(reviewData);
       }
       
       // Mağaza rating'ini güncelle
       await api.updateStoreRating(order.store_id);
+      
+      // Mağaza sahibine bildirim gönder (sadece yeni değerlendirmeler için)
+      if (!existingReview) {
+        try {
+          // Mağaza bilgilerini al (owner_id için)
+          const storeData = await api.getStoreById(order.store_id);
+          
+          if (storeData?.owner_id && storeData.owner_id !== user.id) {
+            await api.createNotification({
+              user_id: storeData.owner_id,
+              type: 'new_review',
+              title: 'Yeni Değerlendirme',
+              message: `${user.name || 'Bir müşteri'} mağazanız için ${rating} yıldızlı bir değerlendirme yaptı.`,
+              data: {
+                review_id: newReview.id,
+                order_id: order.id,
+                store_id: order.store_id,
+                store_name: order.store?.name || storeData.name,
+                rating: rating,
+                customer_name: user.name || 'Anonim Müşteri'
+              }
+            });
+          }
+        } catch (notificationError) {
+          console.warn('Mağaza sahibine bildirim gönderilirken hata:', notificationError.message || notificationError);
+        }
+      }
       
       setSuccess(true);
       
@@ -122,7 +150,7 @@ function OrderReviewContent({ promiseParams }) {
       }, 2000);
       
     } catch (error) {
-      console.error('Değerlendirme kaydedilirken hata:', error);
+      console.error('Değerlendirme kaydedilirken hata:', error.message || error);
       alert('Değerlendirme kaydedilemedi. Lütfen tekrar deneyin.');
     } finally {
       setSubmitting(false);
@@ -200,112 +228,110 @@ function OrderReviewContent({ promiseParams }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link 
-            href={`/profil/siparisler/${params.id}`}
-            className="inline-flex items-center text-orange-600 hover:text-orange-700 mb-4"
-          >
-            <FiArrowLeft className="mr-2" size={16} />
-            Sipariş Detayına Dön
-          </Link>
-          
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {existingReview ? 'Değerlendirmeni Güncelle' : 'Siparişini Değerlendir'}
-          </h1>
-          <p className="text-gray-600">
-            Sipariş No: #{order.id.substring(0, 8)} - {order.store?.name}
-          </p>
-        </div>
-
-        {/* Sipariş Özeti */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Sipariş Özeti</h3>
-          
-          <div className="space-y-2">
-            {order.order_items?.slice(0, 3).map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-gray-600">
-                  {item.quantity}x {item.name}
-                </span>
-                <span className="text-gray-900 font-medium">
-                  {(item.total || 0).toFixed(2)} TL
-                </span>
-              </div>
-            ))}
-            
-            {order.order_items?.length > 3 && (
-              <div className="text-sm text-gray-500 italic">
-                +{order.order_items.length - 3} ürün daha...
-              </div>
-            )}
-            
-            <div className="pt-2 border-t border-gray-200 flex justify-between font-semibold">
-              <span>Toplam</span>
-              <span>{order.total.toFixed(2)} TL</span>
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Header */}
+          <div className="bg-orange-600 text-white p-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold">
+                {existingReview ? 'Değerlendirmeni Güncelle' : 'Siparişini Değerlendir'}
+              </h1>
+              <Link 
+                href={`/profil/siparisler/${params.id}`}
+                className="text-white hover:text-orange-200 transition-colors"
+              >
+                <FiArrowLeft size={24} />
+              </Link>
             </div>
           </div>
-        </div>
 
-        {/* Değerlendirme Formu */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Sipariş Bilgileri */}
+          {order && (
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center mb-4">
+                <div className="bg-orange-100 text-orange-600 rounded-full p-3 mr-4">
+                  <FiCheck size={24} />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900">{order.store?.name || 'Bilinmeyen Mağaza'}</h2>
+                  <p className="text-gray-600 text-sm">
+                    Sipariş No: #{order.id.substring(0, 8)}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Sipariş Tarihi:</span>
+                  <p className="font-medium">
+                    {new Date(order.order_date).toLocaleDateString('tr-TR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Toplam Tutar:</span>
+                  <p className="font-medium">{order.total_amount.toFixed(2).replace('.', ',')} TL</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Değerlendirme Formu */}
+          <form onSubmit={handleSubmit} className="p-6">
             {/* Puan Verme */}
-            <div>
+            <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Mağazaya Kaç Puan Veriyorsun?
+                Mağazayı puanla
               </label>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center justify-center space-x-2 py-4">
                 {renderStars(true)}
               </div>
-              {rating > 0 && (
-                <p className="mt-2 text-sm text-gray-600">
-                  {rating === 1 && "Çok kötü"}
-                  {rating === 2 && "Kötü"}
-                  {rating === 3 && "Orta"}
-                  {rating === 4 && "İyi"}
-                  {rating === 5 && "Mükemmel"}
-                </p>
-              )}
+              <p className="text-center text-sm text-gray-500 mt-2">
+                {rating === 0 ? 'Lütfen bir puan verin' : 
+                 rating === 1 ? 'Çok Kötü' :
+                 rating === 2 ? 'Kötü' :
+                 rating === 3 ? 'Orta' :
+                 rating === 4 ? 'İyi' : 'Mükemmel'}
+              </p>
             </div>
 
-            {/* Yorum */}
-            <div>
+            {/* Yorum Yazma */}
+            <div className="mb-6">
               <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
                 Yorumun
               </label>
               <textarea
                 id="comment"
                 rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                placeholder="Siparişin hakkında düşüncelerini paylaş..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Siparişin ve mağaza hakkındaki deneyimini paylaş..."
-                required
+                maxLength={500}
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Minimum 10 karakter gereklidir
-              </p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">
+                  Deneyimini detaylı anlat ki diğer kullanıcılara yardımcı ol.
+                </p>
+                <span className="text-xs text-gray-400">
+                  {comment.length}/500
+                </span>
+              </div>
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end space-x-3">
-              <Link
-                href={`/profil/siparisler/${params.id}`}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-              >
-                İptal
-              </Link>
-              
-              <button
-                type="submit"
-                disabled={submitting || rating === 0 || comment.trim().length < 10}
-                className="px-6 py-2 bg-orange-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Kaydediliyor...' : (existingReview ? 'Güncelle' : 'Değerlendirmeyi Kaydet')}
-              </button>
-            </div>
+            {/* Gönderme Butonu */}
+            <button
+              type="submit"
+              disabled={submitting || rating === 0 || !comment.trim()}
+              className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors"
+            >
+              {submitting ? 'Kaydediliyor...' : (existingReview ? 'Güncelle' : 'Değerlendirmeyi Kaydet')}
+            </button>
           </form>
         </div>
       </div>

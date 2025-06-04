@@ -65,7 +65,9 @@ export default function RootLayout({ children }) {
                               <div className="enhanced-gradient min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
                                 {!hideNavigation && <HeaderWrapper onCartClick={handleCartOpen} />}
                                 <main className={`flex-1 ${!hideNavigation ? 'mb-16 md:mb-0' : ''}`}>
-                                  {children}
+                                  <div className="app-container">
+                                    {children}
+                                  </div>
                                 </main>
                                 {!hideNavigation && <Footer />}
                                 {!hideNavigation && <MobileNavbar onCartClick={handleCartOpen} />}

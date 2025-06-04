@@ -142,24 +142,14 @@ export const useSupabaseRealtime = (table, filters = {}, options = {}) => {
           console.log(`✅ Successfully subscribed to ${table} changes`);
         } else if (status === 'CHANNEL_ERROR') {
           console.error(`❌ Error subscribing to ${table} changes`, err);
-          // Hata durumunda subscription'ı yeniden kurmayı dene
-          setTimeout(() => {
-            if (enabled && subscriptionRef.current) {
-              console.log(`🔄 Retrying subscription for ${table}...`);
-              setupSubscription();
-            }
-          }, 5000); // 5 saniye sonra tekrar dene
+          // Hata durumunda subscription'ı yeniden kurmaya çalışma
+          // Çift subscription sorununa neden olur
         } else if (status === 'CLOSED') {
           console.log(`🔌 Subscription closed for ${table}`);
         } else if (status === 'TIMED_OUT') {
           console.log(`⏰ Subscription timed out for ${table}`);
-          // Timeout durumunda yeniden bağlanmayı dene
-          setTimeout(() => {
-            if (enabled && subscriptionRef.current) {
-              console.log(`🔄 Retrying subscription after timeout for ${table}...`);
-              setupSubscription();
-            }
-          }, 3000);
+          // Timeout durumunda yeniden bağlanmaya çalışma
+          // Çift subscription sorununa neden olur
         }
       });
 

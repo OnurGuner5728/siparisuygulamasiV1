@@ -102,7 +102,7 @@ export default function ProfileSidebar({ activeTab = 'profile' }) {
         {/* Profil özeti */}
         <div className="p-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
           <div className="flex items-center">
-            <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mr-4 ring-2 ring-white/30">
+            <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mr-4 ring-2 ring-white/30">
               {user?.avatar_url ? (
                 <img 
                   src={user.avatar_url} 
@@ -110,7 +110,7 @@ export default function ProfileSidebar({ activeTab = 'profile' }) {
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
-                <FiUser className="w-8 h-8 text-white" />
+                <FiUser className="w-12 h-12 text-white" />
               )}
             </div>
             <div>

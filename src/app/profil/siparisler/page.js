@@ -30,7 +30,27 @@ function OrdersList() {
       try {
         setLoading(true);
         const userOrders = await api.getUserOrders(user.id);
-        setOrders(userOrders || []);
+        
+        // Her sipariş için değerlendirme durumunu kontrol et
+        const ordersWithReviewStatus = await Promise.all(
+          (userOrders || []).map(async (order) => {
+            if (order.status === 'delivered') {
+              const existingReview = await api.getUserReviewForOrder(user.id, order.id);
+              return {
+                ...order,
+                has_review: !!existingReview,
+                review: existingReview
+              };
+            }
+            return {
+              ...order,
+              has_review: false,
+              review: null
+            };
+          })
+        );
+        
+        setOrders(ordersWithReviewStatus);
       } catch (error) {
         console.error('Siparişler yüklenirken hata:', error);
       } finally {
@@ -253,12 +273,22 @@ function OrdersList() {
                           )}
                           
                           {/* Sipariş tamamlandıysa ve henüz değerlendirme yapılmadıysa değerlendirme butonu göster */}
-                          {order.status === 'delivered' && (
+                          {order.status === 'delivered' && !order.has_review && (
                             <Link 
-                              href={`/profil/siparisler/${order.id}/değerlendirme`}
+                              href={`/profil/siparisler/${order.id}/degerlendirme`}
                               className="text-orange-600 hover:text-orange-800 text-sm font-medium ml-4"
                             >
                               Değerlendir
+                            </Link>
+                          )}
+                          
+                          {/* Değerlendirme yapılmışsa göster */}
+                          {order.status === 'delivered' && order.has_review && (
+                            <Link 
+                              href={`/profil/siparisler/${order.id}/degerlendirme`}
+                              className="text-green-600 hover:text-green-800 text-sm font-medium ml-4"
+                            >
+                              Değerlendirme Güncelle
                             </Link>
                           )}
                         </div>

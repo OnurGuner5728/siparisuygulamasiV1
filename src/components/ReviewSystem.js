@@ -1,53 +1,101 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FiStar, FiEdit, FiTrash2, FiPlus, FiFilter, FiUser, FiCalendar, FiMoreVertical } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react';
+import { FiStar, FiEdit, FiTrash2, FiPlus, FiFilter, FiUser, FiCalendar, FiMoreVertical, FiMessageSquare } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
-import { useReviews } from '@/hooks/useSupabaseRealtime';
 import * as api from '@/lib/api';
 
-const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
+const ReviewSystem = ({ storeId, orderId = null, showHeader = true }) => {
   const { user, isAuthenticated } = useAuth();
   const [showAddReview, setShowAddReview] = useState(false);
   const [filterRating, setFilterRating] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [editingReview, setEditingReview] = useState(null);
   const [userExistingReview, setUserExistingReview] = useState(null);
+  const [showResponseModal, setShowResponseModal] = useState(null);
+  const [userReviewableOrders, setUserReviewableOrders] = useState([]);
 
-  // Real-time reviews hook
-  const {
-    data: allReviews,
-    loading,
-    error: hookError,
-    insert: insertReview,
-    update: updateReview,
-    remove: removeReview
-  } = useReviews(storeId, {
-    enabled: !!storeId,
-    onInsert: (newReview) => {
-      console.log('Yeni yorum eklendi:', newReview);
-      // Mağaza rating'ini güncelle
-      api.updateStoreRating(storeId);
-    },
-    onUpdate: (updatedReview) => {
-      console.log('Yorum güncellendi:', updatedReview);
-      // Mağaza rating'ini güncelle
-      api.updateStoreRating(storeId);
-    },
-    onDelete: (deletedReview) => {
-      console.log('Yorum silindi:', deletedReview);
-      // Mağaza rating'ini güncelle
-      api.updateStoreRating(storeId);
-      // Eğer kullanıcının kendi yorumuysa state'i temizle
-      if (userExistingReview && userExistingReview.id === deletedReview.id) {
-        setUserExistingReview(null);
+  const [allReviews, setAllReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [hookError, setHookError] = useState(null);
+
+  // Reviews'u yükle ve state'i güncelle
+  const loadReviews = async () => {
+    try {
+      setLoading(true);
+      
+      // Eğer orderId varsa, o siparişin yorumunu getir
+      const reviewsData = orderId 
+        ? await api.getOrderReviews(orderId)
+        : await api.getReviews({ store_id: storeId });
+      
+      setAllReviews(reviewsData || []);
+      
+      // Kullanıcının değerlendirme yapabileceği siparişleri de yükle
+      if (isAuthenticated && user && !orderId) {
+        const reviewableOrders = await api.getUserReviewableOrders(user.id);
+        // Sadece bu mağazaya ait siparişleri filtrele
+        const storeOrders = reviewableOrders.filter(order => order.store_id === storeId);
+        setUserReviewableOrders(storeOrders);
       }
+    } catch (error) {
+      console.error('Reviews yüklenirken hata:', error);
+      setHookError(error);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
+
+  // İlk yükleme
+  useEffect(() => {
+    if (storeId) {
+      loadReviews();
+    }
+  }, [storeId, orderId, isAuthenticated, user]);
+
+  // Manual CRUD işlemleri - hemen state'i güncelle
+  const insertReview = async (reviewData) => {
+    try {
+      const result = await api.createReview(reviewData);
+      // State'i hemen güncelle
+      setAllReviews(prev => [result, ...prev]);
+      return { data: result, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  };
+
+  const updateReview = async (reviewId, updates) => {
+    try {
+      const result = await api.updateReview(reviewId, updates);
+      // State'i hemen güncelle
+      setAllReviews(prev => prev.map(review => 
+        review.id === reviewId ? result : review
+      ));
+      return { data: result, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  };
+
+  const removeReview = async (reviewId) => {
+    try {
+      await api.deleteReview(reviewId);
+      // State'i hemen güncelle
+      setAllReviews(prev => prev.filter(review => review.id !== reviewId));
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
 
   // Filtrelenmiş ve sıralanmış yorumları hesapla
   const reviews = allReviews
     .filter(review => {
+      // Artık sadece store review'lar var ve order_id gerekli
+      if (!review.order_id) return false;
+      
+      // Rating filtresi
       if (filterRating === 'all') return true;
       return review.rating === parseInt(filterRating);
     })
@@ -75,12 +123,26 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
 
   const handleAddReview = async (reviewData) => {
     try {
+      // Mağaza sahibinin kendi mağazasına yorum yazmasını engelle
+      if (user?.storeInfo?.id === storeId) {
+        alert('Kendi mağazanıza yorum yazamazsınız.');
+        return;
+      }
+
+      // Order ID kontrolü - artık zorunlu
+      if (!reviewData.order_id) {
+        alert('Yorum yapmak için bir sipariş seçmelisiniz.');
+        return;
+      }
+
       const newReviewData = {
         user_id: user.id,
         store_id: storeId,
+        order_id: reviewData.order_id,
         rating: reviewData.rating,
+        title: reviewData.title || null,
         comment: reviewData.comment,
-        order_id: reviewData.order_id || null
+        is_anonymous: reviewData.is_anonymous || false
       };
 
       const { data: newReview, error } = await insertReview(newReviewData);
@@ -89,9 +151,39 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
       
       setShowAddReview(false);
       setUserExistingReview(newReview);
+      
+      // Store rating güncellemesi (artık trigger otomatik yapıyor)
+      // await api.updateStoreRating(storeId);
+      
+      // Değerlendirilebilir siparişleri yeniden yükle
+      const reviewableOrders = await api.getUserReviewableOrders(user.id);
+      const storeOrders = reviewableOrders.filter(order => order.store_id === storeId);
+      setUserReviewableOrders(storeOrders);
+      
+      // Mağaza sahibine bildirim gönder
+      try {
+        const store = await api.getStoreById(storeId);
+        if (store?.owner_id) {
+          await api.createNotification({
+            user_id: store.owner_id,
+            type: 'new_review',
+            title: 'Yeni Değerlendirme',
+            message: `${newReview.is_anonymous ? 'Anonim bir müşteri' : (user?.name || 'Bir müşteri')} mağazanıza ${newReview.rating} yıldız verdi.`,
+            data: {
+              review_id: newReview.id,
+              store_id: storeId,
+              order_id: reviewData.order_id,
+              rating: newReview.rating,
+              reviewer_name: newReview.is_anonymous ? 'Anonim' : (user?.name || 'Anonim')
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.warn('Bildirim gönderilirken hata:', notificationError.message || notificationError);
+      }
     } catch (error) {
-      console.error('Error adding review:', error);
-      alert('Yorum eklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+      console.error('Error adding review:', error.message || error);
+      alert(error.message || 'Yorum eklenirken bir hata oluştu. Lütfen tekrar deneyin.');
     }
   };
 
@@ -99,15 +191,22 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
     try {
       const { data: updatedReview, error } = await updateReview(editingReview.id, {
         rating: reviewData.rating,
-        comment: reviewData.comment
+        title: reviewData.title || null,
+        comment: reviewData.comment,
+        is_anonymous: reviewData.is_anonymous
       });
       
       if (error) throw error;
       
       setEditingReview(null);
       setUserExistingReview(updatedReview);
+      
+      // Store rating güncellemesi
+      if (type === 'store') {
+        await api.updateStoreRating(storeId);
+      }
     } catch (error) {
-      console.error('Error updating review:', error);
+      console.error('Error updating review:', error.message || error);
       alert('Yorum güncellenirken bir hata oluştu. Lütfen tekrar deneyin.');
     }
   };
@@ -118,8 +217,18 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
     try {
       const { error } = await removeReview(reviewId);
       if (error) throw error;
+      
+      // Store rating güncellemesi
+      if (type === 'store') {
+        await api.updateStoreRating(storeId);
+      }
+      
+      // Kullanıcının mevcut yorumunu temizle
+      if (userExistingReview && userExistingReview.id === reviewId) {
+        setUserExistingReview(null);
+      }
     } catch (error) {
-      console.error('Error deleting review:', error);
+      console.error('Error deleting review:', error.message || error);
       alert('Yorum silinirken bir hata oluştu. Lütfen tekrar deneyin.');
     }
   };
@@ -172,13 +281,14 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
+    <div className={showHeader ? "bg-white rounded-lg shadow-lg p-6" : ""}>
       {/* Header */}
+      {showHeader && (
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-bold text-gray-900">
           Değerlendirmeler ({totalReviews})
         </h3>
-        {isAuthenticated && !userExistingReview && (
+          {isAuthenticated && !userExistingReview && user?.storeInfo?.id !== storeId && (
           <button
             onClick={() => setShowAddReview(true)}
             className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors duration-200"
@@ -197,6 +307,20 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
           </button>
         )}
       </div>
+      )}
+
+      {/* Yorum Ekle Butonu (header olmadığında) */}
+      {!showHeader && isAuthenticated && !userExistingReview && user?.storeInfo?.id !== storeId && (
+        <div className="mb-6">
+          <button
+            onClick={() => setShowAddReview(true)}
+            className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors duration-200"
+          >
+            <FiPlus className="mr-2" />
+            Yorum Ekle
+          </button>
+        </div>
+      )}
 
       {/* Rating Summary */}
       {totalReviews > 0 && (
@@ -292,7 +416,7 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
           <p className="text-gray-600 mb-6">
             İlk yorumu siz yazın ve diğer müşterilere yardımcı olun!
           </p>
-          {isAuthenticated && (
+          {isAuthenticated && user?.storeInfo?.id !== storeId && (
             <button
               onClick={() => setShowAddReview(true)}
               className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors duration-200"
@@ -308,6 +432,7 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
               key={review.id}
               review={review}
               currentUser={user}
+              storeId={storeId}
               onEdit={() => setEditingReview(review)}
               onDelete={() => handleDeleteReview(review.id)}
             />
@@ -321,6 +446,7 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
           review={editingReview}
           storeId={storeId}
           productId={productId}
+          type={type}
           onClose={() => {
             setShowAddReview(false);
             setEditingReview(null);
@@ -332,25 +458,113 @@ const ReviewSystem = ({ storeId, productId = null, type = 'store' }) => {
   );
 };
 
-const ReviewCard = ({ review, currentUser, onEdit, onDelete }) => {
+const ReviewCard = ({ review, currentUser, onEdit, onDelete, storeId }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [helpfulCount, setHelpfulCount] = useState(review.helpful_count || 0);
   const [isHelpful, setIsHelpful] = useState(false);
+  const [responses, setResponses] = useState([]);
+  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [responseText, setResponseText] = useState('');
+  const [loadingResponses, setLoadingResponses] = useState(true);
 
   const isOwner = currentUser?.id === review.user_id;
   const isAdmin = currentUser?.role === 'admin';
+  const isStoreOwner = currentUser?.role === 'store_owner' || currentUser?.store_id === storeId;
 
-  // API'den gelen user bilgilerini kullan
-  const userName = review.user?.name || 'Anonim Kullanıcı';
-  const userAvatar = review.user?.avatar_url || null;
+  // Anonim yorum desteği - Anonimlik mutlak korunmalı
+  const userName = review.is_anonymous ? 'Anonim Müşteri' : (review.user?.name || 'Anonim Kullanıcı');
+  const userAvatar = review.is_anonymous ? null : (review.user?.avatar_url || null);
 
-  const handleHelpful = () => {
-    if (isHelpful) {
-      setHelpfulCount(prev => prev - 1);
+  // Review responses ve like durumunu yükle
+  useEffect(() => {
+    const fetchResponses = async () => {
+      try {
+        setLoadingResponses(true);
+        const responseData = await api.getReviewResponses(review.id);
+        setResponses(responseData);
+      } catch (error) {
+        console.error('Cevaplar yüklenirken hata:', error);
+      } finally {
+        setLoadingResponses(false);
+      }
+    };
+
+    const fetchLikeStatus = async () => {
+      if (currentUser?.id) {
+        try {
+          const liked = await api.checkReviewLike(review.id, currentUser.id);
+          setIsHelpful(liked);
+          const count = await api.getReviewLikeCount(review.id);
+          setHelpfulCount(count);
+        } catch (error) {
+          console.error('Like durumu kontrol hatası:', error);
+        }
+      }
+    };
+
+    fetchResponses();
+    fetchLikeStatus();
+  }, [review.id, currentUser?.id]);
+
+  const handleHelpful = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      const result = await api.likeReview(review.id, currentUser.id);
+      
+      if (result.action === 'liked') {
+        setIsHelpful(true);
+        setHelpfulCount(prev => prev + 1);
     } else {
-      setHelpfulCount(prev => prev + 1);
+        setIsHelpful(false);
+        setHelpfulCount(prev => Math.max(0, prev - 1));
+      }
+          } catch (error) {
+        console.error('Beğeni işlemi hatası:', error.message || error);
+      }
+  };
+
+  const handleSubmitResponse = async (e) => {
+    e.preventDefault();
+    if (!responseText.trim()) return;
+
+    try {
+      const newResponse = await api.createReviewResponse({
+        review_id: review.id,
+        store_id: storeId,
+        responder_id: currentUser.id,
+        response_text: responseText.trim()
+      });
+
+      setResponses(prev => [...prev, newResponse]);
+      setResponseText('');
+      setShowResponseForm(false);
+      
+      // Yorum yapan kişiye bildirim gönder (kendi yorumuna cevap vermiyorsa)
+      if (review.user_id !== currentUser.id) {
+        try {
+          // Store bilgisini al
+          const store = await api.getStoreById(storeId);
+          await api.createNotification({
+            user_id: review.user_id,
+            type: 'review_response',
+            title: 'Yorumunuza Cevap Geldi',
+            message: `${store?.name || 'Mağaza'} yorumunuza cevap verdi.`,
+            data: {
+              review_id: review.id,
+              response_id: newResponse.id,
+              store_id: storeId,
+              store_name: store?.name || 'Mağaza'
+            }
+          });
+        } catch (notificationError) {
+          console.warn('Response bildirimi gönderilirken hata:', notificationError.message || notificationError);
+        }
+      }
+    } catch (error) {
+      console.error('Cevap gönderilirken hata:', error.message || error);
+      alert('Cevap gönderilirken bir hata oluştu.');
     }
-    setIsHelpful(!isHelpful);
   };
 
   const formatDate = (dateString) => {
@@ -446,11 +660,72 @@ const ReviewCard = ({ review, currentUser, onEdit, onDelete }) => {
         </div>
       </div>
 
+      {/* Title */}
+      {review.title && (
+        <h4 className="font-medium text-gray-900 mb-2">{review.title}</h4>
+      )}
+
       {/* Comment */}
       <p className="text-gray-700 mb-4 leading-relaxed">{review.comment}</p>
 
+      {/* Store Responses */}
+      {!loadingResponses && responses.length > 0 && (
+        <div className="mb-4 pl-4 border-l-2 border-orange-200">
+          {responses.map((response) => (
+            <div key={response.id} className="bg-orange-50 rounded-lg p-3 mb-2">
+              <div className="flex items-center mb-2">
+                <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  M
+                </div>
+                <div className="ml-2">
+                  <span className="text-sm font-medium text-orange-800">
+                    {response.store?.name || 'Mağaza'} - Yetkili Cevabı
+                  </span>
+                  <div className="text-xs text-orange-600">
+                    {formatDate(response.created_at)}
+                  </div>
+                </div>
+              </div>
+              <p className="text-gray-700 text-sm">{response.response_text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Response Form */}
+      {showResponseForm && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <form onSubmit={handleSubmitResponse}>
+            <textarea
+              value={responseText}
+              onChange={(e) => setResponseText(e.target.value)}
+              placeholder="Müşterinize cevap yazın..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+              rows="3"
+              required
+            />
+            <div className="flex justify-end space-x-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setShowResponseForm(false)}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-1 bg-orange-500 text-white text-sm rounded hover:bg-orange-600"
+              >
+                Cevapla
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <div className="flex items-center space-x-4">
         <button
           onClick={handleHelpful}
           className={`flex items-center text-sm transition-colors duration-200 ${
@@ -463,19 +738,39 @@ const ReviewCard = ({ review, currentUser, onEdit, onDelete }) => {
           Faydalı ({helpfulCount})
         </button>
 
-        {review.order_id && (
-          <span className="text-xs text-gray-500">
-            Sipariş #{review.order_id.slice(-8)}
+          {/* Store owner response button - sadece cevabı olmayan yorumlara */}
+          {isStoreOwner && !showResponseForm && !responses.length && (
+            <button
+              onClick={() => setShowResponseForm(true)}
+              className="flex items-center text-sm text-orange-500 hover:text-orange-600"
+            >
+              <FiMessageSquare className="w-4 h-4 mr-1" />
+              Cevapla
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-2 text-xs text-gray-500">
+          {review.review_type && (
+            <span className="px-2 py-1 bg-gray-100 rounded">
+              {review.review_type === 'product' ? 'Ürün' : 
+               review.review_type === 'order' ? 'Sipariş' : 'Mağaza'}
           </span>
         )}
+          {review.order_id && (
+            <span>Sipariş #{review.order_id.slice(-8)}</span>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-const ReviewModal = ({ review, storeId, productId, onClose, onSubmit }) => {
+const ReviewModal = ({ review, storeId, productId, type = 'store', onClose, onSubmit }) => {
   const [rating, setRating] = useState(review?.rating || 0);
+  const [title, setTitle] = useState(review?.title || '');
   const [comment, setComment] = useState(review?.comment || '');
+  const [isAnonymous, setIsAnonymous] = useState(review?.is_anonymous || false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
@@ -485,18 +780,24 @@ const ReviewModal = ({ review, storeId, productId, onClose, onSubmit }) => {
       alert('Lütfen bir puan verin.');
       return;
     }
+    if (!comment.trim()) {
+      alert('Lütfen yorumunuzu yazın.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const reviewData = {
         rating,
-        comment,
+        title: title.trim() || null,
+        comment: comment.trim(),
+        is_anonymous: isAnonymous,
         order_id: null // TODO: Eğer sipariş ID'si varsa buraya eklenebilir
       };
 
       await onSubmit(reviewData);
     } catch (error) {
-      console.error('Error submitting review:', error);
+        console.error('Error submitting review:', error.message || error);
       alert('Yorum gönderilirken bir hata oluştu.');
     } finally {
       setIsSubmitting(false);
@@ -556,10 +857,28 @@ const ReviewModal = ({ review, storeId, productId, onClose, onSubmit }) => {
               )}
             </div>
 
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Başlık (Opsiyonel)
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Yorumunuz için kısa bir başlık..."
+                maxLength={100}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {title.length}/100 karakter
+              </p>
+            </div>
+
             {/* Comment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Yorumunuz
+                Yorumunuz *
               </label>
               <textarea
                 value={comment}
@@ -568,9 +887,28 @@ const ReviewModal = ({ review, storeId, productId, onClose, onSubmit }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
                 placeholder="Deneyiminizi diğer müşterilerle paylaşın..."
                 maxLength={500}
+                required
               />
               <p className="text-xs text-gray-500 mt-1">
                 {comment.length}/500 karakter
+              </p>
+            </div>
+
+            {/* Anonymous Option */}
+            <div>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  Anonim olarak yorum yap
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 mt-1">
+                Anonim yorumlarda adınız gizlenir
               </p>
             </div>
 

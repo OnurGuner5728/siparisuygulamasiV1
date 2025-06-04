@@ -237,6 +237,19 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
+  /* Web görünümü için %40 genişlik sınırlaması */
+  .app-container {
+    @apply w-full mx-auto px-4;
+  }
+  
+  /* Sadece büyük desktop ekranlarda %40 genişlik, mobil ve tablet'te (iPad Pro dahil) full */
+  @media (min-width: 1200px) {
+    .app-container {
+      @apply max-w-[50vw] px-6;
+    
+    }
+  }
+
   /* Scrollbar stilleri - Dark mode uyumlu */
   .scrollbar-thin {
     scrollbar-width: thin;

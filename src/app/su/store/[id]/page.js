@@ -660,8 +660,9 @@ export default function SuStoreDetailPage({ params }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-sky-500"></div>
                 </div>
               ) : storeReviews.length > 0 ? (
+                <>
                 <div className="space-y-4">
-                  {storeReviews.map((review) => (
+                    {storeReviews.slice(0, 3).map((review) => (
                     <div key={review.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -682,10 +683,28 @@ export default function SuStoreDetailPage({ params }) {
                     </div>
                   ))}
                 </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <Link 
+                      href={`/store/${id}/yorumlar?cid=3`}
+                      className="block w-full bg-sky-500 text-white text-center py-3 rounded-lg font-medium hover:bg-sky-600 transition-colors"
+                      onClick={closeAllPopups}
+                    >
+                      Tüm Yorumları Görüntüle ({storeReviews.length})
+                    </Link>
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">⭐</div>
-                  <p className="text-gray-500">Henüz değerlendirme yok.</p>
+                  <p className="text-gray-500 mb-4">Henüz değerlendirme yok.</p>
+                  <Link 
+                    href={`/store/${id}/yorumlar?cid=3`}
+                    className="inline-block bg-sky-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-sky-600 transition-colors"
+                    onClick={closeAllPopups}
+                  >
+                    İlk Yorumu Siz Yazın
+                  </Link>
                 </div>
               )}
             </div>

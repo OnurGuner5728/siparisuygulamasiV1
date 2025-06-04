@@ -48,7 +48,7 @@ export default function Footer() {
   return (
     <>
       <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16">
-        <div className="container mx-auto px-4">
+        <div className="app-container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {/* Logo ve Açıklama */}
             <div className="md:col-span-1">

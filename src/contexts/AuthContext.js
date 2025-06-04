@@ -458,7 +458,8 @@ export function AuthProvider({ children }) {
 
     switch (module) {
       case 'admin': return user.role === 'admin';
-      case 'store': return user.role === 'store';
+      case 'store': return user.role === 'store' || user.role === 'store_owner';
+      case 'store_owner': return user.role === 'store' || user.role === 'store_owner';
       case 'user': return user.role === 'user' || user.role === 'admin';
       default: return false;
     }
