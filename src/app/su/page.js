@@ -4,6 +4,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import ModuleGuard from '@/components/ModuleGuard';
 import CategoryCampaignBanner from '@/components/CategoryCampaignBanner';
+import FavoriteButton from '@/components/FavoriteButton';
 import { FiClock } from 'react-icons/fi';
 
 const SU_CATEGORY_NAME = 'Su';
@@ -198,6 +199,15 @@ function SuPageContent() {
                     </div>
 
                     <div className="absolute top-4 right-4">
+                      <FavoriteButton
+                        itemType="store"
+                        itemId={waterStore.id}
+                        size="sm"
+                        className="shadow-lg"
+                      />
+                    </div>
+                    
+                    <div className="absolute top-4 right-16">
                       <div className="flex items-center space-x-2">
                         <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-sm">
                           <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

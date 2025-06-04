@@ -10,6 +10,7 @@ import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ProductDetailModal from '@/components/ProductDetailModal';
 import StoreCampaignBanner from '@/components/StoreCampaignBanner';
+import FavoriteButton from '@/components/FavoriteButton';
 
 // React Icons'ları dinamik olarak import et
 const FiArrowLeft = dynamic(() => import('react-icons/fi').then(mod => ({ default: mod.FiArrowLeft })), { ssr: false });
@@ -345,6 +346,16 @@ export default function StoreDetailPage({ params }) {
         >
           <FiArrowLeft size={20} className="text-gray-800" />
         </button>
+        
+        {/* Favori Butonu */}
+        <div className="absolute top-6 right-20">
+          <FavoriteButton
+            itemType="store"
+            itemId={id}
+            size="md"
+            className="shadow-lg"
+          />
+        </div>
         
         <div className="absolute top-6 right-6">
           <div className="relative">
@@ -750,7 +761,7 @@ export default function StoreDetailPage({ params }) {
                   
                   <div className="mt-6 pt-4 border-t border-gray-200">
                     <Link 
-                      href={`/store/${id}/yorumlar?cid=1`}
+                      href={`/yemek/store/${id}/yorumlar`}
                       className="block w-full bg-orange-500 text-white text-center py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
                       onClick={closeAllPopups}
                     >
@@ -763,7 +774,7 @@ export default function StoreDetailPage({ params }) {
                   <div className="text-4xl mb-4">⭐</div>
                   <p className="text-gray-500 mb-4">Henüz değerlendirme yok.</p>
                   <Link 
-                    href={`/store/${id}/yorumlar?cid=1`}
+                    href={`/yemek/store/${id}/yorumlar`}
                     className="inline-block bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors"
                     onClick={closeAllPopups}
                   >

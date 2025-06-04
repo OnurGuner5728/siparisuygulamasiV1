@@ -689,7 +689,7 @@ export default function MarketStoreDetailPage({ params }) {
                   
                   <div className="mt-6 pt-4 border-t border-gray-200">
                     <Link 
-                      href={`/store/${id}/yorumlar?cid=2`}
+                      href={`/market/store/${id}/yorumlar`}
                       className="block w-full bg-green-500 text-white text-center py-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
                       onClick={closeAllPopups}
                     >
@@ -702,7 +702,7 @@ export default function MarketStoreDetailPage({ params }) {
                   <div className="text-4xl mb-4">⭐</div>
                   <p className="text-gray-500 mb-4">Henüz değerlendirme yok.</p>
                   <Link 
-                    href={`/store/${id}/yorumlar?cid=2`}
+                    href={`/market/store/${id}/yorumlar`}
                     className="inline-block bg-green-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors"
                     onClick={closeAllPopups}
                   >

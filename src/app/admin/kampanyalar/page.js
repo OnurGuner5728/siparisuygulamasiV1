@@ -87,6 +87,20 @@ function CampaignsManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const router = useRouter();
 
+  // Kategori adından slug oluştur
+  const getCategorySlug = (categoryName) => {
+    if (!categoryName) return 'yemek'; // varsayılan
+    
+    const categoryMap = {
+      'Yemek': 'yemek',
+      'Market': 'market', 
+      'Su': 'su',
+      'Aktüel': 'aktuel'
+    };
+    
+    return categoryMap[categoryName] || 'yemek';
+  };
+
   // Mağaza adını ID'ye göre bul
   const getStoreName = (storeId) => {
     const store = stores.find(s => s.id === storeId);
@@ -141,17 +155,23 @@ function CampaignsManagement() {
   };
 
   // Mağaza sayfasına yönlendir
-  const navigateToStore = (storeId) => {
+  const navigateToStore = async (storeId) => {
     const store = stores.find(s => s.id === storeId);
     if (store) {
       const category = categories.find(cat => cat.id === store.category_id);
       if (category) {
         router.push(`/${category.name.toLowerCase()}/store/${store.id}`);
       } else {
-        router.push(`/magaza/store/${store.id}`);
+        // Mağaza kategorisini alıp doğru URL'yi oluştur
+        const storeData = await api.getStoreById(store.id);
+        const categorySlug = getCategorySlug(storeData?.category?.name);
+        router.push(`/${categorySlug}/store/${store.id}`);
       }
     } else {
-      router.push(`/magaza/store/${storeId}`);
+      // Mağaza kategorisini alıp doğru URL'yi oluştur
+      const storeData = await api.getStoreById(storeId);
+      const categorySlug = getCategorySlug(storeData?.category?.name);
+      router.push(`/${categorySlug}/store/${storeId}`);
     }
   };
 

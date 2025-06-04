@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FiUser, FiSettings, FiShoppingBag, FiBell, FiMapPin, FiLogOut, FiX, FiShield, FiStore } from 'react-icons/fi';
+import { FaShop } from "react-icons/fa6";
+import { FiUser, FiSettings, FiShoppingBag, FiBell, FiMapPin, FiLogOut, FiX, FiShield } from 'react-icons/fi';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -126,7 +127,7 @@ const UserDropdown = () => {
                 onClick={() => handlePortalLinkClick('/store')}
                 className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-orange-50 text-gray-700 hover:text-orange-600 transition-colors duration-200"
               >
-                <FiStore className="w-5 h-5" />
+                <FaShop className="w-5 h-5" />
                 <span className="text-sm font-medium">
                   {user.storeInfo?.is_approved ? 'Mağaza Paneli' : 'Mağaza Paneli (Onay Bekleniyor)'}
                 </span>

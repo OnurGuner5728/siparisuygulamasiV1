@@ -524,7 +524,7 @@ function EditStoreContent({ promiseParams }) {
                 value={formData.payment_link}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="https://odeme.com/magaza-link"
+                placeholder="https://example.com/odeme-linki"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Mağaza sahibinin komisyon ödemelerini yapabileceği ödeme sayfası linki

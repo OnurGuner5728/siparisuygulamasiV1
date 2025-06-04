@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
+import FavoriteButton from '@/components/FavoriteButton';
 
 /**
  * Ürün Kartı Bileşeni
@@ -138,9 +139,17 @@ const ProductCard = ({
             </div>
           )}
           
+          {/* Favori butonu */}
+          <FavoriteButton
+            itemType="product"
+            itemId={id}
+            className="absolute top-3 right-3"
+            size="sm"
+          />
+
           {/* İndirim etiketi */}
           {discountPercentage && (
-            <div className="absolute top-3 right-3">
+            <div className="absolute top-3 left-3">
               <span className="bg-red-500 text-white text-xs px-3 py-1 rounded-full font-medium">
                 %{discountPercentage} İndirim
               </span>
